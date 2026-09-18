@@ -44,59 +44,20 @@
 
   var RESTRICTED_ERROR = 'restricted: official ROM loaded in this session';
 
-  // type_text で受理する文字。
-  //
-  // PC-8801の実キーボードは、多くの記号キーが「1つの物理キーに unshifted/
-  // shifted の2文字」を持つ(例: ";" キーは無シフトで';'、シフトで'+')。
-  // quasi88-libretro の src/keyboard.c の keyport[] テーブル(KEY88コード→
-  // ハードウェアの port/bit)を読むと、この2つの意味は**同じport/bitを共有する
-  // 別名**に過ぎず、実際に鳴る文字はハードのシフト線(KEY88_SHIFT)の状態だけで
-  // 決まる。したがって、たとえば'+'を出すには「PLUSのコード(43)を送る」だけでは
-  // 足りず、SHIFTを併せて押す必要がある(単に43を送るとSHIFTなし側の';'が出る。
-  // 実機で確認済み)。
-  //
-  // 判定表(keyport[]の実測。unshifted側の文字はSHIFT不要、shifted側は必要):
-  //   unshifted: 空白, 0-9, : ; , - . / @ [ \(YEN) ] ^ _ , a-z
-  //   shifted  : ! " # $ % & ' ( ) * + < = > ? ` { | } ~ , A-Z
-  var RETROK_LSHIFT = 304;
-  var RETROK_RETURN = 13;
+  // type_text で受理する文字と、「どのPC-88物理キーをSHIFTあり/なしで押すか」の
+  // 対応表は public/char-map.js に一本化してある(src/keyboard.ts の人間用
+  // 記号キー入力と共有。表を二重に持たない)。
+  var CharMap =
+    typeof module !== 'undefined' && module.exports
+      ? require('./char-map.js')
+      : global.WebQ88CharMap;
 
-  var SHIFTED_CHARS = '!"#$%&\'()*+<=>?`{|}~';
+  var RETROK_LSHIFT = CharMap.RETROK_LSHIFT;
+  var charToKeySteps = CharMap.charToKeySteps;
 
   var HOLD_FRAMES = 6; // scripts/smoke-app.cjsで実測済みの値をそのまま採用
   var GAP_FRAMES = 4;
   var SHIFT_SETTLE_FRAMES = 2;
-
-  function isAsciiLower(c) {
-    return c >= 97 && c <= 122;
-  }
-  function isAsciiUpper(c) {
-    return c >= 65 && c <= 90;
-  }
-  /** 印字可能ASCII(制御文字を除く 32-126)で、handle_input()が直接扱える範囲。 */
-  function isDirectAscii(c) {
-    return c >= 32 && c <= 126;
-  }
-
-  /** 1文字(charCode)を送信可能な打鍵ステップ列に変換する。非対応ならnull。 */
-  function charToKeySteps(charCode) {
-    if (charCode === 10) {
-      // \n → RETURN
-      return { code: RETROK_RETURN, shift: false };
-    }
-    if (isAsciiUpper(charCode)) {
-      return { code: charCode + 32, shift: true }; // 小文字コード+SHIFT
-    }
-    if (isAsciiLower(charCode)) {
-      return { code: charCode, shift: false };
-    }
-    if (isDirectAscii(charCode)) {
-      var ch = String.fromCharCode(charCode);
-      var needsShift = SHIFTED_CHARS.indexOf(ch) !== -1;
-      return { code: charCode, shift: needsShift };
-    }
-    return null;
-  }
 
   async function pressAndRelease(ctx, code, shift) {
     if (shift) {

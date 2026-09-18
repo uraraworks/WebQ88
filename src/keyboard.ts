@@ -1,14 +1,30 @@
 // keyboard.ts
 //
-// KeyboardEvent.code（物理キー・レイアウト非依存）を libretro の RETROK 値へ変換する。
-// quasi88-libretro の src/LIBRETRO/libretro.c の handle_input() を
-// _local/quasi88-libretro-src で確認し、対応する RETROK だけを載せている。
+// ブラウザの KeyboardEvent を libretro の RETROK 値へ変換する、人間用キーボード
+// 入力の唯一の窓口。
 //
-// 大事な点: 英字キーは常に小文字側の RETROK（RETROK_a〜z）を送る。
-// Shift の有無はコア側が KEY88_SHIFT の押下状態から解釈するので、
-// ブラウザ側で event.key の大文字小文字（Shift適用後の文字）を見てはいけない
+// 英字・数字・制御キー（Enter, BS, 矢印, ESC, TAB, F キー, SHIFT/CTRL 単独等）は
+// 従来どおり KeyboardEvent.code（物理位置・レイアウト非依存）で変換する
+// （quasi88-libretro の src/LIBRETRO/libretro.c の handle_input() を
+// _local/quasi88-libretro-src で確認し、対応する RETROK だけを載せている）。
+//
+// 大事な点: 英字キーは常に小文字側の RETROK（RETROK_a〜z）を送る。Shift の
+// 有無はコア側が KEY88_SHIFT の押下状態から解釈するので、英字については
+// event.key の大文字小文字（Shift適用後の文字）を見てはいけない
 // （見ると「入力源は末端の唯一の窓口へ集約する」の原則が崩れ、
 // Shift状態を二重に扱うことになる）。
+//
+// 記号（印字可能な非英数字）は事情が違う。KeyboardEvent.code は物理位置
+// でしかないため、ホストのキー配列（JIS/US 等）によって同じ code から出る
+// 文字が変わる（例: US 配列の Backquote は '`' だが、JIS 配列の同じ物理位置は
+// '@' を出す）。そこで記号だけは KeyboardEvent.key（実際に出た文字）で判定し、
+// 「PC-88 のどのキーを SHIFT あり/なしで押せば同じ文字が出せるか」に変換する。
+// この変換表は自動操作API の type_text と共有する
+// （public/char-map.js、public/api-dispatch.js 参照。表を2つ持たない）。
+// ホスト側で SHIFT を押していても、PC-88 側に必要な SHIFT 状態は表（＝実際に
+// 出た文字）だけで決める。押下中の記号キーの keyup は、keydown 時に決めた
+// PC-88 キー・SHIFT要否をそのまま使う（keyup 時の e.key は SHIFT の離し順で
+// 変わりうるため、keydown 時の対応を覚えておく）。
 
 // enum retro_key（libretro.h）から必要な分だけ抜粋。
 const RETROK = {
@@ -17,18 +33,7 @@ const RETROK = {
   RETURN: 13,
   ESCAPE: 27,
   SPACE: 32,
-  QUOTE: 39,
-  COMMA: 44,
-  MINUS: 45,
-  PERIOD: 46,
-  SLASH: 47,
   DIGIT0: 48,
-  SEMICOLON: 59,
-  EQUALS: 61,
-  LEFTBRACKET: 91,
-  BACKSLASH: 92,
-  RIGHTBRACKET: 93,
-  BACKQUOTE: 96,
   A: 97,
   DELETE: 127,
   KP0: 256,
@@ -58,7 +63,14 @@ const RETROK = {
   LALT: 308,
 } as const;
 
-/** KeyboardEvent.code → RETROK の対応表。 */
+/**
+ * KeyboardEvent.code → RETROK の対応表。
+ *
+ * 記号キー（Quote/Comma/Minus/Period/Slash/Semicolon/Equal/BracketLeft/
+ * Backslash/BracketRight/Backquote 等）はここに載せない。物理位置だけでは
+ * ホストのキー配列違いを吸収できないため、resolveSymbolKey() で
+ * KeyboardEvent.key から解決する。
+ */
 const CODE_TO_RETROK: Record<string, number> = {
   Backspace: RETROK.BACKSPACE,
   Tab: RETROK.TAB,
@@ -66,17 +78,6 @@ const CODE_TO_RETROK: Record<string, number> = {
   NumpadEnter: RETROK.KP_ENTER,
   Escape: RETROK.ESCAPE,
   Space: RETROK.SPACE,
-  Quote: RETROK.QUOTE,
-  Comma: RETROK.COMMA,
-  Minus: RETROK.MINUS,
-  Period: RETROK.PERIOD,
-  Slash: RETROK.SLASH,
-  Semicolon: RETROK.SEMICOLON,
-  Equal: RETROK.EQUALS,
-  BracketLeft: RETROK.LEFTBRACKET,
-  Backslash: RETROK.BACKSLASH,
-  BracketRight: RETROK.RIGHTBRACKET,
-  Backquote: RETROK.BACKQUOTE,
   Delete: RETROK.DELETE,
   ArrowUp: RETROK.UP,
   ArrowDown: RETROK.DOWN,
@@ -122,6 +123,36 @@ export function codeToRetroKey(code: string): number | null {
   return CODE_TO_RETROK[code] ?? null;
 }
 
+/** public/char-map.js の WebQ88CharMap が持つ形（依存を注入できるようにした最小インターフェース）。 */
+export interface CharMapLike {
+  charToKeySteps(charCode: number): { code: number; shift: boolean } | null;
+}
+
+/**
+ * 記号（印字可能な非英数字）を KeyboardEvent.key から PC-88 の物理キー
+ * （RETROK値。type_text と同じ値域＝多くはASCIIコードそのもの）と
+ * SHIFT要否へ解決する。英数字・複数文字のキー名（"Enter" 等）は
+ * 対象外として null を返す（それらは codeToRetroKey() 側で扱う）。
+ *
+ * charMap を引数で受け取る純関数にしてあるのは、window に依存せず
+ * Node から直接単体試験できるようにするため（public/char-map.js を
+ * require して渡せばよい）。
+ */
+export function resolveSymbolKey(key: string, charMap: CharMapLike): { code: number; shift: boolean } | null {
+  if (key.length !== 1) return null;
+  const charCode = key.charCodeAt(0);
+  // 数字・英字は codeToRetroKey() 側（KeyboardEvent.code）で扱うので対象外。
+  if (charCode >= 48 && charCode <= 57) return null;
+  if ((charCode >= 65 && charCode <= 90) || (charCode >= 97 && charCode <= 122)) return null;
+  return charMap.charToKeySteps(charCode);
+}
+
+/** ブラウザの window.WebQ88CharMap（index.html が public/char-map.js を読み込んで生やす）。 */
+function getGlobalCharMap(): CharMapLike | null {
+  const g = globalThis as unknown as { WebQ88CharMap?: CharMapLike };
+  return g.WebQ88CharMap ?? null;
+}
+
 export type KeyStateListener = (retroKey: number, pressed: boolean) => void;
 
 /**
@@ -130,21 +161,71 @@ export type KeyStateListener = (retroKey: number, pressed: boolean) => void;
  * 呼び出し元を増やす場合もここを経由させ、配線を分散させない。
  */
 export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener): () => void {
+  // 記号キー: 物理キー(e.code)ごとに「keydown 時に実際に送った PC-88 キーと、
+  // 併せて仮想 SHIFT を押したか」を覚えておく。keyup 時の e.key は SHIFT の
+  // 離し順で変わりうるため、keydown 時の対応をそのまま使って離す。
+  const activeSymbolKeys = new Map<string, { retroKey: number; shift: boolean }>();
+
+  // LSHIFT は「実キーボードの ShiftLeft」と「記号キー用の仮想SHIFT」の
+  // 両方から要求されうる共有リソースなので、要求元の数を数えて 0→1 / 1→0 の
+  // 遷移でだけ実際に PC-88 へ送る（どちらか片方を離しても、もう片方がまだ
+  // 要求していれば離さない）。これにより、SHIFT を押したまま記号→英字を
+  // 続けて打っても英字の大文字化が壊れない。
+  let lshiftDemand = 0;
+  const setLShiftDemand = (delta: number) => {
+    const before = lshiftDemand > 0;
+    lshiftDemand += delta;
+    const after = lshiftDemand > 0;
+    if (before !== after) onKeyState(RETROK.LSHIFT, after);
+  };
+
   const onKeyDown = (ev: Event) => {
     const e = ev as KeyboardEvent;
-    const retroKey = codeToRetroKey(e.code);
-    if (retroKey === null) return;
+
+    const controlRetroKey = codeToRetroKey(e.code);
+    if (controlRetroKey !== null) {
+      e.preventDefault();
+      if (e.repeat) return; // libretro 側はキー押しっぱなし状態を保持するのでリピートは無視してよい
+      if (controlRetroKey === RETROK.LSHIFT) {
+        setLShiftDemand(1);
+      } else {
+        onKeyState(controlRetroKey, true);
+      }
+      return;
+    }
+
+    const charMap = getGlobalCharMap();
+    const resolved = charMap ? resolveSymbolKey(e.key, charMap) : null;
+    if (resolved === null) return;
     e.preventDefault();
-    if (e.repeat) return; // libretro 側はキー押しっぱなし状態を保持するのでリピートは無視してよい
-    onKeyState(retroKey, true);
+    if (activeSymbolKeys.has(e.code)) return; // 押しっぱなし(auto-repeat)は無視
+    activeSymbolKeys.set(e.code, { retroKey: resolved.code, shift: resolved.shift });
+    if (resolved.shift) setLShiftDemand(1);
+    onKeyState(resolved.code, true);
   };
+
   const onKeyUp = (ev: Event) => {
     const e = ev as KeyboardEvent;
-    const retroKey = codeToRetroKey(e.code);
-    if (retroKey === null) return;
+
+    const controlRetroKey = codeToRetroKey(e.code);
+    if (controlRetroKey !== null) {
+      e.preventDefault();
+      if (controlRetroKey === RETROK.LSHIFT) {
+        setLShiftDemand(-1);
+      } else {
+        onKeyState(controlRetroKey, false);
+      }
+      return;
+    }
+
+    const active = activeSymbolKeys.get(e.code);
+    if (!active) return;
     e.preventDefault();
-    onKeyState(retroKey, false);
+    activeSymbolKeys.delete(e.code);
+    onKeyState(active.retroKey, false);
+    if (active.shift) setLShiftDemand(-1);
   };
+
   target.addEventListener('keydown', onKeyDown);
   target.addEventListener('keyup', onKeyUp);
   return () => {

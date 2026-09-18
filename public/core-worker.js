@@ -46,6 +46,7 @@
 importScripts('core/q88_libretro.js');
 importScripts('key-hold-tracker.js');
 importScripts('rom-roles.js');
+importScripts('char-map.js');
 importScripts('api-dispatch.js');
 
 // --- libretro 定数 ---

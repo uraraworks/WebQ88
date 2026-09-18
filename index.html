@@ -17,6 +17,12 @@
       </div>
       <div id="mode-info"></div>
     </div>
+    <!--
+      src/keyboard.ts の記号キー変換は public/api-dispatch.js(type_text)と
+      同じ表(public/char-map.js)を使う(表を二重に持たない)。Vite変換前の
+      素のクラシックスクリプトとして読み込み、window.WebQ88CharMap に生やす。
+    -->
+    <script src="/char-map.js"></script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

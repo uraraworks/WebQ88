@@ -71,9 +71,13 @@ PC-8801の実キーボードは多くの記号キーが「1つの物理キーに
 の2文字」を持つ(quasi88-libretro の `src/keyboard.c` の `keyport[]` テーブルで
 確認: 例えば`;`キーは無シフトで`;`、シフトで`+`。同じport/bitを共有する)。
 `type_text`はこれを踏まえ、文字ごとに「どちらの物理キーを、SHIFTありで押すか
-なしで押すか」を内部で解決してから打鍵する(`public/api-dispatch.js` の
-`SHIFTED_CHARS`)。対応外の文字(日本語や制御文字など)はその位置を明示した
-エラーを返す。
+なしで押すか」を内部で解決してから打鍵する。この解決表は`public/char-map.js`
+に一本化してあり(`SHIFTED_CHARS`・`charToKeySteps`)、`public/api-dispatch.js`
+(`type_text`)と人間用キーボード入力`src/keyboard.ts`(記号キーの判定。
+KeyboardEvent.code は物理位置でホストのキー配列に依存するため、記号だけは
+KeyboardEvent.key の実際の文字で引く)の両方から共有する(表を二重に持たない)。
+対応外の文字(日本語や制御文字など)はその位置を明示したエラーを返す
+(`type_text`の場合。`keyboard.ts`側は解決できない記号キーを黙って無視する)。
 
 ## 3. 検査の回し方
 
