@@ -1,0 +1,35 @@
+# ビルド成果物・依存
+node_modules/
+dist/
+build/
+
+# 作業用・private扱い
+_local/
+private/
+tmp/
+
+# ビルド生成物（バイナリ）
+*.dylib
+*.wasm
+
+# OS
+.DS_Store
+
+# 公式ROM・公式ディスクイメージ類（大文字小文字両方）
+*.rom
+*.ROM
+*.d88
+*.D88
+*.dsk
+*.DSK
+*.t88
+*.T88
+*.cmt
+*.CMT
+*.2d
+*.2D
+*.88d
+*.88D
+
+# ただし互換ROM内蔵用ディレクトリだけは除外解除する
+!compat-rom/**

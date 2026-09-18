@@ -1,0 +1,6 @@
+#!/bin/bash
+# pre-commit: コミット前に公開可否を検査する。
+# 有効化: git config core.hooksPath tools/hooks
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+exec "$REPO_ROOT/tools/check_publishable.sh"
