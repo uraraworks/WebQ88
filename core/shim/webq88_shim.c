@@ -19,6 +19,13 @@
  *                            main_rom_n, sub_romram の 0x0000-0x3FFF,
  *                            kanji_rom, jisho_rom, font_*)を返す口は
  *                            意図的に用意しない。
+ * - webq88_text_cols/webq88_text_snapshot(): テキスト画面の文字コードだけを
+ *                            取り出す(属性・色は含めない)。screen_signature
+ *                            (docs/API-DESIGN.md 第4節)の署名計算に
+ *                            互換・制限どちらのモードでも必要なため、
+ *                            この2関数だけは restricted を見ない
+ *                            (掛け金の対象外。本文を返さない用途にしか
+ *                            使わない設計はJS側=core-worker.jsで担保する)。
  *
  * region:
  *   0 = main_ram      (メインRAM,        64KB = 0x10000)
@@ -30,15 +37,42 @@
  * 宣言されている)。quasi88.h / memory.h をインクルードすると他の大量の
  * マクロ・型定義まで巻き込むため、ここでは意図的に extern 宣言だけを
  * 重複させる(byte の実体は unsigned char で一致するのでリンクできる)。
+ *
+ * テキスト画面の抽出は src/crtcdmac.c の crtc_make_text_attr() を読んで
+ * 決めた: 文字コードは、表示モード(non_separate / transparent)いずれでも
+ * main_ram 上の text_dma_addr.W を先頭に、1行 crtc_byte_per_line バイトごと、
+ * 各行の先頭 crtc_sz_columns バイトに"属性を挟まず"連続して並ぶ(属性は
+ * それとは別に、行内のさらに後ろ or 1バイトおきに置かれるだけで、文字コード
+ * 自体の並びには影響しない)。text_dma_addr は dmac_address[2] (crtcdmac.h の
+ * `#define text_dma_addr dmac_address[2]`)。pair は quasi88.h で
+ * union{ struct{byte l,h;} B; word W; } (LSB_FIRST=リトルエンディアン、
+ * このビルドはwasm=常にLSB_FIRST相当) と定義されており、ここでは
+ * quasi88.h を巻き込まずに同じレイアウトの型を単体で再定義して使う。
  */
 
 #include <string.h>
 
 typedef unsigned char byte;
+typedef unsigned short word;
+
+typedef union {
+    struct { byte l, h; } B;
+    word W;
+} webq88_pair;
 
 extern byte *main_ram;
 extern byte *main_high_ram;
 extern byte *sub_romram;
+
+/* src/crtcdmac.c のグローバル(crtcdmac.h で extern 宣言されている実体)。 */
+extern int crtc_sz_lines;    /* 現在の表示行数 (20〜25) */
+extern int crtc_sz_columns;  /* 現在の表示桁数 (2〜80) */
+extern int crtc_byte_per_line; /* 1行あたりのメモリバイト数 */
+extern int text_display;     /* 0=TEXT_DISABLE 1=ATTR_ONLY 2=ENABLE */
+extern webq88_pair dmac_address[4]; /* [2] が text_dma_addr */
+
+#define WEBQ88_TEXT_MAX_COLS 80
+#define WEBQ88_TEXT_MAX_ROWS 25
 
 static int g_webq88_restricted = 0;
 
@@ -111,4 +145,54 @@ int webq88_ram_write(int region, unsigned int offset, unsigned int len, const un
 
     memcpy(base + offset, src, len);
     return 0;
+}
+
+/*
+ * 現在の表示桁数(1〜80)を返す。screen_signature/screen_text 呼び出し側が
+ * webq88_text_snapshot() の戻り値(総バイト数)から行数を逆算するために使う。
+ */
+int webq88_text_cols(void)
+{
+    int cols = crtc_sz_columns;
+    if (cols < 1) cols = 1;
+    if (cols > WEBQ88_TEXT_MAX_COLS) cols = WEBQ88_TEXT_MAX_COLS;
+    return cols;
+}
+
+/*
+ * テキスト画面の文字コードだけを dst に詰めて返す(属性・色は含めない)。
+ * 戻り値は書き込んだバイト数(= 現在の行数×桁数)。dst が NULL、または
+ * maxLen が足りない場合は -1。restricted は見ない(この関数のコメント冒頭参照)。
+ */
+int webq88_text_snapshot(unsigned char *dst, unsigned int maxLen)
+{
+    int rows = crtc_sz_lines;
+    int cols = crtc_sz_columns;
+    unsigned int need;
+    unsigned int base_addr;
+    int i, j;
+
+    if (!dst) return -1;
+    if (rows < 0) rows = 0;
+    if (cols < 0) cols = 0;
+    if (rows > WEBQ88_TEXT_MAX_ROWS) rows = WEBQ88_TEXT_MAX_ROWS;
+    if (cols > WEBQ88_TEXT_MAX_COLS) cols = WEBQ88_TEXT_MAX_COLS;
+
+    need = (unsigned int)rows * (unsigned int)cols;
+    if (need > maxLen) return -1;
+
+    if (text_display == 0 /* TEXT_DISABLE */ || !main_ram) {
+        memset(dst, 0, need);
+        return (int)need;
+    }
+
+    base_addr = dmac_address[2].W;
+    for (i = 0; i < rows; i++) {
+        unsigned int rowAddr = (base_addr + (unsigned int)i * (unsigned int)crtc_byte_per_line) & 0xFFFFu;
+        for (j = 0; j < cols; j++) {
+            unsigned int addr = (rowAddr + (unsigned int)j) & 0xFFFFu;
+            dst[i * cols + j] = main_ram[addr];
+        }
+    }
+    return (int)need;
 }

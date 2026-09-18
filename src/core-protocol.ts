@@ -57,7 +57,10 @@ export type MainToWorkerMessage =
   | { type: 'mode' }
   // デバッグ用。制限モードでは常に拒否される(docs/API-DESIGN.md 第4節)。
   | { type: 'ram_read'; requestId: number; region: number; offset: number; len: number }
-  | { type: 'ram_write'; requestId: number; region: number; offset: number; bytes: ArrayBuffer };
+  | { type: 'ram_write'; requestId: number; region: number; offset: number; bytes: ArrayBuffer }
+  // 自動操作API本体(docs/API-DESIGN.md)。実装は public/api-dispatch.js に集約し、
+  // ここは呼び出しの往復だけを担う(コマンド一覧・可否判定をここに複製しない)。
+  | { type: 'apiExec'; requestId: number; cmd: string; args: Record<string, unknown> };
 
 /** Worker → メインスレッド */
 export type WorkerToMainMessage =
@@ -73,7 +76,8 @@ export type WorkerToMainMessage =
   | { type: 'error'; message: string }
   | { type: 'mode'; mode: RomMode }
   | { type: 'ram_read_result'; requestId: number; data?: ArrayBuffer; error?: string }
-  | { type: 'ram_write_result'; requestId: number; ok: boolean; error?: string };
+  | { type: 'ram_write_result'; requestId: number; ok: boolean; error?: string }
+  | { type: 'apiExecResult'; requestId: number; result: Record<string, unknown> };
 
 export const WORKER_SCRIPT_PATH = 'core-worker.js';
 export const CORE_JS_RELATIVE_PATH = 'core/q88_libretro.js';

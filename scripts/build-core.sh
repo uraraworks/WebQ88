@@ -118,7 +118,7 @@ emcc -c "$SHIM_SRC" -O2 -o "$SHIM_OBJ"
 
 echo "== emcc でリンクし wasm/js を生成 =="
 mkdir -p "$OUT_DIR"
-EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free,_webq88_restrict,_webq88_is_restricted,_webq88_ram_read,_webq88_ram_write"
+EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free,_webq88_restrict,_webq88_is_restricted,_webq88_ram_read,_webq88_ram_write,_webq88_text_cols,_webq88_text_snapshot"
 
 # shellcheck disable=SC2086
 emcc $OBJS "$SHIM_OBJ" -O2 -o "$OUT_DIR/q88_libretro.js" \

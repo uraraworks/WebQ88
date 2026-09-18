@@ -21,9 +21,12 @@
 //        / {type:'mode'}(デバッグ用。現在のモードを問い合わせる)
 //        / {type:'ram_read',requestId,region,offset,len} / {type:'ram_write',requestId,region,offset,bytes}
 //          (デバッグ用。制限モードでは常に拒否される。docs/API-DESIGN.md 第3-4節)
+//        / {type:'apiExec', requestId, cmd, args}(自動操作API本体。実装は
+//          public/api-dispatch.js に集約。ここは ctx を組み立てて渡すだけ)
 //   送信: {type:'ready',width,height,fps,mode} / {type:'frame',width,height,pitch,buffer} / {type:'error',message}
 //        / {type:'mode',mode} / {type:'ram_read_result',requestId,data?,error?}
 //        / {type:'ram_write_result',requestId,ok,error?}
+//        / {type:'apiExecResult', requestId, result}
 //
 // mode = {restricted, roms:[{role,name,origin}], unresolved:[{name,origin}]}
 //
@@ -43,6 +46,7 @@
 importScripts('core/q88_libretro.js');
 importScripts('key-hold-tracker.js');
 importScripts('rom-roles.js');
+importScripts('api-dispatch.js');
 
 // --- libretro 定数 ---
 var RETRO_ENVIRONMENT_SET_PIXEL_FORMAT = 10;
@@ -61,10 +65,15 @@ var moduleInstance = null;
 // 0 を渡すと保留を無効化し、対策前の即時反映(Setと同じ)に戻る(陰性対照用)。
 var keyHoldTracker = new KeyHoldTracker(2);
 var lastVideoFrame = null; // {width,height,pitch,buffer:Uint8Array}
+var lastFrameForApi = null; // 画面配信用とは別に保持する最新フレーム(screenshot用。tickでnull化しない)
 var fps = FALLBACK_FPS;
 var loopTimer = null;
 var lastTickMs = 0;
 var accumulatedMs = 0;
+
+// --- 自動操作API(docs/API-DESIGN.md)関連の状態 ---
+var pollCount = 0; // retro_input_poll が呼ばれた回数の累計(driveFramesの待ち合わせに使う)
+var stateSlots = Object.create(null); // save_state/load_state のスロット(Worker内メモリのみ。永続化しない)
 
 // --- 出どころ制限(docs/API-DESIGN.md 第3節)の状態 ---
 // restricted: 一方向の掛け金。true にする代入は handleInit 内の1箇所のみ。
@@ -96,12 +105,15 @@ function setupCallbacks(M) {
 
   var videoCb = M.addFunction(function (data, width, height, pitch) {
     if (!data) return;
+    var buf = M.HEAPU8.slice(data, data + pitch * height);
     lastVideoFrame = {
       width: width,
       height: height,
       pitch: pitch,
-      buffer: M.HEAPU8.slice(data, data + pitch * height),
+      buffer: buf,
     };
+    // screenshot(自動操作API)用に、描画ループのnull化とは独立して保持する。
+    lastFrameForApi = { width: width, height: height, pitch: pitch, buffer: buf };
   }, 'viiii');
 
   var audioSampleCb = M.addFunction(function () {}, 'vii');
@@ -112,6 +124,7 @@ function setupCallbacks(M) {
   // ここで保留中のキー状態を1ティック進める(詳細はkey-hold-tracker.js)。
   var inputPollCb = M.addFunction(function () {
     keyHoldTracker.beginPoll();
+    pollCount++;
   }, 'v');
   var inputStateCb = M.addFunction(function (_port, device, _index, id) {
     if (device === RETRO_DEVICE_KEYBOARD) {
@@ -362,6 +375,163 @@ function handleRamWrite(msg) {
   }
 }
 
+/**
+ * n ポーリング分進むまで待つ(自動操作APIのdriveFrames)。
+ * このWorkerは実時間駆動のstartLoop()が裏で回っているので、ここでは
+ * retro_run()を直接呼ばず、pollCountが目標に達するのを待つだけにする
+ * (Node側のscripts/smoke-api.cjsはループが無いのでretro_run()を直接呼ぶ。
+ * 実行環境の違いはctxに閉じ込め、public/api-dispatch.jsのロジックは共通)。
+ */
+function driveFrames(n) {
+  return new Promise(function (resolve, reject) {
+    if (n <= 0) {
+      resolve();
+      return;
+    }
+    if (!moduleInstance) {
+      reject(new Error('not booted'));
+      return;
+    }
+    var target = pollCount + n;
+    var deadline = Date.now() + Math.max(3000, n * 500);
+    (function check() {
+      if (pollCount >= target) {
+        resolve();
+        return;
+      }
+      if (Date.now() > deadline) {
+        reject(new Error('drive frames timeout (core loop not advancing?)'));
+        return;
+      }
+      setTimeout(check, 4);
+    })();
+  });
+}
+
+/** public/api-dispatch.js の exec() へ渡す ctx を組み立てる。 */
+function buildApiCtx() {
+  return {
+    isBooted: function () {
+      return !!moduleInstance;
+    },
+    getMode: function () {
+      return romMode;
+    },
+    reset: function () {
+      if (moduleInstance) moduleInstance._retro_reset();
+    },
+    press: function (id) {
+      keyHoldTracker.press(id);
+    },
+    release: function (id) {
+      keyHoldTracker.release(id);
+    },
+    driveFrames: driveFrames,
+    textCols: function () {
+      if (!moduleInstance) return 0;
+      return moduleInstance._webq88_text_cols();
+    },
+    textSnapshot: function () {
+      if (!moduleInstance) return new Uint8Array(0);
+      var M = moduleInstance;
+      var maxLen = 80 * 25;
+      var ptr = M._malloc(maxLen);
+      try {
+        var written = M._webq88_text_snapshot(ptr, maxLen);
+        if (written < 0) return new Uint8Array(0);
+        return M.HEAPU8.slice(ptr, ptr + written);
+      } finally {
+        M._free(ptr);
+      }
+    },
+    readMemory: function (region, offset, length) {
+      if (!moduleInstance) throw new Error('not booted');
+      if (restricted) throw new Error(WebQ88ApiDispatch.RESTRICTED_ERROR);
+      var M = moduleInstance;
+      var len = length >>> 0;
+      var ptr = M._malloc(len || 1);
+      try {
+        var rc = M._webq88_ram_read(region | 0, offset >>> 0, len, ptr);
+        if (rc !== 0) throw new Error('ram_read failed (invalid region/offset/len)');
+        return M.HEAPU8.slice(ptr, ptr + len);
+      } finally {
+        M._free(ptr);
+      }
+    },
+    writeMemory: function (region, offset, bytes) {
+      if (!moduleInstance) throw new Error('not booted');
+      if (restricted) throw new Error(WebQ88ApiDispatch.RESTRICTED_ERROR);
+      var M = moduleInstance;
+      var len = bytes.length;
+      var ptr = M._malloc(len || 1);
+      try {
+        M.HEAPU8.set(bytes, ptr);
+        var rc = M._webq88_ram_write(region | 0, offset >>> 0, len, ptr);
+        if (rc !== 0) throw new Error('ram_write failed (invalid region/offset/len)');
+      } finally {
+        M._free(ptr);
+      }
+    },
+    screenshotRGBA: function () {
+      if (!lastFrameForApi) return null;
+      var f = lastFrameForApi;
+      return {
+        width: f.width,
+        height: f.height,
+        rgba: WebQ88ApiDispatch.rgb565ToRgba(f.buffer, f.pitch, f.width, f.height),
+      };
+    },
+    saveState: function (slot) {
+      if (!moduleInstance) throw new Error('not booted');
+      var M = moduleInstance;
+      var size = M._retro_serialize_size();
+      var ptr = M._malloc(size || 1);
+      try {
+        var ok = M._retro_serialize(ptr, size);
+        if (!ok) throw new Error('retro_serialize failed');
+        stateSlots[slot] = M.HEAPU8.slice(ptr, ptr + size);
+        return { size: size };
+      } finally {
+        M._free(ptr);
+      }
+    },
+    loadState: function (slot) {
+      if (!moduleInstance) throw new Error('not booted');
+      var saved = stateSlots[slot];
+      if (!saved) throw new Error('no saved state in slot: ' + slot);
+      var M = moduleInstance;
+      var ptr = M._malloc(saved.length || 1);
+      try {
+        M.HEAPU8.set(saved, ptr);
+        var ok = M._retro_unserialize(ptr, saved.length);
+        if (!ok) throw new Error('retro_unserialize failed');
+      } finally {
+        M._free(ptr);
+      }
+    },
+    getStateBlob: function (slot) {
+      var saved = stateSlots[slot];
+      if (!saved) throw new Error('no saved state in slot: ' + slot);
+      return saved;
+    },
+  };
+}
+
+function handleApiExec(msg) {
+  var requestId = msg.requestId;
+  WebQ88ApiDispatch.exec(buildApiCtx(), msg.cmd, msg.args)
+    .then(function (result) {
+      postMessage({ type: 'apiExecResult', requestId: requestId, result: result });
+    })
+    .catch(function (err) {
+      postMessage({
+        type: 'apiExecResult',
+        requestId: requestId,
+        result: { error: String((err && err.message) || err) },
+      });
+    });
+}
+
 self.onmessage = function (ev) {
   var msg = ev.data;
   if (!msg || typeof msg.type !== 'string') return;
@@ -393,6 +563,9 @@ self.onmessage = function (ev) {
       break;
     case 'ram_write':
       handleRamWrite(msg);
+      break;
+    case 'apiExec':
+      handleApiExec(msg);
       break;
     default:
       break;

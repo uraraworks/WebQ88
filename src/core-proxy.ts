@@ -22,6 +22,7 @@ export class CoreProxy {
   private worker: Worker;
   private pendingRamReads = new Map<number, { resolve: (data: ArrayBuffer) => void; reject: (err: Error) => void }>();
   private pendingRamWrites = new Map<number, { resolve: () => void; reject: (err: Error) => void }>();
+  private pendingApiExecs = new Map<number, (result: Record<string, unknown>) => void>();
 
   constructor(handlers: CoreProxyHandlers) {
     // ワーカー本体は importScripts() で emscripten の UMD 出力を読み込む必要があり
@@ -69,6 +70,13 @@ export class CoreProxy {
           } else {
             pending.resolve();
           }
+          break;
+        }
+        case 'apiExecResult': {
+          const pending = this.pendingApiExecs.get(msg.requestId);
+          if (!pending) break;
+          this.pendingApiExecs.delete(msg.requestId);
+          pending(msg.result);
           break;
         }
       }
@@ -122,6 +130,21 @@ export class CoreProxy {
     });
     const payload: MainToWorkerMessage = { type: 'ram_write', requestId, region, offset, bytes };
     this.worker.postMessage(payload, [bytes]);
+    return promise;
+  }
+
+  /**
+   * 自動操作API本体(docs/API-DESIGN.md)。実装・可否判定はWorker側
+   * (public/api-dispatch.js)に集約されており、ここは往復するだけ。
+   * 戻り値は常に {ok:true,...} か {error:'...'}(reject しない)。
+   */
+  execApi(cmd: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+    const requestId = nextRequestId++;
+    const promise = new Promise<Record<string, unknown>>((resolve) => {
+      this.pendingApiExecs.set(requestId, resolve);
+    });
+    const payload: MainToWorkerMessage = { type: 'apiExec', requestId, cmd, args };
+    this.worker.postMessage(payload);
     return promise;
   }
 

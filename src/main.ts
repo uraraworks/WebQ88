@@ -9,6 +9,7 @@ import { CoreProxy } from './core-proxy';
 import type { RomFile, RomMode } from './core-protocol';
 import { attachKeyboard } from './keyboard';
 import { convertRgb565ToImageData } from './rgb565';
+import { Bridge, resolveBridgeUrl } from './bridge';
 
 const statusEl = document.querySelector<HTMLDivElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#screen')!;
@@ -109,6 +110,23 @@ async function main(): Promise<void> {
   });
 
   canvas.addEventListener('click', () => canvas.focus());
+
+  // 自動操作API(docs/API-DESIGN.md)の入口。可否判定・コマンド実装は一切ここに
+  // 持たず、Worker側(public/api-dispatch.js)へ転送するだけにする
+  // (第5節: メインスレッド側はコマンド一覧の複製を持たない)。
+  const bridge = new Bridge({ exec: (cmd, args) => proxy.execApi(cmd, args) });
+  const bridgeUrl = resolveBridgeUrl(window.location.search);
+  if (bridgeUrl) {
+    bridge.connect(bridgeUrl);
+  }
+
+  // 開発ビルドのみ、ページ内JSから直接叩ける入口を公開する(同じ掛け金を通す。
+  // docs/API-DESIGN.md 第5節: 開発用の入口だけ制限をすり抜ける形にしない)。
+  if (import.meta.env.DEV) {
+    (window as unknown as { __webq88Debug: unknown }).__webq88Debug = {
+      exec: (cmd: string, args: Record<string, unknown> = {}) => bridge.exec(cmd, args),
+    };
+  }
 }
 
 main();
