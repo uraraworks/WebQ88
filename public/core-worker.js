@@ -15,9 +15,25 @@
 // 変更したら両方直すこと。
 //
 // メッセージ:
-//   受信: {type:'init', roms:[{name,bytes:ArrayBuffer}]} / {type:'key',code,pressed} / {type:'reset'}
+//   受信: {type:'init', bundled:[{name,bytes:ArrayBuffer}], user:[{name,bytes:ArrayBuffer}]}
+//        / {type:'key',code,pressed} / {type:'reset'}
 //        / {type:'setKeyHoldMinPolls',minPolls}(デバッグ用。詳細はkey-hold-tracker.js)
-//   送信: {type:'ready',width,height,fps} / {type:'frame',width,height,pitch,buffer} / {type:'error',message}
+//        / {type:'mode'}(デバッグ用。現在のモードを問い合わせる)
+//        / {type:'ram_read',requestId,region,offset,len} / {type:'ram_write',requestId,region,offset,bytes}
+//          (デバッグ用。制限モードでは常に拒否される。docs/API-DESIGN.md 第3-4節)
+//   送信: {type:'ready',width,height,fps,mode} / {type:'frame',width,height,pitch,buffer} / {type:'error',message}
+//        / {type:'mode',mode} / {type:'ram_read_result',requestId,data?,error?}
+//        / {type:'ram_write_result',requestId,ok,error?}
+//
+// mode = {restricted, roms:[{role,name,origin}], unresolved:[{name,origin}]}
+//
+// 出どころ制限(docs/API-DESIGN.md 第3節)の一方向掛け金は二重に持つ:
+//   - このファイルの `restricted` 変数(JS側)。true にする代入はここ1箇所のみ
+//     (handleInit内)。false に戻す経路は作らない。
+//   - コア(wasm)側の webq88_is_restricted()(core/shim/webq88_shim.c)。
+//     こちらも webq88_restrict() でしか true にならず、戻す関数は無い。
+// ROM の役割判定・出どころマージは public/rom-roles.js (Workerとスモークテスト
+// scripts/smoke-mode.cjs で共有、ロジックを二重化しない)。
 
 'use strict';
 
@@ -26,6 +42,7 @@
 //  常に正しいディレクトリを指しているので相対パスで解決できる)
 importScripts('core/q88_libretro.js');
 importScripts('key-hold-tracker.js');
+importScripts('rom-roles.js');
 
 // --- libretro 定数 ---
 var RETRO_ENVIRONMENT_SET_PIXEL_FORMAT = 10;
@@ -48,6 +65,11 @@ var fps = FALLBACK_FPS;
 var loopTimer = null;
 var lastTickMs = 0;
 var accumulatedMs = 0;
+
+// --- 出どころ制限(docs/API-DESIGN.md 第3節)の状態 ---
+// restricted: 一方向の掛け金。true にする代入は handleInit 内の1箇所のみ。
+var restricted = false;
+var romMode = { restricted: false, roms: [], unresolved: [] };
 
 function postError(message) {
   postMessage({ type: 'error', message: String(message) });
@@ -164,7 +186,85 @@ function startLoop() {
   loopTimer = setTimeout(tick, frameDurationMs);
 }
 
-function handleInit(roms) {
+/** /sys 配下から、役割の全バリアント名を消す(古いROMが紛れ込んで役割判定を狂わせないため)。 */
+function clearSysRoms(M) {
+  var known = WebQ88RomRoles.allKnownFilenames();
+  for (var i = 0; i < known.length; i++) {
+    try {
+      M.FS.unlink('/sys/' + known[i]);
+    } catch (e) {
+      // 存在しなければ無視
+    }
+  }
+}
+
+function writeSysRoms(M, placements) {
+  for (var i = 0; i < placements.length; i++) {
+    var p = placements[i];
+    M.FS.writeFile('/sys/' + p.name, new Uint8Array(p.bytes));
+  }
+}
+
+/**
+ * ROM配置後の共通処理(初回起動・再起動どちらからも呼ぶ)。
+ * isReboot=true のときは既存インスタンス上で ROM を差し替えて
+ * retro_init → retro_load_game をやり直す(同一Workerインスタンス内での
+ * 再起動。docs/API-DESIGN.md 第3節)。
+ *
+ * 実測により、reboot時に retro_deinit() を挟むと(quasi88_stop() が
+ * 内部状態を壊すらしく)再起動後 数フレームで
+ * "RuntimeError: null function or function signature mismatch" を
+ * 起こすことを確認したため、あえて呼ばない。retro_init() 自身が
+ * ROMの再読み込み・主要バッファの再確保・状態リセットを行うため、
+ * retro_deinit() を省いても機能上は再起動できる
+ * (代償として、reboot のたびに古いバッファが1組ぶん解放されずに残る
+ * = 軽いメモリリークが起きるが、ページ再読み込みで解消するため許容する)。
+ */
+function finishBoot(M, plan, isReboot) {
+  // ROMをFSに置く「前」に掛け金を掛ける(起動後では遅い)。
+  if (restricted) {
+    M._webq88_restrict();
+  }
+
+  clearSysRoms(M);
+  writeSysRoms(M, plan.placements);
+
+  M._retro_init();
+  var loaded = M._retro_load_game(0);
+  if (!loaded) {
+    postError('retro_load_game に失敗しました');
+    return;
+  }
+
+  var avInfo = readAvInfo(M);
+  fps = avInfo.fps;
+  postMessage({ type: 'ready', width: avInfo.width, height: avInfo.height, fps: fps, mode: romMode });
+
+  if (!isReboot) {
+    startLoop();
+  }
+}
+
+function handleInit(bundled, user) {
+  var plan = WebQ88RomRoles.planRomPlacement(bundled || [], user || []);
+  // 一方向の掛け金: true にする代入はここだけ。false に戻す経路は作らない。
+  if (plan.restricted) {
+    restricted = true;
+  }
+  romMode = {
+    restricted: restricted,
+    roms: plan.placements.map(function (p) {
+      return { role: p.role, name: p.name, origin: p.origin };
+    }),
+    unresolved: plan.unresolved,
+  };
+
+  if (moduleInstance) {
+    // 同一Workerインスタンス内での再起動(ページ再読み込み・Worker作り直しではない)。
+    finishBoot(moduleInstance, plan, true);
+    return;
+  }
+
   // emscripten の locateFile は ENVIRONMENT_IS_WORKER のとき
   // self.location.href (= このワーカー自身のURL = core-worker.js の場所) を基準にするため、
   // そのままだと wasm を core-worker.js と同じ階層に探しに行ってしまう。
@@ -180,25 +280,86 @@ function handleInit(roms) {
     } catch (e) {
       // 既に存在する場合は無視
     }
-    for (var i = 0; i < roms.length; i++) {
-      M.FS.writeFile('/sys/' + roms[i].name, new Uint8Array(roms[i].bytes));
-    }
-
     setupCallbacks(M);
-    M._retro_init();
-    var loaded = M._retro_load_game(0);
-    if (!loaded) {
-      postError('retro_load_game に失敗しました');
-      return;
-    }
-
-    var avInfo = readAvInfo(M);
-    fps = avInfo.fps;
-    postMessage({ type: 'ready', width: avInfo.width, height: avInfo.height, fps: fps });
-    startLoop();
+    finishBoot(M, plan, false);
   }).catch(function (err) {
     postError('コア初期化中の例外: ' + (err && err.message ? err.message : String(err)));
   });
+}
+
+function handleMode() {
+  postMessage({ type: 'mode', mode: romMode });
+}
+
+function handleRamRead(msg) {
+  var requestId = msg.requestId;
+  if (!moduleInstance) {
+    postMessage({ type: 'ram_read_result', requestId: requestId, error: 'not booted' });
+    return;
+  }
+  if (restricted) {
+    postMessage({
+      type: 'ram_read_result',
+      requestId: requestId,
+      error: 'restricted: official ROM loaded in this session',
+    });
+    return;
+  }
+  var M = moduleInstance;
+  var len = msg.len >>> 0;
+  var dstPtr = M._malloc(len || 1);
+  try {
+    var rc = M._webq88_ram_read(msg.region | 0, msg.offset >>> 0, len, dstPtr);
+    if (rc !== 0) {
+      postMessage({
+        type: 'ram_read_result',
+        requestId: requestId,
+        error: 'ram_read failed (invalid region/offset/len, or restricted)',
+      });
+      return;
+    }
+    var bytes = M.HEAPU8.slice(dstPtr, dstPtr + len);
+    postMessage({ type: 'ram_read_result', requestId: requestId, data: bytes.buffer }, [bytes.buffer]);
+  } finally {
+    M._free(dstPtr);
+  }
+}
+
+function handleRamWrite(msg) {
+  var requestId = msg.requestId;
+  if (!moduleInstance) {
+    postMessage({ type: 'ram_write_result', requestId: requestId, ok: false, error: 'not booted' });
+    return;
+  }
+  if (restricted) {
+    postMessage({
+      type: 'ram_write_result',
+      requestId: requestId,
+      ok: false,
+      error: 'restricted: official ROM loaded in this session',
+    });
+    return;
+  }
+  var M = moduleInstance;
+  var srcBytes = new Uint8Array(msg.bytes);
+  var len = srcBytes.length;
+  var srcPtr = M._malloc(len || 1);
+  try {
+    M.HEAPU8.set(srcBytes, srcPtr);
+    var rc = M._webq88_ram_write(msg.region | 0, msg.offset >>> 0, len, srcPtr);
+    if (rc !== 0) {
+      postMessage({
+        type: 'ram_write_result',
+        requestId: requestId,
+        ok: false,
+        error: 'ram_write failed (invalid region/offset/len, or restricted)',
+      });
+      return;
+    }
+    postMessage({ type: 'ram_write_result', requestId: requestId, ok: true });
+  } finally {
+    M._free(srcPtr);
+  }
 }
 
 self.onmessage = function (ev) {
@@ -206,7 +367,7 @@ self.onmessage = function (ev) {
   if (!msg || typeof msg.type !== 'string') return;
   switch (msg.type) {
     case 'init':
-      handleInit(msg.roms);
+      handleInit(msg.bundled, msg.user);
       break;
     case 'key':
       if (msg.pressed) {
@@ -223,6 +384,15 @@ self.onmessage = function (ev) {
     case 'setKeyHoldMinPolls':
       // デバッグ/検証用: 0を渡すと保留を無効化する(陰性対照)。
       keyHoldTracker = new KeyHoldTracker(msg.minPolls);
+      break;
+    case 'mode':
+      handleMode();
+      break;
+    case 'ram_read':
+      handleRamRead(msg);
+      break;
+    case 'ram_write':
+      handleRamWrite(msg);
       break;
     default:
       break;

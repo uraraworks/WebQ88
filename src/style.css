@@ -39,3 +39,30 @@ canvas#screen {
   background: #000;
   border: 1px solid #333;
 }
+
+#rom-loader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  max-width: 960px;
+}
+
+#mode-info {
+  font-size: 0.8rem;
+  color: #ccc;
+  white-space: pre-wrap;
+  max-width: 960px;
+  width: 100%;
+}
+
+#mode-info .restricted {
+  color: #f88;
+  font-weight: bold;
+}
+
+#mode-info .compat {
+  color: #8f8;
+  font-weight: bold;
+}

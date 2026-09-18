@@ -4,18 +4,24 @@
 // Worker 生成・メッセージの送受信だけを担当し、描画（rgb565.ts）や
 // キー入力の変換（keyboard.ts）はここに持ち込まない。
 
-import type { MainToWorkerMessage, WorkerToMainMessage } from './core-protocol';
+import type { MainToWorkerMessage, RomFile, RomMode, WorkerToMainMessage } from './core-protocol';
 import { WORKER_SCRIPT_PATH } from './core-protocol';
 import type { VerifiedRom } from './compat-rom';
 
 export interface CoreProxyHandlers {
-  onReady?: (info: { width: number; height: number; fps: number }) => void;
+  onReady?: (info: { width: number; height: number; fps: number; mode: RomMode }) => void;
   onFrame?: (frame: { width: number; height: number; pitch: number; buffer: ArrayBuffer }) => void;
   onError?: (message: string) => void;
+  /** {type:'mode'} への応答(デバッグ用)。 */
+  onMode?: (mode: RomMode) => void;
 }
+
+let nextRequestId = 1;
 
 export class CoreProxy {
   private worker: Worker;
+  private pendingRamReads = new Map<number, { resolve: (data: ArrayBuffer) => void; reject: (err: Error) => void }>();
+  private pendingRamWrites = new Map<number, { resolve: () => void; reject: (err: Error) => void }>();
 
   constructor(handlers: CoreProxyHandlers) {
     // ワーカー本体は importScripts() で emscripten の UMD 出力を読み込む必要があり
@@ -27,7 +33,7 @@ export class CoreProxy {
       const msg = ev.data;
       switch (msg.type) {
         case 'ready':
-          handlers.onReady?.({ width: msg.width, height: msg.height, fps: msg.fps });
+          handlers.onReady?.({ width: msg.width, height: msg.height, fps: msg.fps, mode: msg.mode });
           break;
         case 'frame':
           handlers.onFrame?.({
@@ -40,6 +46,31 @@ export class CoreProxy {
         case 'error':
           handlers.onError?.(msg.message);
           break;
+        case 'mode':
+          handlers.onMode?.(msg.mode);
+          break;
+        case 'ram_read_result': {
+          const pending = this.pendingRamReads.get(msg.requestId);
+          if (!pending) break;
+          this.pendingRamReads.delete(msg.requestId);
+          if (msg.error || !msg.data) {
+            pending.reject(new Error(msg.error ?? 'ram_read: 不明なエラー'));
+          } else {
+            pending.resolve(msg.data);
+          }
+          break;
+        }
+        case 'ram_write_result': {
+          const pending = this.pendingRamWrites.get(msg.requestId);
+          if (!pending) break;
+          this.pendingRamWrites.delete(msg.requestId);
+          if (!msg.ok) {
+            pending.reject(new Error(msg.error ?? 'ram_write: 不明なエラー'));
+          } else {
+            pending.resolve();
+          }
+          break;
+        }
       }
     };
     this.worker.onerror = (ev) => {
@@ -47,13 +78,51 @@ export class CoreProxy {
     };
   }
 
-  init(roms: VerifiedRom[]): void {
+  /**
+   * 起動 / 再起動する。bundled は同梱互換ROM(検証済み)、user は利用者が
+   * 選んだファイル。初回はコアを新規起動し、既に起動済みなら同一Worker
+   * インスタンス内で ROM を差し替えて再起動する(docs/API-DESIGN.md 第3節)。
+   */
+  init(bundled: VerifiedRom[], user: RomFile[] = []): void {
     const payload: MainToWorkerMessage = {
       type: 'init',
-      roms: roms.map((r) => ({ name: r.name, bytes: r.bytes })),
+      bundled: bundled.map((r) => ({ name: r.name, bytes: r.bytes })),
+      user: user.map((r) => ({ name: r.name, bytes: r.bytes })),
     };
-    // ROMバイト列は転送（transfer）してコピーを避ける。
-    this.worker.postMessage(payload, roms.map((r) => r.bytes));
+    // bundled(同梱ROM)は再起動のたびに同じ ArrayBuffer を使い回す可能性があるため
+    // 転送(transfer)せずコピーする(転送すると呼び出し元の ArrayBuffer が detached になり、
+    // 2回目の init() で DataCloneError になる)。user 側は毎回ファイルから新しく
+    // 読み込んだバイト列なので転送してコピーを避ける。
+    const transfer = user.map((r) => r.bytes);
+    this.worker.postMessage(payload, transfer);
+  }
+
+  /** デバッグ用(次ステップの自動操作APIの土台)。現在のモードを問い合わせる。 */
+  requestMode(): void {
+    const payload: MainToWorkerMessage = { type: 'mode' };
+    this.worker.postMessage(payload);
+  }
+
+  /** デバッグ用。制限モードでは reject される(docs/API-DESIGN.md 第4節)。 */
+  readRam(region: number, offset: number, len: number): Promise<ArrayBuffer> {
+    const requestId = nextRequestId++;
+    const promise = new Promise<ArrayBuffer>((resolve, reject) => {
+      this.pendingRamReads.set(requestId, { resolve, reject });
+    });
+    const payload: MainToWorkerMessage = { type: 'ram_read', requestId, region, offset, len };
+    this.worker.postMessage(payload);
+    return promise;
+  }
+
+  /** デバッグ用。制限モードでは reject される(docs/API-DESIGN.md 第4節)。 */
+  writeRam(region: number, offset: number, bytes: ArrayBuffer): Promise<void> {
+    const requestId = nextRequestId++;
+    const promise = new Promise<void>((resolve, reject) => {
+      this.pendingRamWrites.set(requestId, { resolve, reject });
+    });
+    const payload: MainToWorkerMessage = { type: 'ram_write', requestId, region, offset, bytes };
+    this.worker.postMessage(payload, [bytes]);
+    return promise;
   }
 
   sendKey(code: number, pressed: boolean): void {

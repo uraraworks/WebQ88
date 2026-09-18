@@ -65,6 +65,13 @@ PC88Behavior のクリーンルーム規律（PC88Behavior リポジトリの `C
   空文字列や 0 を返して「成功したように見せる」ことはしない（空の成功は沈黙に化ける）
 - 画面の署名は PC88Behavior の `tools/check_l3_screen_output.py` と同じ考え方にする。
   本文は1文字も返さない
+- `save_state`/`load_state` の実体は libretro の `retro_serialize`/`retro_unserialize` で、
+  コア側(webq88_shim.c)では中身を検査して拒否することができない（利用者の手元保存に
+  必要な機能そのものであり、シリアライズ結果の意味をシムが解釈できないため）。
+  したがって「制限モードでは中身を API で返さない／中身を渡す `get_state_blob` は拒否する」
+  という区別は **JS層のみ**で行う(第3節の「二重に止める」はコア側に読み出し口を作らない
+  `read_memory`/`get_state_blob` に限られ、`save_state`/`load_state` 自体はコア側では
+  区別しない)。実装時に判明した制約であり、方針の変更ではない。
 
 ## 5. 有効化の方法
 

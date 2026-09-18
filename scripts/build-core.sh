@@ -105,12 +105,23 @@ if [ -z "$OBJS" ]; then
   exit 1
 fi
 
+echo "== WebQ88 シム(core/shim/webq88_shim.c)をコンパイル =="
+# 上流ソースへのパッチではなく、WebQ88 側の追加ファイルとしてリンクに加える。
+# 出どころ制限(docs/API-DESIGN.md 第3節)の掛け金と、RAMだけを読み書きする口を提供する。
+SHIM_SRC="$PROJECT_DIR/core/shim/webq88_shim.c"
+SHIM_OBJ="$SRC_DIR/webq88_shim.o"
+if [ ! -f "$SHIM_SRC" ]; then
+  echo "エラー: $SHIM_SRC が見つかりません。" >&2
+  exit 1
+fi
+emcc -c "$SHIM_SRC" -O2 -o "$SHIM_OBJ"
+
 echo "== emcc でリンクし wasm/js を生成 =="
 mkdir -p "$OUT_DIR"
-EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free"
+EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free,_webq88_restrict,_webq88_is_restricted,_webq88_ram_read,_webq88_ram_write"
 
 # shellcheck disable=SC2086
-emcc $OBJS -O2 -o "$OUT_DIR/q88_libretro.js" \
+emcc $OBJS "$SHIM_OBJ" -O2 -o "$OUT_DIR/q88_libretro.js" \
   -sMODULARIZE=1 \
   -sEXPORT_NAME=Q88 \
   -sALLOW_MEMORY_GROWTH=1 \
@@ -132,13 +143,16 @@ if [ "${#APPLIED_PATCHES[@]}" -gt 0 ]; then
   PATCH_JSON+="]"
 fi
 
+SHIM_SHA="$(shasum -a 256 "$SHIM_SRC" | awk '{print $1}')"
+
 cat > "$OUT_DIR/q88_libretro.build.json" <<EOF
 {
   "upstreamUrl": "$UPSTREAM_URL",
   "upstreamCommit": "$UPSTREAM_COMMIT",
   "noPatch": $( [ "$NO_PATCH" = "1" ] && echo true || echo false ),
   "appliedPatches": $PATCH_JSON,
-  "emscriptenVersion": "$EMCC_VERSION"
+  "emscriptenVersion": "$EMCC_VERSION",
+  "webq88Shim": {"file": "core/shim/webq88_shim.c", "sha256": "$SHIM_SHA"}
 }
 EOF
 

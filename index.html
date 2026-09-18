@@ -10,6 +10,12 @@
       <h1>WebQ88</h1>
       <div id="status">起動準備中…</div>
       <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
+      <div id="rom-loader">
+        <label for="rom-files">利用者ROMを読み込む(複数選択可・任意。渡すと制限モードになります):</label>
+        <input type="file" id="rom-files" multiple />
+        <button id="rom-boot" type="button">起動 / 再起動</button>
+      </div>
+      <div id="mode-info"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
