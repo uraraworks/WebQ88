@@ -1,0 +1,342 @@
+#!/usr/bin/env node
+// WebQ88 MCP server: ブラウザで動く WebQ88(PC-8801 エミュレータ)を WebSocket 越しに操作し、
+// MCP クライアント(Claude Code 等)から画面の取得・キー入力・メモリアクセス等を行えるようにする。
+// 移植元は姉妹アプリ WebX68k の mcp/server.mjs。
+//
+// 重要: stdout は MCP の stdio transport 専用。診断出力は必ず console.error() を使うこと。
+//
+// このサーバーは docs/API-DESIGN.md の指示どおり「可否の判断を一切持たない」。
+// public/api-dispatch.js の exec() が返す {ok:true,...} をそのまま結果として返し、
+// {error:'...'} をそのまま isError なツールエラー(本文に理由文字列そのまま)として返す。
+// 制限モードの判定・コマンドごとの許可表はここには書かない(二箇所に書くと食い違う)。
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { WebSocketServer } from 'ws';
+import { z } from 'zod';
+
+const BRIDGE_PORT = Number(process.env.WEBQ88_BRIDGE_PORT) || 3188;
+const REQUEST_TIMEOUT_MS = 20000;
+// ページ側の再接続間隔(3秒)より長く待つ
+const CLIENT_WAIT_MS = 8000;
+
+// --- WebSocket ブリッジ ----------------------------------------------------
+//
+// 複数ページが同時に ?bridge=1 で接続してきた場合は、WebX68k に倣い
+// 「最後に hello してきたタブ」だけをアクティブにする(古い接続は close する)。
+// 複数タブを同時操作する用途は想定していない(1操作対象=1タブの前提)。
+
+let activeClient = null;
+let nextRequestId = 1;
+const pending = new Map();
+
+const wss = new WebSocketServer({ port: BRIDGE_PORT });
+
+wss.on('listening', () => {
+  console.error(`WebSocket bridge listening on port ${BRIDGE_PORT}`);
+});
+
+wss.on('error', (err) => {
+  console.error('WebSocket server error:', err && err.stack ? err.stack : err);
+});
+
+wss.on('connection', (ws) => {
+  console.error('Browser client connected');
+
+  ws.on('message', (data) => {
+    let msg;
+    try {
+      msg = JSON.parse(data.toString());
+    } catch (err) {
+      console.error('Received non-JSON message from browser:', err.message);
+      return;
+    }
+
+    // 新しいタブが名乗ってきたら、それを唯一の接続先として扱う。
+    if (msg && msg.type === 'hello' && msg.role === 'webq88') {
+      if (activeClient && activeClient !== ws && activeClient.readyState === activeClient.OPEN) {
+        console.error('Replacing previous active client');
+        try {
+          activeClient.close();
+        } catch {
+          // ignore
+        }
+      }
+      activeClient = ws;
+      console.error('Active WebQ88 client registered');
+      return;
+    }
+
+    if (msg && msg.id !== undefined && pending.has(msg.id)) {
+      const entry = pending.get(msg.id);
+      pending.delete(msg.id);
+      clearTimeout(entry.timer);
+      // src/bridge.ts は {id, result} を返す(結果自体が {ok:true,...} か {error:'...'})。
+      entry.resolve(msg.result);
+    }
+  });
+
+  ws.on('close', () => {
+    if (activeClient === ws) activeClient = null;
+    console.error('Browser client disconnected');
+  });
+
+  ws.on('error', (err) => {
+    console.error('Browser client error:', err && err.message ? err.message : err);
+  });
+});
+
+/**
+ * ブラウザタブの接続を待つ。ページ側は切断されると3秒間隔で繋ぎ直しに来るので、
+ * MCP サーバーを起動した直後や再起動した直後は「まだ繋がっていない」状態が数秒続く。
+ * ここで待たないと最初の1回が必ず失敗して使いづらい。
+ */
+async function waitForClient(timeoutMs = CLIENT_WAIT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (activeClient && activeClient.readyState === activeClient.OPEN) return true;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return activeClient !== null && activeClient.readyState === activeClient.OPEN;
+}
+
+async function sendCommand(cmd, args = {}) {
+  if (!(await waitForClient())) {
+    throw new Error('WebQ88 のブラウザタブが接続されていません');
+  }
+  return new Promise((resolve, reject) => {
+    if (!activeClient || activeClient.readyState !== activeClient.OPEN) {
+      reject(new Error('WebQ88 のブラウザタブが接続されていません'));
+      return;
+    }
+    const id = nextRequestId++;
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`コマンド ${cmd} がタイムアウトしました (${REQUEST_TIMEOUT_MS}ms)`));
+    }, REQUEST_TIMEOUT_MS);
+    pending.set(id, { resolve, reject, timer });
+    activeClient.send(JSON.stringify({ id, cmd, args }));
+  });
+}
+
+/**
+ * ブラウザ未接続・タイムアウト時に、手順を添えたエラーを返す。
+ * dispatch(public/api-dispatch.js)が返した {error:...} はここでは判定せず、
+ * callDispatch() 側でそのまま isError として素通しする(可否判断を持たない)。
+ */
+async function withBridge(fn) {
+  try {
+    return await fn();
+  } catch (err) {
+    const message = err && err.message ? err.message : String(err);
+    return {
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text:
+            `${message}\n\n` +
+            `WebQ88 のタブが ?bridge=1 付きで開かれているか確認してください。\n` +
+            `例: http://localhost:5188/?bridge=1 (ポートを変える場合は ?bridge=<port>)`,
+        },
+      ],
+    };
+  }
+}
+
+const textResult = (text) => ({ content: [{ type: 'text', text }] });
+const jsonResult = (value) => textResult(JSON.stringify(value, null, 2));
+
+/**
+ * public/api-dispatch.js の exec() 呼び出し。戻り値は必ず {ok:true,...} か
+ * {error:'...'} のどちらか(dispatch側が例外を投げない設計のため)。
+ * ここでは中身を判定せず、error があればそのまま MCP のツールエラーにする
+ * (制限モードかどうか・どのコマンドが×かの判断はしない)。
+ */
+async function callDispatch(cmd, args = {}) {
+  return withBridge(async () => {
+    const result = await sendCommand(cmd, args);
+    if (result && typeof result === 'object' && 'error' in result) {
+      return { isError: true, content: [{ type: 'text', text: String(result.error) }] };
+    }
+    return jsonResult(result);
+  });
+}
+
+// --- MCP サーバー ----------------------------------------------------------
+
+const server = new McpServer({
+  name: 'webq88-mcp',
+  version: '0.1.0',
+});
+
+server.tool(
+  'status',
+  'WebQ88 の現在の状態(起動しているか、互換/制限モード、読み込んだROMの役割・出どころ)を取得する。まず最初にこれを呼ぶと状況が分かる。',
+  {},
+  async () => callDispatch('status')
+);
+
+server.tool(
+  'reset',
+  '同一Workerでコアを再起動する(制限モードの掛け金は保持されたまま)。',
+  {},
+  async () => callDispatch('reset')
+);
+
+server.tool(
+  'key',
+  'キーを1つ、押す/離す/タップのいずれかで操作する。',
+  {
+    code: z.number().describe('RETROK のキーコード'),
+    action: z.enum(['down', 'up', 'tap']).describe('down=押す, up=離す, tap=押して離す'),
+  },
+  async ({ code, action }) => callDispatch('key', { code, action })
+);
+
+server.tool(
+  'key_sequence',
+  '複数のキー操作を順番に実行する。各ステップ後に waitFrames(既定4)分だけエミュレーションを進める。',
+  {
+    steps: z
+      .array(
+        z.object({
+          code: z.number().describe('RETROK のキーコード'),
+          action: z.enum(['down', 'up', 'tap']),
+          waitFrames: z.number().optional().describe('このステップの後に進めるフレーム数(既定4)'),
+        })
+      )
+      .describe('実行するキー操作の並び'),
+  },
+  async ({ steps }) => callDispatch('key_sequence', { steps })
+);
+
+server.tool(
+  'type_text',
+  'ASCII英数字・記号・空白・改行(\\n)のみの文字列をキーボード入力として送る。対応外の文字が含まれる場合はどの位置かを示すエラーになる。',
+  {
+    text: z.string().describe('入力する文字列(ASCII範囲のみ)'),
+  },
+  async ({ text }) => callDispatch('type_text', { text })
+);
+
+server.tool(
+  'screen_signature',
+  '画面の署名({rows, nonBlankChars, sha256})を取得する。本文は返さないため制限モードでも常に使える。',
+  {},
+  async () => callDispatch('screen_signature')
+);
+
+server.tool(
+  'screen_text',
+  'テキスト画面の内容を行ごとの文字列として取得する。制限モード(利用者ROM使用時)では拒否される。',
+  {},
+  async () => callDispatch('screen_text')
+);
+
+server.tool(
+  'screenshot',
+  '画面をPNG画像として取得する。制限モード(利用者ROM使用時)では拒否される。',
+  {},
+  async () =>
+    withBridge(async () => {
+      const result = await sendCommand('screenshot');
+      if (result && typeof result === 'object' && 'error' in result) {
+        return { isError: true, content: [{ type: 'text', text: String(result.error) }] };
+      }
+      return { content: [{ type: 'image', data: String(result.base64), mimeType: 'image/png' }] };
+    })
+);
+
+server.tool(
+  'wait_screen_change',
+  '画面の署名が変化するまで、最大 timeoutFrames フレーム待つ。',
+  {
+    timeoutFrames: z.number().describe('最大待機フレーム数'),
+  },
+  async ({ timeoutFrames }) => callDispatch('wait_screen_change', { timeoutFrames })
+);
+
+server.tool(
+  'wait_screen_signature',
+  '画面の署名(sha256)が指定値に一致するまで、最大 timeoutFrames フレーム待つ。',
+  {
+    sha256: z.string().describe('待つ対象のsha256署名'),
+    timeoutFrames: z.number().describe('最大待機フレーム数'),
+  },
+  async ({ sha256, timeoutFrames }) => callDispatch('wait_screen_signature', { sha256, timeoutFrames })
+);
+
+server.tool(
+  'read_memory',
+  'ゲストのメモリ領域を読む。region: 0=main_ram, 1=main_high_ram, 2=サブ側RAM。制限モードでは拒否される。',
+  {
+    region: z.number().describe('0=main_ram, 1=main_high_ram, 2=サブ側RAM'),
+    offset: z.number().describe('読み出し開始オフセット'),
+    length: z.number().describe('読み出しバイト数'),
+  },
+  async ({ region, offset, length }) => callDispatch('read_memory', { region, offset, length })
+);
+
+server.tool(
+  'write_memory',
+  'ゲストのメモリ領域へ書き込む(bytesはbase64)。制限モードでは拒否される。',
+  {
+    region: z.number().describe('0=main_ram, 1=main_high_ram, 2=サブ側RAM'),
+    offset: z.number().describe('書き込み開始オフセット'),
+    bytes: z.string().describe('書き込む内容(base64)'),
+  },
+  async ({ region, offset, bytes }) => callDispatch('write_memory', { region, offset, bytes })
+);
+
+server.tool(
+  'save_state',
+  '現在の実行状態をWorker内メモリに保存する(永続化はしない)。中身は返さずサイズのみ。',
+  {
+    slot: z.string().optional().describe('保存枠の名前(既定 "default")'),
+  },
+  async ({ slot }) => callDispatch('save_state', { slot })
+);
+
+server.tool(
+  'load_state',
+  '保存済みのステートを復元する。保存済みでなければエラーになる。',
+  {
+    slot: z.string().optional().describe('復元する保存枠の名前(既定 "default")'),
+  },
+  async ({ slot }) => callDispatch('load_state', { slot })
+);
+
+server.tool(
+  'get_state_blob',
+  '保存済みステートの中身をbase64で取得する。制限モードでは拒否される。',
+  {
+    slot: z.string().optional().describe('取得する保存枠の名前(既定 "default")'),
+  },
+  async ({ slot }) => callDispatch('get_state_blob', { slot })
+);
+
+server.tool(
+  'insert_disk',
+  'ディスクをドライブへ挿入する(ディスク機能は現状未実装のため常にエラーを返す)。',
+  {},
+  async () => callDispatch('insert_disk')
+);
+
+server.tool(
+  'eject_disk',
+  'ドライブからディスクを取り出す(ディスク機能は現状未実装のため常にエラーを返す)。',
+  {},
+  async () => callDispatch('eject_disk')
+);
+
+server.tool(
+  'list_disks',
+  'ドライブの状態を一覧する(ディスク機能は現状未実装のため常にエラーを返す)。',
+  {},
+  async () => callDispatch('list_disks')
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+console.error('WebQ88 MCP server ready (stdio)');

@@ -1,0 +1,22 @@
+{
+  "name": "webq88-mcp",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "MCP server that operates the WebQ88 (PC-8801 emulator) running in a browser via a WebSocket bridge",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "bundle": "esbuild server.mjs --bundle --platform=node --format=esm --target=node18 --external:bufferutil --external:utf-8-validate --banner:js=\"import{createRequire as __webq88CreateRequire}from'node:module';const require=__webq88CreateRequire(import.meta.url);\" --outfile=dist/webq88-mcp.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "ws": "latest",
+    "zod": "^3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
