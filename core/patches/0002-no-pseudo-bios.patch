@@ -1,0 +1,52 @@
+From 853d9330551f6171329b515267fc4237d3a49c78 Mon Sep 17 00:00:00 2001
+From: Masakazu Yonehara <rxp10430@gmail.com>
+Date: Fri, 18 Sep 2026 21:18:18 +0900
+Subject: [PATCH 2/3] =?UTF-8?q?libretro:=20pseudo=5Fbios.h=20=E3=82=92?=
+ =?UTF-8?q?=E5=8F=82=E7=85=A7=E3=81=9B=E3=81=9A=E3=80=81ROM=E6=9C=AA?=
+ =?UTF-8?q?=E6=A4=9C=E5=87=BA=E6=99=82=E3=81=AF0=E5=9F=8B=E3=82=81+?=
+ =?UTF-8?q?=E3=83=AD=E3=82=B0=E5=87=BA=E5=8A=9B=E3=81=AB=E3=81=99=E3=82=8B?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/LIBRETRO/libretro.c | 17 +++++++++++++----
+ 1 file changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/src/LIBRETRO/libretro.c b/src/LIBRETRO/libretro.c
+index 7b76cbe..482eb67 100644
+--- a/src/LIBRETRO/libretro.c
++++ b/src/LIBRETRO/libretro.c
+@@ -26,7 +26,6 @@
+ #include "fdc.h"
+ #include "soundbd.h"
+ #include "pc88cpu.h"
+-#include "pseudo_bios.h"
+ #include "disks.h"
+ #include "libretro_core_options.h"
+ static bool libretro_supports_option_categories = false;
+@@ -546,11 +545,21 @@ void retro_init(void)
+ 
+    memory_allocate();
+ 
+-   /* Fallback on pseudo BIOS if needed */
++   /* pseudo_bios.h（出所不明の疑似BIOS）は参照しない。
++    * N88.ROM / DISK.ROM が無ければ 0 埋めにし、利用側が
++    * 互換ROMか公式ROMを system directory に置く前提とする。 */
+    if (!load_system_file(N88_ROM, main_rom,   0x08000))
+-      memcpy(main_rom, &pbios_n88, 0x08000);
++   {
++      memset(main_rom, 0, 0x08000);
++      if (log_cb)
++         log_cb(RETRO_LOG_ERROR, "[QUASI88]: N88.ROM が見つかりません\n");
++   }
+    if (!load_system_file(SUB_ROM, sub_romram, 0x00800))
+-      memcpy(sub_romram, &pbios_disk, 0x00800);
++   {
++      memset(sub_romram, 0, 0x00800);
++      if (log_cb)
++         log_cb(RETRO_LOG_ERROR, "[QUASI88]: DISK.ROM が見つかりません\n");
++   }
+    rom_version = ROM_VERSION;
+    load_system_file(EXT0_ROM,  main_rom_ext[0], 0x02000);
+    load_system_file(EXT1_ROM,  main_rom_ext[1], 0x02000);

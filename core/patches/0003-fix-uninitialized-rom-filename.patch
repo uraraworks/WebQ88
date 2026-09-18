@@ -1,0 +1,30 @@
+From e663a27634951dd98c9f19ba83ff3803354abce4 Mon Sep 17 00:00:00 2001
+From: Masakazu Yonehara <rxp10430@gmail.com>
+Date: Fri, 18 Sep 2026 21:18:34 +0900
+Subject: [PATCH 3/3] =?UTF-8?q?libretro:=20load=5Fsystem=5Ffile=20?=
+ =?UTF-8?q?=E3=81=AE=20rom=5Ffilename=20=E6=9C=AA=E5=88=9D=E6=9C=9F?=
+ =?UTF-8?q?=E5=8C=96=E8=AA=AD=E3=81=BF=E3=82=92=E4=BF=AE=E6=AD=A3?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/LIBRETRO/libretro.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/LIBRETRO/libretro.c b/src/LIBRETRO/libretro.c
+index 482eb67..d8195a1 100644
+--- a/src/LIBRETRO/libretro.c
++++ b/src/LIBRETRO/libretro.c
+@@ -452,6 +452,11 @@ static bool load_system_file(uint8_t bios_index, byte *rom_data, uint32_t rom_si
+ 
+       strncpy(filename, bios_filenames[bios_index][i], sizeof(filename) - 1);
+ 
++      /* rom_filename はループの外で一度も書かれない場合があるため、
++       * 未初期化のまま filestream_exists() に渡ってしまう不具合を修正する。
++       * 毎回のイテレーション先頭で空文字に初期化する。 */
++      rom_filename[0] = '\0';
++
+       /* Look in the download directory first... */
+       if (!filestream_exists(rom_filename) && !string_is_empty(download_dir))
+          snprintf(rom_filename, sizeof(rom_filename), "%s%c%s", download_dir, SLASH, filename);

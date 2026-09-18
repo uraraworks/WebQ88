@@ -13,6 +13,36 @@ pre-commit フックで行っています。clone 後、以下を実行してく
 git config core.hooksPath tools/hooks
 ```
 
+## コアのビルド
+
+上流ソース（quasi88-libretro）はこのリポジトリに含めません。
+`scripts/build-core.sh` が `core/UPSTREAM` の固定コミットを取得し、
+`core/patches/` の配布用パッチを当ててから emscripten でビルドします。
+
+前提:
+- `~/emsdk` に emsdk 導入済み、`emcc` は 6.0.7
+- コンパット ROM 生成用に [PC88Behavior](../PC88Behavior) が隣にあること
+
+```sh
+./scripts/build-core.sh
+# public/core/q88_libretro.{js,wasm} と q88_libretro.build.json が生成される
+# （いずれも .gitignore 済みでコミットしない）
+
+# 動作確認（互換ROMを自動生成してスモークテスト）
+./scripts/smoke-core.sh
+
+# 陰性対照（パッチなしの素の上流をビルドして、フォントが壊れることを確認）
+NO_PATCH=1 OUT_DIR=/tmp/q88-no-patch ./scripts/build-core.sh
+./scripts/smoke-core.sh /tmp/q88-no-patch
+```
+
+`core/patches/` の3本のパッチは、上流 libretro.c / memory.c にある
+「フォントROM読み込み成功時にも内蔵フォント・漢字ROMで上書きしてしまう」
+「N88.ROM/DISK.ROM が無いと出所不明の疑似BIOSにフォールバックする」
+「load_system_file の rom_filename が初期化されないまま参照される」
+という3つの不具合を修正します。font.h・pseudo_bios.h の削除は
+（中身が長大なバイト列のため）パッチではなくビルドスクリプトの `rm` で行います。
+
 ## ライセンス
 
 未定。コア（QUASI88-libretro）は BSD 3-Clause です。

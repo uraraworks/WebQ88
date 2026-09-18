@@ -1,0 +1,5 @@
+上流: https://github.com/libretro/quasi88-libretro.git
+固定コミット: b5a0e044a914c9a6b8d7b2dd2ddd152f93d35687
+
+scripts/build-core.sh はこのファイルの URL とコミットを読んで
+_local/quasi88-libretro-src に作業用クローンを用意する。

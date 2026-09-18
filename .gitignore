@@ -12,6 +12,9 @@ tmp/
 *.dylib
 *.wasm
 
+# コアのビルド成果物（js/build.jsonもコミットしない方針。scripts/build-core.shで生成）
+public/core/
+
 # OS
 .DS_Store
 
