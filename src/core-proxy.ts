@@ -66,6 +66,12 @@ export class CoreProxy {
     this.worker.postMessage(payload);
   }
 
+  /** デバッグ/検証用。通常のUIからは呼ばない(core-protocol.tsの型定義コメント参照)。 */
+  setKeyHoldMinPolls(minPolls: number): void {
+    const payload: MainToWorkerMessage = { type: 'setKeyHoldMinPolls', minPolls };
+    this.worker.postMessage(payload);
+  }
+
   terminate(): void {
     this.worker.terminate();
   }

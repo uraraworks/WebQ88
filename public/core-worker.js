@@ -16,14 +16,16 @@
 //
 // メッセージ:
 //   受信: {type:'init', roms:[{name,bytes:ArrayBuffer}]} / {type:'key',code,pressed} / {type:'reset'}
+//        / {type:'setKeyHoldMinPolls',minPolls}(デバッグ用。詳細はkey-hold-tracker.js)
 //   送信: {type:'ready',width,height,fps} / {type:'frame',width,height,pitch,buffer} / {type:'error',message}
 
 'use strict';
 
-// core-worker.js 自身のURLを基準に q88_libretro.js を読み込む。
+// core-worker.js 自身のURLを基準に読み込む。
 // (Viteの base:'./' でサブパス配信されても、worker script自身のURLは
 //  常に正しいディレクトリを指しているので相対パスで解決できる)
 importScripts('core/q88_libretro.js');
+importScripts('key-hold-tracker.js');
 
 // --- libretro 定数 ---
 var RETRO_ENVIRONMENT_SET_PIXEL_FORMAT = 10;
@@ -35,7 +37,12 @@ var MAX_CATCHUP_FRAMES = 4; // タブ非表示から復帰した際に一気に�
 var FALLBACK_FPS = 60;
 
 var moduleInstance = null;
-var pressedKeys = new Set();
+// 既定2ポーリング: ../PC88Behavior 系メモ「最低2ポーリングは押下を保つ」を踏まえた値。
+// scripts/smoke-app.cjs の1フレーム内打鍵テストで N=1 では取りこぼす条件を作れず
+// (1回でも観測できれば十分なケースがある一方、N=2以上でないと陰性対照との差が
+// 安定して出ない構成があったため)、実測で効くと確認済みの2を採用する。
+// 0 を渡すと保留を無効化し、対策前の即時反映(Setと同じ)に戻る(陰性対照用)。
+var keyHoldTracker = new KeyHoldTracker(2);
 var lastVideoFrame = null; // {width,height,pitch,buffer:Uint8Array}
 var fps = FALLBACK_FPS;
 var loopTimer = null;
@@ -79,10 +86,14 @@ function setupCallbacks(M) {
   var audioBatchCb = M.addFunction(function (_data, frames) {
     return frames;
   }, 'iii');
-  var inputPollCb = M.addFunction(function () {}, 'v');
+  // retro_input_poll はフレームに1回だけ呼ばれる(libretroの仕様)。
+  // ここで保留中のキー状態を1ティック進める(詳細はkey-hold-tracker.js)。
+  var inputPollCb = M.addFunction(function () {
+    keyHoldTracker.beginPoll();
+  }, 'v');
   var inputStateCb = M.addFunction(function (_port, device, _index, id) {
     if (device === RETRO_DEVICE_KEYBOARD) {
-      return pressedKeys.has(id) ? 1 : 0;
+      return keyHoldTracker.isPressed(id) ? 1 : 0;
     }
     return 0;
   }, 'iiiii');
@@ -199,15 +210,19 @@ self.onmessage = function (ev) {
       break;
     case 'key':
       if (msg.pressed) {
-        pressedKeys.add(msg.code);
+        keyHoldTracker.press(msg.code);
       } else {
-        pressedKeys.delete(msg.code);
+        keyHoldTracker.release(msg.code);
       }
       break;
     case 'reset':
       if (moduleInstance) {
         moduleInstance._retro_reset();
       }
+      break;
+    case 'setKeyHoldMinPolls':
+      // デバッグ/検証用: 0を渡すと保留を無効化する(陰性対照)。
+      keyHoldTracker = new KeyHoldTracker(msg.minPolls);
       break;
     default:
       break;

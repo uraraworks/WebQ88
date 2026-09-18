@@ -19,7 +19,10 @@ export type MainToWorkerMessage =
       roms: { name: string; bytes: ArrayBuffer }[];
     }
   | { type: 'key'; code: number /* RETROK */; pressed: boolean }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  // デバッグ/検証用: 1フレーム内の押下取りこぼし対策(public/key-hold-tracker.js)の
+  // 保留ポーリング数を上書きする。0で対策を無効化(陰性対照)。通常のUIからは呼ばない。
+  | { type: 'setKeyHoldMinPolls'; minPolls: number };
 
 /** Worker → メインスレッド */
 export type WorkerToMainMessage =
