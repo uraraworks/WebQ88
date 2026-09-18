@@ -36,12 +36,14 @@ NO_PATCH=1 OUT_DIR=/tmp/q88-no-patch ./scripts/build-core.sh
 ./scripts/smoke-core.sh /tmp/q88-no-patch
 ```
 
-`core/patches/` の3本のパッチは、上流 libretro.c / memory.c にある
+`core/patches/` の4本のパッチは、上流 libretro.c / memory.c にある
 「フォントROM読み込み成功時にも内蔵フォント・漢字ROMで上書きしてしまう」
 「N88.ROM/DISK.ROM が無いと出所不明の疑似BIOSにフォールバックする」
 「load_system_file の rom_filename が初期化されないまま参照される」
-という3つの不具合を修正します。font.h・pseudo_bios.h の削除は
-（中身が長大なバイト列のため）パッチではなくビルドスクリプトの `rm` で行います。
+「handle_input() の識別マッピングループが KEY88_AT(='@')を取りこぼし、
+'@'キーが一切反応しない」という4つの不具合を修正します。font.h・
+pseudo_bios.h の削除は（中身が長大なバイト列のため）パッチではなく
+ビルドスクリプトの `rm` で行います。
 
 ## ライセンス
 

@@ -1,0 +1,39 @@
+From 96e460f3a3f8c4943722da8fa0a0526e4ed723f5 Mon Sep 17 00:00:00 2001
+From: Masakazu Yonehara <rxp10430@gmail.com>
+Date: Fri, 18 Sep 2026 23:51:09 +0900
+Subject: [PATCH 4/4] =?UTF-8?q?libretro:=20handle=5Finput=20=E3=81=AE=E8=AD=98?=
+ =?UTF-8?q?=E5=88=A5=E3=83=9E=E3=83=83=E3=83=94=E3=83=B3=E3=82=B0=E3=83=AB?=
+ =?UTF-8?q?=E3=83=BC=E3=83=97=E3=81=8B=E3=82=89=E6=BC=8F=E3=82=8C=E3=81=A6?=
+ =?UTF-8?q?=E3=81=84=E3=81=9F=20KEY88=5FAT('@')=E3=82=92=E4=BF=AE=E6=AD=A3?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+src/keyboard.h では KEY88_AT = 64、libretro-common の RETROK_AT も 64 で
+値が一致するにもかかわらず、handle_input() の
+'for (i = 0; i < 64; i++) handle_key(i, i);' は i<64 のため 64 を含まず、
+KEY88_AT はどこからも handle_key() されない。結果として '@' キーがホストから
+PC-88へ一切届かなかった。ループ上限を KEY88_AT を含む形に変更する。
+---
+ src/LIBRETRO/libretro.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/LIBRETRO/libretro.c b/src/LIBRETRO/libretro.c
+index d8195a1..1ea585b 100644
+--- a/src/LIBRETRO/libretro.c
++++ b/src/LIBRETRO/libretro.c
+@@ -235,7 +235,10 @@ static void handle_input(void)
+    handle_pad(KEY88_Q,      RETRO_DEVICE_ID_JOYPAD_B,      1);
+    
+    /* Basics, numbers */
+-   for (i = 0; i < 64; i++)
++   /* KEY88_AT (== RETROK_AT == 64) はこのループの外側にあり、
++    * 「i < 64」では取りこぼされて '@' キーが一切反応しない不具合があった。
++    * KEY88_AT を含むよう上限を <= に変更して修正する。 */
++   for (i = 0; i <= KEY88_AT; i++)
+       handle_key(i, i);
+    for (i = 0; i < 6; i++)
+       handle_key(KEY88_BRACKETLEFT + i, RETROK_LEFTBRACKET + i);
+-- 
+2.54.0
+
