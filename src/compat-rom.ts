@@ -10,6 +10,10 @@
 import n88RomUrl from '../compat-rom/N88.ROM?url';
 import diskRomUrl from '../compat-rom/DISK.ROM?url';
 import fontRomUrl from '../compat-rom/FONT.ROM?url';
+import n88Ext0RomUrl from '../compat-rom/N88_0.ROM?url';
+import n88Ext1RomUrl from '../compat-rom/N88_1.ROM?url';
+import n88Ext2RomUrl from '../compat-rom/N88_2.ROM?url';
+import n88Ext3RomUrl from '../compat-rom/N88_3.ROM?url';
 import manifest from '../compat-rom/manifest.json';
 
 interface ManifestFile {
@@ -29,6 +33,10 @@ const ROM_URLS: Record<string, string> = {
   'N88.ROM': n88RomUrl,
   'DISK.ROM': diskRomUrl,
   'FONT.ROM': fontRomUrl,
+  'N88_0.ROM': n88Ext0RomUrl,
+  'N88_1.ROM': n88Ext1RomUrl,
+  'N88_2.ROM': n88Ext2RomUrl,
+  'N88_3.ROM': n88Ext3RomUrl,
 };
 
 export interface VerifiedRom {

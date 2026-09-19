@@ -2,7 +2,8 @@
 # scripts/import-compat-rom.sh
 #
 # PC88Behavior のビルド成果物（クリーンルーム実装、MIT）から N88.ROM / DISK.ROM /
-# FONT.ROM を生成し、compat-rom/ に取り込む。manifest.json に生成元コミットと
+# FONT.ROM / N88_0.ROM〜N88_3.ROM（拡張ROMバンク、docs/spec/ext-rom-bank.md）
+# を生成し、compat-rom/ に取り込む。manifest.json に生成元コミットと
 # 各ファイルの SHA-256 を記録する。
 #
 # 使い方:
@@ -19,7 +20,7 @@ OUT_DIR="$PROJECT_DIR/compat-rom"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-echo "== PC88Behavior のビルドスクリプトで N88.ROM / DISK.ROM / FONT.ROM を生成 =="
+echo "== PC88Behavior のビルドスクリプトで N88.ROM / DISK.ROM / FONT.ROM / N88_0.ROM〜N88_3.ROM を生成 =="
 python3 "$PC88BEHAVIOR_DIR/src/build_main_rom.py" "$TMP_DIR"
 
 echo "== 生成元コミットを記録 =="
@@ -31,7 +32,7 @@ fi
 
 echo "== compat-rom/ へコピー =="
 mkdir -p "$OUT_DIR"
-FILES="N88.ROM DISK.ROM FONT.ROM"
+FILES="N88.ROM DISK.ROM FONT.ROM N88_0.ROM N88_1.ROM N88_2.ROM N88_3.ROM"
 for f in $FILES; do
   if [ ! -f "$TMP_DIR/$f" ]; then
     echo "エラー: 生成結果に $f がありません。" >&2
