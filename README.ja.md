@@ -34,6 +34,11 @@ git config core.hooksPath tools/hooks
 # 陰性対照（パッチなしの素の上流をビルドして、フォントが壊れることを確認）
 NO_PATCH=1 OUT_DIR=/tmp/q88-no-patch ./scripts/build-core.sh
 ./scripts/smoke-core.sh /tmp/q88-no-patch
+
+# 拡張ROMバンク切り替えの確認（試験ビルド専用シムを使う。配布物には入らない）
+TEST_SHIM=1 OUT_DIR=/tmp/q88-test-shim ./scripts/build-core.sh
+node scripts/smoke-ext-bank.cjs /tmp/q88-test-shim compat-rom
+node scripts/smoke-ext-bank.cjs /tmp/q88-test-shim compat-rom --omit N88_2.ROM  # 陰性対照
 ```
 
 `core/patches/` の4本のパッチは、上流 libretro.c / memory.c にある
