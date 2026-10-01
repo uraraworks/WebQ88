@@ -4,7 +4,8 @@
 // エミュレーション本体（コアの実行・入力の反映）は core-worker.js（Worker側）が持つ。
 
 import './style.css';
-import { loadVerifiedCompatRoms, type VerifiedRom } from './compat-rom';
+import { loadVerifiedBundledDisks, loadVerifiedCompatRoms, type VerifiedRom } from './compat-rom';
+import { DiskPanel } from './disks';
 import { CoreProxy } from './core-proxy';
 import type { RomFile, RomMode } from './core-protocol';
 import { attachKeyboard } from './keyboard';
@@ -17,6 +18,8 @@ const ctx = canvas.getContext('2d')!;
 const romFilesInput = document.querySelector<HTMLInputElement>('#rom-files')!;
 const romBootButton = document.querySelector<HTMLButtonElement>('#rom-boot')!;
 const modeInfoEl = document.querySelector<HTMLDivElement>('#mode-info')!;
+const disksEl = document.querySelector<HTMLDivElement>('#disks')!;
+const coreResetButton = document.querySelector<HTMLButtonElement>('#core-reset')!;
 
 function setStatus(text: string): void {
   statusEl.textContent = text;
@@ -58,17 +61,28 @@ async function filesToRomFiles(files: FileList | null): Promise<RomFile[]> {
 async function main(): Promise<void> {
   setStatus('互換ROMを検証中…');
   let bundledRoms: VerifiedRom[];
+  let bundledDisks: VerifiedRom[] = [];
   try {
     bundledRoms = await loadVerifiedCompatRoms();
   } catch (err) {
     setStatus(`ROM検証エラー: ${(err as Error).message}`);
     return;
   }
+  try {
+    // 同梱の空データディスク(ブランクFD作成用)。取れなくてもエミュレータ自体は動かす
+    // (その場合は「ブランクFDを作成」だけ無効になる)。
+    bundledDisks = await loadVerifiedBundledDisks();
+  } catch (err) {
+    console.error('同梱ディスクの検証に失敗しました', err);
+  }
+  const blank2d = bundledDisks.find((d) => /^BLANK2D\.D88$/i.test(d.name));
 
   setStatus('コアを起動中…');
 
   let imageData: ImageData | null = null;
   let pixelBuf32: Uint32Array | null = null;
+  let diskPanel: DiskPanel | null = null;
+  let firstReady = true;
 
   const proxy = new CoreProxy({
     onReady: ({ width, height, fps, mode }) => {
@@ -78,8 +92,17 @@ async function main(): Promise<void> {
       pixelBuf32 = new Uint32Array(imageData.data.buffer);
       setStatus(`起動しました (${width}x${height} @ ${fps.toFixed(1)}fps) — クリックしてキー入力を有効化`);
       renderMode(mode);
+      if (firstReady) {
+        firstReady = false;
+        // 前回のドライブ割り当てを自動で挿入する。ドライブ1に入れたときは、
+        // 起動用ディスクとして読まれるようもう一度リセットする。
+        void diskPanel?.restore().then((restored) => {
+          if (restored.includes(0)) proxy.reset();
+        });
+      }
     },
-    onFrame: ({ width, height, pitch, buffer }) => {
+    onFrame: ({ width, height, pitch, buffer, lamp }) => {
+      diskPanel?.setLamp(lamp);
       if (!imageData || !pixelBuf32) return;
       if (width !== imageData.width || height !== imageData.height) return;
       convertRgb565ToImageData(new Uint8Array(buffer), pitch, width, height, pixelBuf32);
@@ -90,6 +113,8 @@ async function main(): Promise<void> {
     },
   });
 
+  diskPanel = new DiskPanel(proxy, disksEl, { blankImage: blank2d ? new Uint8Array(blank2d.bytes) : null });
+
   // 初回は同梱の互換ROMだけで起動する。
   proxy.init(bundledRoms, []);
 
@@ -98,8 +123,17 @@ async function main(): Promise<void> {
   romBootButton.addEventListener('click', () => {
     void (async () => {
       const userRoms = await filesToRomFiles(romFilesInput.files);
+      // 再起動でディスクの状態が変わりうるので、先にゲストの書き込みを保存する。
+      await diskPanel?.flushAll();
       setStatus('起動中…');
       proxy.init(bundledRoms, userRoms);
+    })();
+  });
+
+  coreResetButton.addEventListener('click', () => {
+    void (async () => {
+      await diskPanel?.flushAll();
+      proxy.reset();
     })();
   });
 

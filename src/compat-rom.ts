@@ -14,6 +14,7 @@ import n88Ext0RomUrl from '../compat-rom/N88_0.ROM?url';
 import n88Ext1RomUrl from '../compat-rom/N88_1.ROM?url';
 import n88Ext2RomUrl from '../compat-rom/N88_2.ROM?url';
 import n88Ext3RomUrl from '../compat-rom/N88_3.ROM?url';
+import blank2dUrl from '../compat-rom/BLANK2D.D88?url';
 import manifest from '../compat-rom/manifest.json';
 
 interface ManifestFile {
@@ -37,7 +38,12 @@ const ROM_URLS: Record<string, string> = {
   'N88_1.ROM': n88Ext1RomUrl,
   'N88_2.ROM': n88Ext2RomUrl,
   'N88_3.ROM': n88Ext3RomUrl,
+  'BLANK2D.D88': blank2dUrl,
 };
+
+function isDiskImage(name: string): boolean {
+  return /\.d88$/i.test(name);
+}
 
 export interface VerifiedRom {
   name: string;
@@ -57,9 +63,23 @@ async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
  * 成功したように見せない。../docs/API-DESIGN.md 4節と同じ考え方）。
  */
 export async function loadVerifiedCompatRoms(): Promise<VerifiedRom[]> {
+  return loadVerified((name) => !isDiskImage(name));
+}
+
+/**
+ * 同梱のディスクイメージ(BLANK2D.D88: 空のデータディスク)を、ROMと同じ
+ * manifest の SHA-256 照合を通して取得する。ROM としては渡さない
+ * (loadVerifiedCompatRoms は .D88 を含まない)。manifest に無ければ空配列。
+ */
+export async function loadVerifiedBundledDisks(): Promise<VerifiedRom[]> {
+  return loadVerified(isDiskImage);
+}
+
+async function loadVerified(pick: (name: string) => boolean): Promise<VerifiedRom[]> {
   const m = manifest as Manifest;
   const results: VerifiedRom[] = [];
   for (const entry of m.files) {
+    if (!pick(entry.name)) continue;
     const url = ROM_URLS[entry.name];
     if (!url) {
       throw new Error(`compat-rom: manifest に載っている ${entry.name} の配信元が無い`);

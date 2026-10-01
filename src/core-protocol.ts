@@ -60,7 +60,17 @@ export type MainToWorkerMessage =
   | { type: 'ram_write'; requestId: number; region: number; offset: number; bytes: ArrayBuffer }
   // 自動操作API本体(docs/API-DESIGN.md)。実装は public/api-dispatch.js に集約し、
   // ここは呼び出しの往復だけを担う(コマンド一覧・可否判定をここに複製しない)。
-  | { type: 'apiExec'; requestId: number; cmd: string; args: Record<string, unknown> };
+  | { type: 'apiExec'; requestId: number; cmd: string; args: Record<string, unknown> }
+  // UIのディスク操作(実体は public/disk-host.js)。drive は 0=ドライブ1 / 1=ドライブ2。
+  // insert は bytes を転送(送り元では使えなくなる)。dump の応答の bytes も転送される。
+  | {
+      type: 'disk';
+      requestId: number;
+      op: 'insert' | 'eject' | 'dump' | 'poll';
+      drive?: number;
+      name?: string;
+      bytes?: ArrayBuffer;
+    };
 
 /** Worker → メインスレッド */
 export type WorkerToMainMessage =
@@ -72,12 +82,36 @@ export type WorkerToMainMessage =
       pitch: number;
       /** RGB565 の生ピクセルバッファ（変換はメインスレッド側で行う） */
       buffer: ArrayBuffer;
+      /** 前回のframe以降に点いたアクセスランプ(bit0=ドライブ1, bit1=ドライブ2) */
+      lamp?: number;
     }
   | { type: 'error'; message: string }
   | { type: 'mode'; mode: RomMode }
   | { type: 'ram_read_result'; requestId: number; data?: ArrayBuffer; error?: string }
   | { type: 'ram_write_result'; requestId: number; ok: boolean; error?: string }
-  | { type: 'apiExecResult'; requestId: number; result: Record<string, unknown> };
+  | { type: 'apiExecResult'; requestId: number; result: Record<string, unknown> }
+  | ({ type: 'diskResult'; requestId: number } & DiskResult);
+
+/** ディスク操作の応答本体(失敗は ok=false と error)。 */
+export interface DiskResult {
+  ok: boolean;
+  error?: string;
+  gen?: number;
+  size?: number;
+  mtime?: number;
+  had?: boolean;
+  bytes?: ArrayBuffer;
+  drives?: DiskPollEntry[];
+}
+
+/** disk-host.js の poll() の1ドライブ分。 */
+export interface DiskPollEntry {
+  present: boolean;
+  name?: string;
+  gen?: number;
+  size?: number;
+  mtime?: number;
+}
 
 export const WORKER_SCRIPT_PATH = 'core-worker.js';
 export const CORE_JS_RELATIVE_PATH = 'core/q88_libretro.js';

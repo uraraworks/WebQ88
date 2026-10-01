@@ -66,3 +66,66 @@ canvas#screen {
   color: #8f8;
   font-weight: bold;
 }
+
+#disks {
+  width: 100%;
+  max-width: 960px;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.disks-title {
+  color: #ccc;
+}
+
+.drive-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.drive-row.drag-over {
+  border-color: #9cf;
+  background: #1a2733;
+}
+
+.drive-lamp {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #422;
+  border: 1px solid #633;
+}
+
+.drive-lamp.on {
+  background: #f44;
+  border-color: #f88;
+}
+
+.drive-label {
+  font-weight: bold;
+  min-width: 5.5em;
+}
+
+.drive-file {
+  flex: 1 1 10em;
+  min-width: 8em;
+  overflow-wrap: anywhere;
+  color: #9cf;
+}
+
+#disk-msg {
+  min-height: 1.2em;
+  color: #cd8;
+}
+
+.disks-notice {
+  color: #aaa;
+  font-size: 0.78rem;
+}

@@ -10,10 +10,40 @@
       <h1>WebQ88</h1>
       <div id="status">起動準備中…</div>
       <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
+      <div id="disks">
+        <div class="disks-title">フロッピーディスク(ファイルをドライブ行へドラッグ＆ドロップでも挿入できます)</div>
+        <div class="drive-row" data-drive="0">
+          <span class="drive-lamp" title="アクセスランプ"></span>
+          <span class="drive-label">ドライブ1</span>
+          <span class="drive-file">(空)</span>
+          <button type="button" class="drive-insert">挿入</button>
+          <button type="button" class="drive-eject" disabled>排出</button>
+          <button type="button" class="drive-blank">ブランクFDを作成</button>
+          <button type="button" class="drive-download" disabled>ダウンロード</button>
+          <input type="file" class="drive-file-input" accept=".d88,.88d" hidden />
+        </div>
+        <div class="drive-row" data-drive="1">
+          <span class="drive-lamp" title="アクセスランプ"></span>
+          <span class="drive-label">ドライブ2</span>
+          <span class="drive-file">(空)</span>
+          <button type="button" class="drive-insert">挿入</button>
+          <button type="button" class="drive-eject" disabled>排出</button>
+          <button type="button" class="drive-blank">ブランクFDを作成</button>
+          <button type="button" class="drive-download" disabled>ダウンロード</button>
+          <input type="file" class="drive-file-input" accept=".d88,.88d" hidden />
+        </div>
+        <div id="disk-msg" role="status"></div>
+        <div class="disks-notice">
+          ブラウザ保存は消えることがあります(サイトデータの削除・シークレットウィンドウ・容量不足・
+          Safari で7日間使わなかったとき)。大事なディスクは「ダウンロード」で手元にも保存してください。
+          書き込みは数秒おきにこのブラウザへ自動保存され、次に開いたときドライブへ自動で挿入し直します。
+        </div>
+      </div>
       <div id="rom-loader">
         <label for="rom-files">利用者ROMを読み込む(複数選択可・任意。渡すと制限モードになります):</label>
         <input type="file" id="rom-files" multiple />
         <button id="rom-boot" type="button">起動 / 再起動</button>
+        <button id="core-reset" type="button">リセット</button>
       </div>
       <div id="mode-info"></div>
     </div>

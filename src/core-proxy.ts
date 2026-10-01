@@ -4,13 +4,13 @@
 // Worker 生成・メッセージの送受信だけを担当し、描画（rgb565.ts）や
 // キー入力の変換（keyboard.ts）はここに持ち込まない。
 
-import type { MainToWorkerMessage, RomFile, RomMode, WorkerToMainMessage } from './core-protocol';
+import type { DiskResult, MainToWorkerMessage, RomFile, RomMode, WorkerToMainMessage } from './core-protocol';
 import { WORKER_SCRIPT_PATH } from './core-protocol';
 import type { VerifiedRom } from './compat-rom';
 
 export interface CoreProxyHandlers {
   onReady?: (info: { width: number; height: number; fps: number; mode: RomMode }) => void;
-  onFrame?: (frame: { width: number; height: number; pitch: number; buffer: ArrayBuffer }) => void;
+  onFrame?: (frame: { width: number; height: number; pitch: number; buffer: ArrayBuffer; lamp: number }) => void;
   onError?: (message: string) => void;
   /** {type:'mode'} への応答(デバッグ用)。 */
   onMode?: (mode: RomMode) => void;
@@ -23,6 +23,7 @@ export class CoreProxy {
   private pendingRamReads = new Map<number, { resolve: (data: ArrayBuffer) => void; reject: (err: Error) => void }>();
   private pendingRamWrites = new Map<number, { resolve: () => void; reject: (err: Error) => void }>();
   private pendingApiExecs = new Map<number, (result: Record<string, unknown>) => void>();
+  private pendingDisks = new Map<number, (result: DiskResult) => void>();
 
   constructor(handlers: CoreProxyHandlers) {
     // ワーカー本体は importScripts() で emscripten の UMD 出力を読み込む必要があり
@@ -42,6 +43,7 @@ export class CoreProxy {
             height: msg.height,
             pitch: msg.pitch,
             buffer: msg.buffer,
+            lamp: msg.lamp ?? 0,
           });
           break;
         case 'error':
@@ -70,6 +72,13 @@ export class CoreProxy {
           } else {
             pending.resolve();
           }
+          break;
+        }
+        case 'diskResult': {
+          const pending = this.pendingDisks.get(msg.requestId);
+          if (!pending) break;
+          this.pendingDisks.delete(msg.requestId);
+          pending(msg);
           break;
         }
         case 'apiExecResult': {
@@ -145,6 +154,26 @@ export class CoreProxy {
     });
     const payload: MainToWorkerMessage = { type: 'apiExec', requestId, cmd, args };
     this.worker.postMessage(payload);
+    return promise;
+  }
+
+  /**
+   * ディスク操作(UI用)。drive は 0=ドライブ1 / 1=ドライブ2。
+   * 戻り値は常に {ok:true,...} か {ok:false,error}(reject しない)。
+   * insert の bytes は転送される(呼び出し元のバッファは使えなくなる)ので、
+   * 手元に残したいときはコピーを渡すこと。
+   */
+  diskRequest(
+    op: 'insert' | 'eject' | 'dump' | 'poll',
+    drive?: number,
+    extra: { name?: string; bytes?: ArrayBuffer } = {},
+  ): Promise<DiskResult> {
+    const requestId = nextRequestId++;
+    const promise = new Promise<DiskResult>((resolve) => {
+      this.pendingDisks.set(requestId, resolve);
+    });
+    const payload: MainToWorkerMessage = { type: 'disk', requestId, op, drive, name: extra.name, bytes: extra.bytes };
+    this.worker.postMessage(payload, extra.bytes ? [extra.bytes] : []);
     return promise;
   }
 
