@@ -34,6 +34,12 @@
 //   saveState(slot): {size:number}        — スロットへ保存(Worker内メモリ)
 //   loadState(slot): void                 — スロットから復元。無ければthrow
 //   getStateBlob(slot): Uint8Array        — 直近保存分の中身(get_state_blob用)
+//   diskInsert(index, name, bytes): {gen} — index は 0/1(API の drive 1/2 を変換済み)。
+//                                            不正イメージ等は throw
+//   diskEject(index): {had:boolean}
+//   diskList(): [{drive, empty, name?, size?, written?}]  — 中身は含まない
+//   diskDump(index): Uint8Array           — flush済みのイメージ全体。空なら throw
+//   (実体は public/disk-host.js。Workerとスモークテストで共有)
 //
 // 戻り値はコマンドの意味に応じて {ok:true, ...} または {error:'...'}。
 // 例外は投げず、内部でtry/catchして {error: message} に変換する
@@ -240,6 +246,14 @@
     out.set(idatChunk, pos); pos += idatChunk.length;
     out.set(iendChunk, pos);
     return out;
+  }
+
+  /** API の drive 引数(1 または 2)を内部の 0/1 へ。不正なら null。 */
+  function parseDrive(v) {
+    var n = Number(v);
+    if (n === 1) return 0;
+    if (n === 2) return 1;
+    return null;
   }
 
   function bytesToBase64(bytes) {
@@ -488,10 +502,43 @@
           return { ok: true, slot: blobSlot, base64: bytesToBase64(blob) };
         }
 
-        case 'insert_disk':
-        case 'eject_disk':
+        case 'insert_disk': {
+          var inDrive = parseDrive(args.drive);
+          if (inDrive === null) return { error: 'invalid args: drive must be 1 or 2' };
+          if (typeof args.name !== 'string' || args.name === '') {
+            return { error: 'invalid args: name must be a non-empty string' };
+          }
+          if (typeof args.base64 !== 'string' || args.base64 === '') {
+            return { error: 'invalid args: base64 must be a non-empty base64 string' };
+          }
+          var imgBytes =
+            typeof Buffer !== 'undefined'
+              ? new Uint8Array(Buffer.from(args.base64, 'base64'))
+              : base64ToBytesBrowser(args.base64);
+          var inRes = ctx.diskInsert(inDrive, args.name, imgBytes);
+          return { ok: true, drive: inDrive + 1, name: args.name, size: imgBytes.length, gen: inRes.gen };
+        }
+
+        case 'eject_disk': {
+          var ejDrive = parseDrive(args.drive);
+          if (ejDrive === null) return { error: 'invalid args: drive must be 1 or 2' };
+          var ejRes = ctx.diskEject(ejDrive);
+          return { ok: true, drive: ejDrive + 1, hadDisk: !!ejRes.had };
+        }
+
         case 'list_disks': {
-          return { error: 'not implemented: disk support' };
+          // 名前・サイズ・書き込みの有無のみ。中身は返さない(制限モードでも可)。
+          return { ok: true, disks: ctx.diskList() };
+        }
+
+        case 'get_disk_image': {
+          // 中身を返すので制限モードでは×(利用者が持ち込んだ公式ディスクの
+          // 中身をAPIから取り出させない。API-DESIGN.md 第2節の表と同じ考え方)。
+          if (ctx.getMode().restricted) return { error: RESTRICTED_ERROR };
+          var gdDrive = parseDrive(args.drive);
+          if (gdDrive === null) return { error: 'invalid args: drive must be 1 or 2' };
+          var img = ctx.diskDump(gdDrive);
+          return { ok: true, drive: gdDrive + 1, size: img.length, base64: bytesToBase64(img) };
         }
 
         default:

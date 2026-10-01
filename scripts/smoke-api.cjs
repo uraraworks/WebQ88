@@ -22,6 +22,7 @@ const Q88 = require(path.join(path.resolve(coreDir), 'q88_libretro.js'));
 const RomRoles = require(path.join(path.resolve(__dirname, '..', 'public'), 'rom-roles.js'));
 const KeyHoldTracker = require(path.join(path.resolve(__dirname, '..', 'public'), 'key-hold-tracker.js'));
 const ApiDispatch = require(path.join(path.resolve(__dirname, '..', 'public'), 'api-dispatch.js'));
+const DiskHost = require(path.join(path.resolve(__dirname, '..', 'public'), 'disk-host.js'));
 
 let failures = 0;
 function check(name, ok, detail) {
@@ -34,7 +35,8 @@ function loadManifest(dir) {
 }
 
 function readAsFiles(dir, manifest) {
-  return manifest.files.map((f) => ({ name: f.name, bytes: fs.readFileSync(path.join(dir, f.name)) }));
+  // .D88 はROMではなく同梱ディスク(ROMの役割判定に混ぜない)
+  return manifest.files.filter((f) => !/\.d88$/i.test(f.name)).map((f) => ({ name: f.name, bytes: fs.readFileSync(path.join(dir, f.name)) }));
 }
 
 /**
@@ -54,6 +56,8 @@ async function bootCore(files, isUserRoms) {
   M.stringToUTF8('/sys', sysPath, 64);
   M.FS.mkdir('/sys');
 
+  const enabledPtr = M._malloc(16);
+  M.stringToUTF8('enabled', enabledPtr, 16);
   const env = M.addFunction((cmd, data) => {
     const realCmd = cmd & 0xffff;
     if (realCmd === 9 || realCmd === 31) {
@@ -61,6 +65,14 @@ async function bootCore(files, isUserRoms) {
       return 1;
     }
     if (realCmd === 10) return 1;
+    if (realCmd === 15) {
+      // GET_VARIABLE: q88_save_to_disk_image=enabled(public/core-worker.js と同じ応答)
+      const keyPtr = new DataView(M.HEAPU8.buffer).getUint32(data, true);
+      if (M.UTF8ToString(keyPtr) === 'q88_save_to_disk_image') {
+        new DataView(M.HEAPU8.buffer).setUint32(data + 4, enabledPtr, true);
+        return 1;
+      }
+    }
     return 0;
   }, 'iii');
 
@@ -108,6 +120,7 @@ async function bootCore(files, isUserRoms) {
   };
 
   const stateSlots = Object.create(null);
+  const disks = DiskHost.create(M);
 
   function driveFrames(n) {
     for (let i = 0; i < n; i++) M._retro_run();
@@ -203,6 +216,10 @@ async function bootCore(files, isUserRoms) {
         if (!saved) throw new Error('no saved state in slot: ' + slot);
         return saved;
       },
+      diskInsert: (i, name, bytes) => disks.insert(i, name, bytes),
+      diskEject: (i) => disks.eject(i),
+      diskList: () => disks.list(),
+      diskDump: (i) => disks.dump(i),
     };
   }
 
@@ -366,10 +383,28 @@ async function main() {
     check('compat type_text 非対応文字: エラー', !!r.error && /unsupported character/.test(r.error));
   }
 
-  // --- disk系はdocs通り未実装エラー ---
-  for (const cmd of ['insert_disk', 'eject_disk', 'list_disks']) {
-    const r = await ApiDispatch.exec(compatCtx, cmd, {});
-    check(`compat ${cmd}: not implemented`, r.error === 'not implemented: disk support');
+  // --- disk系(詳細な往復検査は scripts/smoke-disk.cjs。ここは可否と引数検査) ---
+  {
+    const blank = fs.readFileSync(path.join(romDir, 'BLANK2D.D88'));
+    const b64 = blank.toString('base64');
+    let r = await ApiDispatch.exec(compatCtx, 'list_disks', {});
+    check('compat list_disks: 両ドライブ空', !!r.ok && r.disks.length === 2 && r.disks.every((d) => d.empty), JSON.stringify(r).slice(0, 100));
+    r = await ApiDispatch.exec(compatCtx, 'insert_disk', { drive: 3, name: 'x.d88', base64: b64 });
+    check('compat insert_disk: drive不正はエラー', !!r.error && /drive/.test(r.error), JSON.stringify(r));
+    r = await ApiDispatch.exec(compatCtx, 'insert_disk', { drive: 2, name: 'x.d88', base64: '' });
+    check('compat insert_disk: 空base64はエラー', !!r.error, JSON.stringify(r));
+    r = await ApiDispatch.exec(compatCtx, 'insert_disk', { drive: 2, name: 'x.d88', base64: Buffer.from([1, 2, 3]).toString('base64') });
+    check('compat insert_disk: 小さすぎるイメージはエラー', !!r.error, JSON.stringify(r));
+    r = await ApiDispatch.exec(compatCtx, 'insert_disk', { drive: 2, name: 'blank.d88', base64: b64 });
+    check('compat insert_disk: ok', !!r.ok && r.size === blank.length, JSON.stringify(r).slice(0, 100));
+    r = await ApiDispatch.exec(compatCtx, 'list_disks', {});
+    check('compat list_disks: ドライブ2に blank.d88・未書き込み', !!r.ok && r.disks[1].name === 'blank.d88' && r.disks[1].written === false && !('base64' in r.disks[1]), JSON.stringify(r).slice(0, 160));
+    r = await ApiDispatch.exec(compatCtx, 'get_disk_image', { drive: 2 });
+    check('compat get_disk_image: 中身が返る', !!r.ok && r.base64 === b64);
+    r = await ApiDispatch.exec(compatCtx, 'get_disk_image', { drive: 1 });
+    check('compat get_disk_image: 空ドライブはエラー', !!r.error, JSON.stringify(r));
+    r = await ApiDispatch.exec(compatCtx, 'eject_disk', { drive: 2 });
+    check('compat eject_disk: ok', !!r.ok && r.hadDisk === true, JSON.stringify(r));
   }
 
   // === 制限モード(陽性対照: 同じ互換ROMを「利用者が読み込んだファイル」として起動) ===
@@ -379,19 +414,21 @@ async function main() {
   const restrictedCtx = restrictedCore.makeCtx();
   await restrictedCore.driveFrames(120);
 
-  const restrictedDenied = ['screen_text', 'screenshot', 'read_memory', 'write_memory', 'get_state_blob'];
+  const restrictedDenied = ['screen_text', 'screenshot', 'read_memory', 'write_memory', 'get_state_blob', 'get_disk_image'];
   for (const cmd of restrictedDenied) {
     const args =
       cmd === 'read_memory'
         ? { region: 0, offset: 0, length: 1 }
         : cmd === 'write_memory'
           ? { region: 0, offset: 0, bytes: Buffer.from([0]).toString('base64') }
-          : {};
+          : cmd === 'get_disk_image'
+            ? { drive: 1 }
+            : {};
     const r = await ApiDispatch.exec(restrictedCtx, cmd, args);
     check(`restricted ${cmd}: 理由付きエラー`, r.error === ApiDispatch.RESTRICTED_ERROR, JSON.stringify(r));
   }
 
-  const restrictedAllowed = ['status', 'type_text', 'screen_signature', 'save_state', 'load_state'];
+  const restrictedAllowed = ['status', 'type_text', 'screen_signature', 'save_state', 'load_state', 'list_disks'];
   for (const cmd of restrictedAllowed) {
     let args = {};
     if (cmd === 'type_text') args = { text: 'X' };

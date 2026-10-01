@@ -60,7 +60,10 @@ ws.send(JSON.stringify({ id: 1, cmd: 'status', args: {} }));
 | `save_state` | `{slot?}` | ○ | ○ | 中身は返さずサイズのみ。Worker内メモリのみ(永続化しない) |
 | `load_state` | `{slot?}` | ○ | ○ | 保存済みでなければエラー |
 | `get_state_blob` | `{slot?}` | ○ | × | 保存済みステートの中身(base64) |
-| `insert_disk` / `eject_disk` / `list_disks` | — | — | — | ディスク機能が未実装のため常に`{"error":"not implemented: disk support"}` |
+| `insert_disk` | `{drive:1\|2, name, base64}` | ○ | ○ | 指定ドライブへD88イメージを挿入。不正イメージはエラー。UIの保存(IndexedDB)の対象外 |
+| `eject_disk` | `{drive:1\|2}` | ○ | ○ | 排出。空でも成功(`hadDisk`で区別) |
+| `list_disks` | — | ○ | ○ | `{disks:[{drive, empty, name?, size?, written?}]}`。中身は返さない |
+| `get_disk_image` | `{drive:1\|2}` | ○ | × | 現在のイメージ全体(base64)。利用者が持ち込んだ公式ディスクの中身を返さないため制限モードでは拒否 |
 
 未知のコマンドは `{"error":"unknown command: ..."}`。引数が不正な場合も
 理由付きエラーを返す(空文字列や0で成功したふりをしない)。
@@ -78,6 +81,19 @@ KeyboardEvent.code は物理位置でホストのキー配列に依存するた�
 KeyboardEvent.key の実際の文字で引く)の両方から共有する(表を二重に持たない)。
 対応外の文字(日本語や制御文字など)はその位置を明示したエラーを返す
 (`type_text`の場合。`keyboard.ts`側は解決できない記号キーを黙って無視する)。
+
+### ディスク(`insert_disk` 等)の実装メモ
+
+実体は `public/disk-host.js`(Worker と Node スモークで共有)。ドライブごとに
+固定パス(`/disk/drive1.d88`・`/disk/drive2.d88`)を MEMFS に置き、同じファイルを
+その場で上書きして差し替える(上流 `file-op.c` はディスクのストリームを fclose せず
+16枠しか無く解放もされないため、挿入のたびにパスを変えると枠が尽きる)。ゲストの書き込みを
+イメージ本体へ書かせるため、環境コールバックの GET_VARIABLE で
+`q88_save_to_disk_image=enabled` を返している(無効だと .srm 差分ファイルへ書かれ、
+吸い出したイメージに書き込みが入らない)。ROM 再起動(`retro_load_game` が全ドライブを
+イジェクトする)の後は、MEMFS 上の書き込み済みの中身ごと自動で挿入し直す。
+`scripts/smoke-disk.cjs` が一連(SAVE→FILES→NEW→LOAD→LIST、吸い出しの別起動での
+再挿入、陰性対照、24回差し替え、ドライブ1ブランク起動)を検査する。
 
 ## 3. 検査の回し方
 
@@ -112,7 +128,13 @@ node scripts/bridge-test-server.mjs 3188 --auto &
 `screen_signature` → `screen_text` を送り、結果をJSONで標準出力に出して
 終了する。`?bridge` を付けずに開いた場合は接続が来ないことも確認する。
 
-### 3.3 既存の検査
+### 3.3 ディスク
+
+```sh
+node scripts/smoke-disk.cjs        # 互換ROMと自作ブランクディスクのみ使用(画面本文を見て判定)
+```
+
+### 3.4 既存の検査
 
 `scripts/smoke-app.cjs` / `scripts/smoke-mode.cjs` / `scripts/smoke-core.sh`、
 `npm run build`、`npm run typecheck`、`bash tools/check_publishable.sh --all`

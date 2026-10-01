@@ -23,10 +23,14 @@
 //          (デバッグ用。制限モードでは常に拒否される。docs/API-DESIGN.md 第3-4節)
 //        / {type:'apiExec', requestId, cmd, args}(自動操作API本体。実装は
 //          public/api-dispatch.js に集約。ここは ctx を組み立てて渡すだけ)
+//        / {type:'disk', requestId, op:'insert'|'eject'|'dump'|'poll', drive(0/1), name?, bytes?}
+//          (UIのディスク操作。実体は public/disk-host.js)
 //   送信: {type:'ready',width,height,fps,mode} / {type:'frame',width,height,pitch,buffer} / {type:'error',message}
 //        / {type:'mode',mode} / {type:'ram_read_result',requestId,data?,error?}
 //        / {type:'ram_write_result',requestId,ok,error?}
 //        / {type:'apiExecResult', requestId, result}
+//        / {type:'diskResult', requestId, ok, error?, gen?, had?, bytes?, drives?}
+//   (frame には lamp=アクセスランプのビットマスクが付く)
 //
 // mode = {restricted, roms:[{role,name,origin}], unresolved:[{name,origin}]}
 //
@@ -48,17 +52,21 @@ importScripts('key-hold-tracker.js');
 importScripts('rom-roles.js');
 importScripts('char-map.js');
 importScripts('api-dispatch.js');
+importScripts('disk-host.js');
 
 // --- libretro 定数 ---
 var RETRO_ENVIRONMENT_SET_PIXEL_FORMAT = 10;
 var RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY = 9;
 var RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY = 31;
+var RETRO_ENVIRONMENT_GET_VARIABLE = 15;
 var RETRO_DEVICE_KEYBOARD = 3;
 
 var MAX_CATCHUP_FRAMES = 4; // タブ非表示から復帰した際に一気に追いつきすぎない上限
 var FALLBACK_FPS = 60;
 
 var moduleInstance = null;
+var disks = null; // WebQ88DiskHost.create(M)(public/disk-host.js)。コア起動後に作る
+var lampAcc = 0; // 直近のframe送信以降に点いたアクセスランプ(bit0=ドライブ1, bit1=ドライブ2)
 // 既定2ポーリング: ../PC88Behavior 系メモ「最低2ポーリングは押下を保つ」を踏まえた値。
 // scripts/smoke-app.cjs の1フレーム内打鍵テストで N=1 では取りこぼす条件を作れず
 // (1回でも観測できれば十分なケースがある一方、N=2以上でないと陰性対照との差が
@@ -89,8 +97,23 @@ function setupCallbacks(M) {
   var sysPathPtr = M._malloc(64);
   M.stringToUTF8('/sys', sysPathPtr, 64);
 
+  var saveToDiskPtr = M._malloc(16);
+  M.stringToUTF8('enabled', saveToDiskPtr, 16);
+
   var envCb = M.addFunction(function (cmd, data) {
     var realCmd = cmd & 0xffff;
+    if (realCmd === RETRO_ENVIRONMENT_GET_VARIABLE) {
+      // struct retro_variable { const char *key; const char *value; }
+      // q88_save_to_disk_image=enabled: ゲストの書き込みをディスクイメージ本体へ直接書かせる。
+      // 無効だと上流は save_path の .srm 差分ファイルへ書き、吸い出したイメージに
+      // 書き込みが入らない(scripts/smoke-disk.cjs の陰性対照で確認)。
+      var keyPtr = new DataView(M.HEAPU8.buffer).getUint32(data, true);
+      if (M.UTF8ToString(keyPtr) === 'q88_save_to_disk_image') {
+        new DataView(M.HEAPU8.buffer).setUint32(data + 4, saveToDiskPtr, true);
+        return 1;
+      }
+      return 0;
+    }
     if (realCmd === RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY || realCmd === RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY) {
       new DataView(M.HEAPU8.buffer).setUint32(data, sysPathPtr, true);
       return 1;
@@ -176,6 +199,7 @@ function startLoop() {
     var ran = 0;
     while (accumulatedMs >= frameDurationMs && ran < MAX_CATCHUP_FRAMES) {
       moduleInstance._retro_run();
+      lampAcc |= disks.lampMask();
       accumulatedMs -= frameDurationMs;
       ran++;
     }
@@ -189,9 +213,10 @@ function startLoop() {
       lastVideoFrame = null;
       var bufferCopy = f.buffer.slice().buffer;
       postMessage(
-        { type: 'frame', width: f.width, height: f.height, pitch: f.pitch, buffer: bufferCopy },
+        { type: 'frame', width: f.width, height: f.height, pitch: f.pitch, buffer: bufferCopy, lamp: lampAcc },
         [bufferCopy],
       );
+      lampAcc = 0;
     }
 
     loopTimer = setTimeout(tick, frameDurationMs);
@@ -249,6 +274,13 @@ function finishBoot(M, plan, isReboot) {
     postError('retro_load_game に失敗しました');
     return;
   }
+  if (isReboot) {
+    // retro_load_game は全ドライブをイジェクトする。MEMFS 上の(書き込み済みの)中身ごと
+    // 挿入し直し、起動用ディスクが入っていれば読めるようもう一度リセットする。
+    if (disks.reinsertAll() > 0) {
+      M._retro_reset();
+    }
+  }
 
   var avInfo = readAvInfo(M);
   fps = avInfo.fps;
@@ -289,6 +321,7 @@ function handleInit(bundled, user) {
     },
   }).then(function (M) {
     moduleInstance = M;
+    disks = WebQ88DiskHost.create(M);
     try {
       M.FS.mkdir('/sys');
     } catch (e) {
@@ -515,6 +548,22 @@ function buildApiCtx() {
       if (!saved) throw new Error('no saved state in slot: ' + slot);
       return saved;
     },
+    diskInsert: function (index, name, bytes) {
+      if (!disks) throw new Error('not booted');
+      return disks.insert(index, name, bytes);
+    },
+    diskEject: function (index) {
+      if (!disks) throw new Error('not booted');
+      return disks.eject(index);
+    },
+    diskList: function () {
+      if (!disks) throw new Error('not booted');
+      return disks.list();
+    },
+    diskDump: function (index) {
+      if (!disks) throw new Error('not booted');
+      return disks.dump(index);
+    },
   };
 }
 
@@ -531,6 +580,44 @@ function handleApiExec(msg) {
         result: { error: String((err && err.message) || err) },
       });
     });
+}
+
+/**
+ * UI(メインスレッド)からのディスク操作。API(insert_disk 等)と同じ disks を使う。
+ * 応答は {type:'diskResult', requestId, ...} で、失敗は error に理由を入れる。
+ * 転送(transferable)したバッファは送り元で使えなくなるため、dump の結果は
+ * ここで別コピーを作って転送する(Worker側の MEMFS には影響しない)。
+ */
+function handleDisk(msg) {
+  var requestId = msg.requestId;
+  try {
+    if (!disks) throw new Error('not booted');
+    switch (msg.op) {
+      case 'insert': {
+        var res = disks.insert(msg.drive, msg.name, new Uint8Array(msg.bytes));
+        postMessage({ type: 'diskResult', requestId: requestId, ok: true, gen: res.gen, size: res.size, mtime: res.mtime });
+        break;
+      }
+      case 'eject': {
+        var ej = disks.eject(msg.drive);
+        postMessage({ type: 'diskResult', requestId: requestId, ok: true, had: ej.had });
+        break;
+      }
+      case 'dump': {
+        var img = disks.dump(msg.drive);
+        postMessage({ type: 'diskResult', requestId: requestId, ok: true, bytes: img.buffer }, [img.buffer]);
+        break;
+      }
+      case 'poll': {
+        postMessage({ type: 'diskResult', requestId: requestId, ok: true, drives: disks.poll() });
+        break;
+      }
+      default:
+        throw new Error('unknown disk op: ' + msg.op);
+    }
+  } catch (err) {
+    postMessage({ type: 'diskResult', requestId: requestId, ok: false, error: String((err && err.message) || err) });
+  }
 }
 
 self.onmessage = function (ev) {
@@ -567,6 +654,9 @@ self.onmessage = function (ev) {
       break;
     case 'apiExec':
       handleApiExec(msg);
+      break;
+    case 'disk':
+      handleDisk(msg);
       break;
     default:
       break;

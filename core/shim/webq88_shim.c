@@ -196,3 +196,38 @@ int webq88_text_snapshot(unsigned char *dst, unsigned int maxLen)
     }
     return (int)need;
 }
+
+/*
+ * ディスク操作の薄い口。上流の quasi88_disk_insert()/quasi88_disk_eject()
+ * (quasi88.c)と get_drive_ready()(fdc.c)をそのまま呼ぶだけで、ここには
+ * 判断を持たない。RAM を返す口ではないので restricted は見ない
+ * (ディスクの中身の取り出し制限は JS 層の get_disk_image で行う)。
+ *
+ * - webq88_disk_insert(): drv は 0=ドライブ1 / 1=ドライブ2。path は MEMFS 上の
+ *                         D88 イメージ。成功なら 1、失敗なら 0(上流 TRUE/FALSE)。
+ * - webq88_disk_eject():  イジェクト。上流は disk_image_exist() が偽でも安全。
+ * - webq88_drive_busy():  アクセスランプ。get_drive_ready() は「FDC が drv を
+ *                         選択して処理中」のとき 0 を返す(status.c のランプ判定と同じ)。
+ *                         ランプONなら 1。
+ */
+extern int quasi88_disk_insert(int drv, const char *filename, int image, int ro);
+extern void quasi88_disk_eject(int drv);
+extern int get_drive_ready(int drv);
+
+int webq88_disk_insert(int drv, const char *path)
+{
+    if (drv < 0 || drv > 1 || !path) return 0;
+    return quasi88_disk_insert(drv, path, 0, 0);
+}
+
+void webq88_disk_eject(int drv)
+{
+    if (drv < 0 || drv > 1) return;
+    quasi88_disk_eject(drv);
+}
+
+int webq88_drive_busy(int drv)
+{
+    if (drv < 0 || drv > 1) return 0;
+    return get_drive_ready(drv) ? 0 : 1;
+}

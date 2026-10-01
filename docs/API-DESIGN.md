@@ -52,7 +52,8 @@ PC88Behavior のクリーンルーム規律（PC88Behavior リポジトリの `C
 |---|---|---|
 | `status`（起動状態・モード・読み込んだ ROM の名前） | ○ | ○ |
 | `reset` / `type_text` / `key` / `key_sequence` | ○ | ○ |
-| `insert_disk` / `eject_disk` / `list_disks` | ○ | ○ |
+| `insert_disk` / `eject_disk` / `list_disks`（名前・サイズ・書き込みの有無のみ） | ○ | ○ |
+| `get_disk_image`（ディスクの中身を返す） | ○ | × |
 | `screen_text`（テキスト画面の本文） | ○ | × |
 | `screenshot`（画像） | ○ | × |
 | `screen_signature`（行数・非空白文字数・SHA-256） | ○ | ○ |
@@ -72,6 +73,10 @@ PC88Behavior のクリーンルーム規律（PC88Behavior リポジトリの `C
   という区別は **JS層のみ**で行う(第3節の「二重に止める」はコア側に読み出し口を作らない
   `read_memory`/`get_state_blob` に限られ、`save_state`/`load_state` 自体はコア側では
   区別しない)。実装時に判明した制約であり、方針の変更ではない。
+
+- `get_disk_image` を制限モードで拒否するのは、利用者が持ち込んだ公式ディスクの中身を
+  API から取り出させないため（`get_state_blob` と同じ考え方。判定は JS 層のみ）。
+  UI の「ダウンロード」は利用者本人の操作なので別（自分のディスクを手元へ戻す機能）
 
 ## 5. 有効化の方法
 
@@ -96,3 +101,7 @@ PC88Behavior のクリーンルーム規律（PC88Behavior リポジトリの `C
 ## 7. 保存領域
 
 ブラウザ保存領域のキー・DB 名には `webq88-` 接頭辞を付ける（`../CLAUDE.md`）。
+
+- ディスクライブラリ: IndexedDB `webq88-disks`、ストア `disks`（イメージ本体。キーは
+  `file:名前:サイズ` または `blank:...`）と `meta`（ドライブの割り当て）。
+  API から挿入したディスクは保存の対象外
