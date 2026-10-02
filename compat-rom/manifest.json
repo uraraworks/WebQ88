@@ -1,9 +1,9 @@
 {
   "generatedBy": "PC88Behavior",
-  "sourceCommit": "8631fad1b6d48bbe8ce11f6ed18e5c835db01b04",
+  "sourceCommit": "3ee3f48bfacb0e9e9f0fbce3444f9f88e47e7a60",
   "license": "MIT",
   "files": [
-    {"name": "N88.ROM", "size": 32768, "sha256": "7aacda2d6af68f0819fcaf99d79a28a6e4a1b8e922182b555bec7f74eb183874"}
+    {"name": "N88.ROM", "size": 32768, "sha256": "60f740f5696ecce2975ae487d5a6e3c49215cc1ee96d44b0dbbe766ea17a622a"}
     ,
     {"name": "DISK.ROM", "size": 8192, "sha256": "9286f6fda091e489ff4ce4349c9a5f80216440322599184c3d9165242392d7a0"}
     ,
@@ -11,11 +11,11 @@
     ,
     {"name": "N88_0.ROM", "size": 8192, "sha256": "d9f0e8ab91cd65a73528c30491590e4dd5bee1aa36b25ecbd3463217e8f92129"}
     ,
-    {"name": "N88_1.ROM", "size": 8192, "sha256": "273e01f137d5bcce00ec99c88567e2eed73b2450f5f5507e90ae7aa6dbf9bb88"}
+    {"name": "N88_1.ROM", "size": 8192, "sha256": "9579f5931d608f2c1494a1b6220ba10091c83f894dc8c22dc503f1b9403b8a61"}
     ,
-    {"name": "N88_2.ROM", "size": 8192, "sha256": "8a790bf21edacaf9bc809afc7cb0b0baa2d2f58d21bb396ce996a81f43a910d1"}
+    {"name": "N88_2.ROM", "size": 8192, "sha256": "a8437fcb722960691465ba890bfbd5a8c45e113b477f71d7bd64ed7c42c37523"}
     ,
-    {"name": "N88_3.ROM", "size": 8192, "sha256": "4922e34a75660c8059bfa6f6b61141905a3ecb3701c1e029708b0d93d59c8837"}
+    {"name": "N88_3.ROM", "size": 8192, "sha256": "c527fa4246aac6bd09b4fbda1aeefb31004108f54146a8f038ae1b96ff76b8b2"}
     ,
     {"name": "BLANK2D.D88", "size": 348848, "sha256": "d057262db4fbcce07949c5be9536e83314a67baa4b02acc44fd07157ef02247e"}
   ]
