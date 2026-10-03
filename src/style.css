@@ -95,6 +95,12 @@ canvas#screen {
   background: #1a2733;
 }
 
+.drive-note {
+  flex-basis: 100%;
+  color: #aaa;
+  font-size: 0.78rem;
+}
+
 .drive-lamp {
   width: 0.7rem;
   height: 0.7rem;

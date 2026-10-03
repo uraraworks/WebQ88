@@ -53,7 +53,7 @@ interface Row {
   fileName: HTMLElement;
   insertBtn: HTMLButtonElement;
   ejectBtn: HTMLButtonElement;
-  blankBtn: HTMLButtonElement;
+  blankBtn: HTMLButtonElement | null;
   downloadBtn: HTMLButtonElement;
   fileInput: HTMLInputElement;
   root: HTMLElement;
@@ -101,11 +101,11 @@ export class DiskPanel {
       fileName: q('.drive-file'),
       insertBtn: q<HTMLButtonElement>('.drive-insert'),
       ejectBtn: q<HTMLButtonElement>('.drive-eject'),
-      blankBtn: q<HTMLButtonElement>('.drive-blank'),
+      blankBtn: root.querySelector<HTMLButtonElement>('.drive-blank'),
       downloadBtn: q<HTMLButtonElement>('.drive-download'),
       fileInput: q<HTMLInputElement>('.drive-file-input'),
     };
-    row.blankBtn.disabled = !this.opts.blankImage;
+    if (row.blankBtn) row.blankBtn.disabled = !this.opts.blankImage;
     row.insertBtn.addEventListener('click', () => row.fileInput.click());
     row.fileInput.addEventListener('change', () => {
       const f = row.fileInput.files?.[0];
@@ -113,7 +113,7 @@ export class DiskPanel {
       if (f) void this.insertFile(d, f);
     });
     row.ejectBtn.addEventListener('click', () => void this.eject(d));
-    row.blankBtn.addEventListener('click', () => void this.createBlank(d));
+    row.blankBtn?.addEventListener('click', () => void this.createBlank(d));
     row.downloadBtn.addEventListener('click', () => void this.download(d));
     root.addEventListener('dragover', (ev) => {
       if (ev.dataTransfer?.types.includes('Files')) {
