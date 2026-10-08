@@ -25,7 +25,7 @@
 //                                            Workerでは実時間ループの自然な
 //                                            進行を待ち、Nodeでは retro_run()
 //                                            をn回直接呼ぶ。
-//   textCols(): number                    — webq88_text_cols()
+//   textCols(): number                    — webq88_text_cols()(40桁時は40。I/O 0x30 bit0 で判定)
 //   textSnapshot(): Uint8Array            — webq88_text_snapshot() の結果
 //                                            (restrictedでも常に取得可)
 //   readMemory(region, offset, length): Uint8Array   — restricted等はthrow
@@ -119,7 +119,7 @@
       if (rowHasContent) nonBlankRows++;
     }
     var hex = await sha256Hex(snapshot.buffer ? snapshot.buffer.slice(snapshot.byteOffset, snapshot.byteOffset + snapshot.byteLength) : snapshot);
-    return { rows: nonBlankRows, nonBlankChars: nonBlankChars, sha256: hex };
+    return { rows: nonBlankRows, nonBlankChars: nonBlankChars, sha256: hex, columns: cols, screenRows: rows };
   }
 
   // --- PNG エンコード(依存ゼロ。deflateは"格納(非圧縮)"ブロックのみを使う) ---
@@ -395,14 +395,15 @@
 
         case 'screen_signature': {
           var sig = await computeScreenSignature(ctx);
-          return { ok: true, rows: sig.rows, nonBlankChars: sig.nonBlankChars, sha256: sig.sha256 };
+          return { ok: true, rows: sig.rows, nonBlankChars: sig.nonBlankChars, sha256: sig.sha256, columns: sig.columns, screenRows: sig.screenRows };
         }
 
         case 'screen_text': {
           if (ctx.getMode().restricted) return { error: RESTRICTED_ERROR };
           var snap = ctx.textSnapshot();
           var cols = ctx.textCols();
-          return { ok: true, lines: textSnapshotToString(snap, cols) };
+          var lines = textSnapshotToString(snap, cols);
+          return { ok: true, lines: lines, columns: cols, rows: lines.length };
         }
 
         case 'screenshot': {

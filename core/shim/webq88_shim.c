@@ -68,6 +68,7 @@ extern byte *sub_romram;
 extern int crtc_sz_lines;    /* 現在の表示行数 (20〜25) */
 extern int crtc_sz_columns;  /* 現在の表示桁数 (2〜80) */
 extern int crtc_byte_per_line; /* 1行あたりのメモリバイト数 */
+extern unsigned char sys_ctrl; /* OUT[30] SystemCtrl。bit0=1:80桁 / 0:40桁 */
 extern int text_display;     /* 0=TEXT_DISABLE 1=ATTR_ONLY 2=ENABLE */
 extern webq88_pair dmac_address[4]; /* [2] が text_dma_addr */
 
@@ -151,11 +152,18 @@ int webq88_ram_write(int region, unsigned int offset, unsigned int len, const un
  * 現在の表示桁数(1〜80)を返す。screen_signature/screen_text 呼び出し側が
  * webq88_text_snapshot() の戻り値(総バイト数)から行数を逆算するために使う。
  */
+static int webq88_text_stride(void)
+{
+    /* I/O 0x30 の bit0 (ハードウェアの桁数選択)。40桁のとき文字は2バイトおき。 */
+    return (sys_ctrl & 0x01) ? 1 : 2;
+}
+
 int webq88_text_cols(void)
 {
     int cols = crtc_sz_columns;
     if (cols < 1) cols = 1;
     if (cols > WEBQ88_TEXT_MAX_COLS) cols = WEBQ88_TEXT_MAX_COLS;
+    if (webq88_text_stride() == 2) cols = (cols + 1) / 2;
     return cols;
 }
 
@@ -167,16 +175,15 @@ int webq88_text_cols(void)
 int webq88_text_snapshot(unsigned char *dst, unsigned int maxLen)
 {
     int rows = crtc_sz_lines;
-    int cols = crtc_sz_columns;
+    int stride = webq88_text_stride();
+    int cols = webq88_text_cols();
     unsigned int need;
     unsigned int base_addr;
     int i, j;
 
     if (!dst) return -1;
     if (rows < 0) rows = 0;
-    if (cols < 0) cols = 0;
     if (rows > WEBQ88_TEXT_MAX_ROWS) rows = WEBQ88_TEXT_MAX_ROWS;
-    if (cols > WEBQ88_TEXT_MAX_COLS) cols = WEBQ88_TEXT_MAX_COLS;
 
     need = (unsigned int)rows * (unsigned int)cols;
     if (need > maxLen) return -1;
@@ -190,7 +197,7 @@ int webq88_text_snapshot(unsigned char *dst, unsigned int maxLen)
     for (i = 0; i < rows; i++) {
         unsigned int rowAddr = (base_addr + (unsigned int)i * (unsigned int)crtc_byte_per_line) & 0xFFFFu;
         for (j = 0; j < cols; j++) {
-            unsigned int addr = (rowAddr + (unsigned int)j) & 0xFFFFu;
+            unsigned int addr = (rowAddr + (unsigned int)(j * stride)) & 0xFFFFu;
             dst[i * cols + j] = main_ram[addr];
         }
     }

@@ -311,6 +311,25 @@ async function main() {
     );
   }
 
+  // --- 40桁/20行モード: screen_text が桁数・行数に従う ---
+  // 判定はハードウェア状態(I/O 0x30 bit0 / CRTC の行数)。打った文字列が
+  // 間に空白を挟まず読めること、columns/rows が正しいことを確かめる。
+  for (const [wc, wr, tag] of [[40, 20, '40x20'], [80, 20, '80x20'], [40, 25, '40x25'], [80, 25, '80x25']]) {
+    await ApiDispatch.exec(compatCtx, 'type_text', { text: `\nwidth ${wc},${wr}\n` });
+    await compat.driveFrames(120);
+    await ApiDispatch.exec(compatCtx, 'type_text', { text: 'print "WQ88TEST"\n' });
+    await compat.driveFrames(90);
+    const st = await ApiDispatch.exec(compatCtx, 'screen_text', {});
+    check(`compat width ${tag}: columns/rows`, !!st.ok && st.columns === wc && st.rows === wr && st.lines.length === wr && st.lines[0].length === wc,
+      `columns=${st.columns} rows=${st.rows}`);
+    const hit = (st.lines || []).filter((l) => l.indexOf('WQ88TEST') >= 0).length;
+    check(`compat width ${tag}: 打った文字列が連続して読める`, hit >= 1, `hit=${hit}`);
+    const sg = await ApiDispatch.exec(compatCtx, 'screen_signature', {});
+    check(`compat width ${tag}: screen_signature の columns/screenRows`, !!sg.ok && sg.columns === wc && sg.screenRows === wr);
+  }
+  await ApiDispatch.exec(compatCtx, 'type_text', { text: 'width 80,20\n' });
+  await compat.driveFrames(120);
+
   // --- read/write memory 往復 ---
   {
     const region = 0; // main_ram

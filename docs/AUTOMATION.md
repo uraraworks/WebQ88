@@ -50,8 +50,8 @@ ws.send(JSON.stringify({ id: 1, cmd: 'status', args: {} }));
 | `key` | `{code, action:'down'\|'up'\|'tap'}` | ○ | ○ | `code`はRETROK値 |
 | `key_sequence` | `{steps:[{code,action,waitFrames?}]}` | ○ | ○ | 各ステップ後に`waitFrames`(既定4)分進む |
 | `type_text` | `{text}` | ○ | ○ | ASCII英数字・記号・空白・`\n`のみ |
-| `screen_signature` | — | ○ | ○ | `{rows, nonBlankChars, sha256}`。本文は返さない |
-| `screen_text` | — | ○ | × | 行ごとの文字列(非ASCIIは`\xNN`) |
+| `screen_signature` | — | ○ | ○ | `{rows, nonBlankChars, sha256, columns, screenRows}`。本文は返さない。`columns`/`screenRows`は現在の桁数・行数 |
+| `screen_text` | — | ○ | × | `{lines, columns, rows}`。行ごとの文字列(非ASCIIは`\xNN`)。40桁・20行/25行モードに追従(40桁は間の空白バイトを除いた40文字) |
 | `screenshot` | — | ○ | × | `{format:'png', width, height, base64}` |
 | `wait_screen_change` | `{timeoutFrames}` | ○ | ○ | 署名変化を検出したら返る |
 | `wait_screen_signature` | `{sha256, timeoutFrames}` | ○ | ○ | 指定署名に一致したら返る |
@@ -141,6 +141,14 @@ node scripts/smoke-disk.cjs        # 互換ROMと自作ブランクディスク�
 は自動操作API追加後も変わらずPASSすること。
 
 ## 4. 実装メモ(設計との整合)
+
+- 桁数・行数の判定はハードウェア側の状態で行う(ROM内部のワークは読まない)。
+  桁数は I/O ポート 0x30 の bit0(1=80桁 / 0=40桁。コアの `sys_ctrl`)、
+  行数は CRTC に設定された表示行数(`crtc_sz_lines`)。40桁のときテキスト
+  VRAMは1行120バイトのまま文字が2バイトおきに並ぶので、`webq88_text_snapshot()`
+  が2バイトおきに拾い、`webq88_text_cols()` は40を返す。この変更はC側
+  (シム)なので、反映には `scripts/build-core.sh` でコアの再ビルドが要る。
+  `scripts/smoke-api.cjs` が 80/40桁×20/25行の4通りで検査している。
 
 - テキスト画面の取り出しは `core/shim/webq88_shim.c` の
   `webq88_text_snapshot()` / `webq88_text_cols()` で行う。上流の
