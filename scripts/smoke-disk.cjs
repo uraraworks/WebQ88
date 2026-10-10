@@ -191,7 +191,15 @@ async function main() {
   const dumpedNo = n1.disks.dump(1);
   check('陰性対照(save_to_disk_image無効): 吸い出しは blank と同一(SAVEがイメージに入らない)', Buffer.from(dumpedNo).equals(Buffer.from(BLANK)));
   await type(n1, 'FILES 2\n', 240);
-  console.log('INFO: 陰性対照のゲスト上では FILES 2 に TEST が見える=' + screenHas(await screen(n1), /TEST/i) + '(差分ファイル経由。イメージ本体には入っていない)');
+  check('差分保存: FILES 2 で保存したファイルが見える', screenHas(await screen(n1), /TEST/i));
+  await type(n1, 'NEW\n', 60);
+  await type(n1, 'CLS\n', 60);
+  await type(n1, 'LIST\n', 60);
+  check('差分保存: NEW 後にプログラムが消える', !screenHas(await screen(n1), /HELLO-DISK/));
+  await type(n1, 'CLS\n', 60);
+  await type(n1, 'LOAD "2:TEST"\n', 240);
+  await type(n1, 'LIST\n', 90);
+  check('差分保存: LOAD → LIST で元のプログラムが戻る', screenHas(await screen(n1), /10 PRINT "HELLO-DISK"/i));
   const c = await boot({});
   await c.frames(240);
   await ApiDispatch.exec(c.ctx, 'insert_disk', { drive: 2, name: 'work.d88', base64: Buffer.from(dumpedNo).toString('base64') });
