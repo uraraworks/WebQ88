@@ -1,11 +1,11 @@
 {
   "generatedBy": "PC88Behavior",
-  "sourceCommit": "1c961bb98e820ca528f1a9aef6e683116ddc4558",
+  "sourceCommit": "a8bd57d55543cb83f5957c91f0b8188acb12a201",
   "license": "MIT",
   "files": [
     {"name": "N88.ROM", "size": 32768, "sha256": "4abc1a99ebe631f95f120076fda118b0ef2afe1db12066b383ae7352a16eb827"}
     ,
-    {"name": "DISK.ROM", "size": 8192, "sha256": "6a62e9b31b0894c0d583f1da84e07784cdc52efc7653e63a591537577a089c3b"}
+    {"name": "DISK.ROM", "size": 8192, "sha256": "bb6a1b0c76eb211d504793e8fca98e5b27df0f30a805fb1edd53cafd81d960d4"}
     ,
     {"name": "FONT.ROM", "size": 4096, "sha256": "53d8cc9418149528c43174b309f34ec08138bdf45c54947cd8159956af3f2b97"}
     ,
