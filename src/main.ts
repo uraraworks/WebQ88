@@ -5,6 +5,7 @@ declare const __BUILD_TIME__: string;
 // エミュレーション本体（コアの実行・入力の反映）は core-worker.js（Worker側）が持つ。
 
 import './style.css';
+import { AudioEngine } from './audio';
 import { initDisplay } from './display';
 import { initPlayerUi } from './player-ui';
 import { loadVerifiedBundledDisks, loadVerifiedCompatRoms, type VerifiedRom } from './compat-rom';
@@ -18,6 +19,29 @@ import { Bridge, resolveBridgeUrl } from './bridge';
 import { registerUrl } from './disk-source';
 
 initPlayerUi();
+const audio = new AudioEngine();
+const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
+const volumeInput = document.querySelector<HTMLInputElement>('#volume')!;
+let muted = false;
+try {
+  muted = localStorage.getItem('webq88-muted') === 'true';
+  const stored = localStorage.getItem('webq88-volume');
+  if (stored !== null && Number.isFinite(Number(stored))) volumeInput.value = String(Math.max(0, Math.min(100, Number(stored))));
+} catch { /* 保存を使えない環境でも再生する */ }
+function updateAudioSettings(): void {
+  audio.setSettings(muted, Number(volumeInput.value) / 100);
+  muteButton.title = muted ? 'ミュート解除' : 'ミュート';
+  muteButton.setAttribute('aria-label', muteButton.title);
+  muteButton.setAttribute('aria-pressed', String(muted));
+  muteButton.classList.toggle('active', muted);
+  muteButton.querySelector('path')!.setAttribute('d', muted ? 'M4 9h4l5-4v14l-5-4H4z M16 9l5 6 M21 9l-5 6' : 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M19 6a8 8 0 0 1 0 12');
+  try { localStorage.setItem('webq88-muted', String(muted)); localStorage.setItem('webq88-volume', volumeInput.value); } catch { /* 保存不可 */ }
+}
+muteButton.addEventListener('click', () => { muted = !muted; updateAudioSettings(); });
+volumeInput.addEventListener('input', updateAudioSettings);
+updateAudioSettings();
+// 自動起動時も最初のユーザー操作から AudioContext を開始する。
+for (const event of ['pointerdown', 'keydown'] as const) window.addEventListener(event, () => audio.start(), { capture: true });
 
 const numpadAlt = document.querySelector<HTMLInputElement>('#numpad-alt')!;
 try { numpadAlt.checked = localStorage.getItem('webq88-numpad-alt') === 'true'; } catch { /* 既定OFF */ }
@@ -104,7 +128,8 @@ async function main(): Promise<void> {
   let firstReady = true;
 
   const proxy = new CoreProxy({
-    onReady: ({ width, height, fps, mode }) => {
+    onReady: ({ width, height, fps, sampleRate, mode }) => {
+      audio.setRate(sampleRate);
       canvas.width = width;
       canvas.height = height;
       display.update();
@@ -140,6 +165,7 @@ async function main(): Promise<void> {
         })();
       }
     },
+    onAudio: buffer => audio.push(buffer),
     onFrame: ({ width, height, pitch, buffer, lamp }) => {
       diskPanel?.setLamp(lamp);
       if (!imageData || width !== imageData.width || height !== imageData.height) {
@@ -160,9 +186,12 @@ async function main(): Promise<void> {
     },
   });
 
+  const audioPacing = !new URLSearchParams(location.search).has('bridge');
+  audio.onQueue = seconds => proxy.setAudioQueue(seconds, audioPacing);
   let paused = false;
   pauseButton.addEventListener('click', () => {
     paused = !paused;
+    audio.setPaused(paused);
     proxy.setPaused(paused);
     pauseOverlay.hidden = !paused;
     pauseButton.classList.toggle('active', paused);

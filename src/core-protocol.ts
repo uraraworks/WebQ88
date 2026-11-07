@@ -40,6 +40,7 @@ export interface RomMode {
 
 /** メインスレッド → Worker */
 export type MainToWorkerMessage =
+  | { type: 'audioQueue'; enabled: boolean; seconds: number }
   | {
       // 初回はコアを新規起動、2回目以降(moduleInstance が既にある)は
       // 同一Workerインスタンス内で ROM を差し替えて再起動する
@@ -75,7 +76,8 @@ export type MainToWorkerMessage =
 
 /** Worker → メインスレッド */
 export type WorkerToMainMessage =
-  | { type: 'ready'; width: number; height: number; fps: number; mode: RomMode }
+  | { type: 'ready'; width: number; height: number; fps: number; sampleRate: number; mode: RomMode }
+  | { type: 'audio'; buffer: ArrayBuffer }
   | {
       type: 'frame';
       width: number;

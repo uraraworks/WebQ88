@@ -80,6 +80,10 @@ var loopTimer = null;
 var lastTickMs = 0;
 var accumulatedMs = 0;
 var paused = false;
+var audioChunks = [];
+var audioQueueSeconds = null;
+var audioQueueAt = 0;
+var audioPacing = false;
 
 // --- 自動操作API(docs/API-DESIGN.md)関連の状態 ---
 var pollCount = 0; // retro_input_poll が呼ばれた回数の累計(driveFramesの待ち合わせに使う)
@@ -141,8 +145,17 @@ function setupCallbacks(M) {
     lastFrameForApi = { width: width, height: height, pitch: pitch, buffer: buf };
   }, 'viiii');
 
-  var audioSampleCb = M.addFunction(function () {}, 'vii');
-  var audioBatchCb = M.addFunction(function (_data, frames) {
+  var audioSampleCb = M.addFunction(function (left, right) {
+    audioChunks.push(new Float32Array([left / 32768, right / 32768]));
+  }, 'vii');
+  var audioBatchCb = M.addFunction(function (data, frames) {
+    if (frames > 0) {
+      // HEAP16 はこのビルドでは公開されていないので HEAPU8 の buffer から見る
+      var input = new Int16Array(M.HEAPU8.buffer, data, frames * 2);
+      var samples = new Float32Array(input.length);
+      for (var i = 0; i < input.length; i++) samples[i] = input[i] / 32768;
+      audioChunks.push(samples);
+    }
     return frames;
   }, 'iii');
   // retro_input_poll はフレームに1回だけ呼ばれる(libretroの仕様)。
@@ -181,7 +194,9 @@ function readAvInfo(M) {
     }
     if (!(width > 0 && width <= 4096)) width = 640;
     if (!(height > 0 && height <= 4096)) height = 400;
-    return { fps: readFps, width: width, height: height };
+    var rate = f64[1];
+    if (!Number.isFinite(rate) || rate < 8000 || rate > 192000) rate = 44100;
+    return { fps: readFps, width: width, height: height, sampleRate: rate };
   } finally {
     M._free(ptr);
   }
@@ -198,6 +213,11 @@ function startLoop() {
     accumulatedMs += now - lastTickMs;
     lastTickMs = now;
 
+    // 音声が動作中の通常起動だけキュー深度を利用する。bridge は壁時計のまま。
+    if (audioPacing && audioQueueSeconds !== null && now - audioQueueAt < 250) {
+      if (audioQueueSeconds > 0.2) accumulatedMs = Math.min(accumulatedMs, frameDurationMs * 0.9);
+      else if (audioQueueSeconds < 0.032) accumulatedMs = Math.max(accumulatedMs, frameDurationMs * 2);
+    }
     var ran = 0;
     while (accumulatedMs >= frameDurationMs && ran < MAX_CATCHUP_FRAMES) {
       moduleInstance._retro_run();
@@ -210,6 +230,14 @@ function startLoop() {
       accumulatedMs = 0;
     }
 
+    if (audioChunks.length) {
+      var length = 0;
+      for (var a = 0; a < audioChunks.length; a++) length += audioChunks[a].length;
+      var audio = new Float32Array(length), offset = 0;
+      for (var b = 0; b < audioChunks.length; b++) { audio.set(audioChunks[b], offset); offset += audioChunks[b].length; }
+      audioChunks = [];
+      postMessage({ type: 'audio', buffer: audio.buffer }, [audio.buffer]);
+    }
     if (lastVideoFrame) {
       var f = lastVideoFrame;
       lastVideoFrame = null;
@@ -286,7 +314,7 @@ function finishBoot(M, plan, isReboot) {
 
   var avInfo = readAvInfo(M);
   fps = avInfo.fps;
-  postMessage({ type: 'ready', width: avInfo.width, height: avInfo.height, fps: fps, mode: romMode });
+  postMessage({ type: 'ready', width: avInfo.width, height: avInfo.height, fps: fps, sampleRate: avInfo.sampleRate, mode: romMode });
 
   if (!isReboot) {
     startLoop();
@@ -635,6 +663,11 @@ self.onmessage = function (ev) {
       } else {
         keyHoldTracker.release(msg.code);
       }
+      break;
+    case 'audioQueue':
+      audioPacing = !!msg.enabled;
+      audioQueueSeconds = msg.seconds;
+      audioQueueAt = performance.now();
       break;
     case 'pause':
       paused = true;

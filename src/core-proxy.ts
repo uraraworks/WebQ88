@@ -9,7 +9,8 @@ import { WORKER_SCRIPT_PATH } from './core-protocol';
 import type { VerifiedRom } from './compat-rom';
 
 export interface CoreProxyHandlers {
-  onReady?: (info: { width: number; height: number; fps: number; mode: RomMode }) => void;
+  onReady?: (info: { width: number; height: number; fps: number; sampleRate: number; mode: RomMode }) => void;
+  onAudio?: (buffer: ArrayBuffer) => void;
   onFrame?: (frame: { width: number; height: number; pitch: number; buffer: ArrayBuffer; lamp: number }) => void;
   onError?: (message: string) => void;
   /** {type:'mode'} への応答(デバッグ用)。 */
@@ -20,6 +21,7 @@ let nextRequestId = 1;
 
 export class CoreProxy {
   private worker: Worker;
+  setAudioQueue(seconds: number, enabled: boolean): void { this.worker.postMessage({ type: 'audioQueue', seconds, enabled }); }
   private pendingRamReads = new Map<number, { resolve: (data: ArrayBuffer) => void; reject: (err: Error) => void }>();
   private pendingRamWrites = new Map<number, { resolve: () => void; reject: (err: Error) => void }>();
   private pendingApiExecs = new Map<number, (result: Record<string, unknown>) => void>();
@@ -35,7 +37,10 @@ export class CoreProxy {
       const msg = ev.data;
       switch (msg.type) {
         case 'ready':
-          handlers.onReady?.({ width: msg.width, height: msg.height, fps: msg.fps, mode: msg.mode });
+          handlers.onReady?.({ width: msg.width, height: msg.height, fps: msg.fps, sampleRate: msg.sampleRate, mode: msg.mode });
+          break;
+        case 'audio':
+          handlers.onAudio?.(msg.buffer);
           break;
         case 'frame':
           handlers.onFrame?.({
