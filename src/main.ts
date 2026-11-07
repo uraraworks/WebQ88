@@ -1,3 +1,4 @@
+declare const __BUILD_TIME__: string;
 // main.ts — 最小の起動配線。
 //
 // メインスレッドの役割は「ROM検証→Worker初期化」「描画」「キー入力の集約」の3つだけ。
@@ -209,4 +210,14 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+const startupOverlay = document.querySelector<HTMLElement>('#startup-overlay')!;
+const start = (): void => {
+  startupOverlay.hidden = true;
+  void main();
+};
+if (new URLSearchParams(window.location.search).has('bridge')) {
+  start();
+} else {
+  document.querySelector<HTMLButtonElement>('#startup-button')!.addEventListener('click', start, { once: true });
+}
+document.querySelector<HTMLElement>('#build-time')!.textContent = `Build: ${__BUILD_TIME__}`;

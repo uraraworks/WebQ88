@@ -26,6 +26,7 @@ export function initPlayerUi(): void {
 
   function setFullscreen(on: boolean): void {
     document.body.classList.toggle('pseudo-fullscreen', on);
+    window.dispatchEvent(new Event('player-fullscreen-change'));
     fullscreen.classList.toggle('active', on);
     fullscreen.setAttribute('aria-pressed', String(on));
     fullscreen.title = on ? '全画面表示を終了' : '全画面表示';
