@@ -22,6 +22,9 @@ export interface StoredDisk {
   savedAt: number;
   /** 一覧用の表示名。再保存で上書きしない(putDiskPreservingMeta)。 */
   displayName?: string;
+  url?: string;
+  archiveEntry?: string;
+  sourceOrder?: number;
 }
 
 export interface DriveAssignment {
@@ -103,7 +106,7 @@ export async function putDiskPreservingMeta(disk: StoredDisk): Promise<void> {
   const store = tx.objectStore(STORE_DISKS);
   const done = txDone(tx);
   const existing = (await reqToPromise(store.get(disk.sourceKey))) as StoredDisk | undefined;
-  store.put({ ...disk, displayName: existing?.displayName ?? disk.displayName });
+  store.put({ ...existing, ...disk, displayName: existing?.displayName ?? disk.displayName });
   await done;
 }
 

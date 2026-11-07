@@ -15,6 +15,7 @@ import type { RomFile, RomMode } from './core-protocol';
 import { attachKeyboard } from './keyboard';
 import { convertRgb565ToImageData } from './rgb565';
 import { Bridge, resolveBridgeUrl } from './bridge';
+import { registerUrl } from './disk-source';
 
 initPlayerUi();
 
@@ -116,9 +117,27 @@ async function main(): Promise<void> {
         firstReady = false;
         // 前回のドライブ割り当てを自動で挿入する。ドライブ1に入れたときは、
         // 起動用ディスクとして読まれるようもう一度リセットする。
-        void diskPanel?.restore().then((restored) => {
-          if (restored.includes(0)) proxy.reset();
-        });
+        void (async () => {
+          if (!diskPanel) return;
+          const restored = await diskPanel.restore();
+          const params = new URLSearchParams(location.search);
+          let bootChanged = restored.includes(0);
+          for (let d = 0; d < 2; d++) {
+            const url = params.get(`fd${d + 1}`);
+            if (!url) continue;
+            try {
+              const disks = await registerUrl(url, message => diskPanel!.showMessage(`FD${d + 1}: ${message}`));
+              await diskPanel.insertStored(d, disks[0].sourceKey);
+              if (d === 0) bootChanged = true;
+            } catch (err) { diskPanel.showMessage(`FD${d + 1}: ${(err as Error).message}`); }
+          }
+          for (const url of params.getAll('lib').filter(Boolean)) {
+            try { await registerUrl(url, message => diskPanel!.showMessage(`ライブラリ: ${message}`)); }
+            catch (err) { diskPanel.showMessage(`ライブラリ: ${(err as Error).message}`); }
+          }
+          if (params.getAll('lib').some(Boolean)) document.querySelector<HTMLButtonElement>('#disk-library')!.click();
+          if (bootChanged) proxy.reset();
+        })();
       }
     },
     onFrame: ({ width, height, pitch, buffer, lamp }) => {
@@ -224,7 +243,7 @@ const start = (): void => {
   startupOverlay.hidden = true;
   void main();
 };
-if (new URLSearchParams(window.location.search).has('bridge')) {
+if (new URLSearchParams(window.location.search).has('bridge') || (new URLSearchParams(window.location.search).get('run') === '1' && !new URLSearchParams(window.location.search).has('lib'))) {
   start();
 } else {
   document.querySelector<HTMLButtonElement>('#startup-button')!.addEventListener('click', start, { once: true });

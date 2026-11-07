@@ -14,7 +14,7 @@ export function initLibrary(panel: DiskPanel): void {
     button.textContent = label;
     button.addEventListener('click', () => {
       button.disabled = true;
-      void run().catch(() => { window.alert('操作に失敗しました。'); }).finally(() => { button.disabled = false; });
+      void run().catch((err: unknown) => { window.alert(`操作に失敗しました: ${(err as Error).message}`); }).finally(() => { button.disabled = false; });
     });
     return button;
   };
@@ -44,12 +44,17 @@ export function initLibrary(panel: DiskPanel): void {
       const link = document.createElement('a'); link.href = url; link.download = latest.name; link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 10000);
     }));
+    if (disk.url) actions.append(action('配布元に戻す', async () => {
+      if (!window.confirm(`「${disk.displayName || disk.name}」の保存済みの変更を破棄し、配布元から再取得しますか？ 挿入中の場合は排出します。`)) return;
+      await panel.resetStored(disk.sourceKey); await refresh();
+    }, true));
     actions.append(action('削除', async () => {
       if (!window.confirm(`「${disk.displayName || disk.name}」を削除しますか？ 挿入中の場合は排出します。`)) return;
       await panel.deleteStored(disk.sourceKey); await refresh();
     }, true));
     item.append(badge, name, meta, actions); return item;
   };
+  document.querySelector<HTMLButtonElement>('#share-disks')!.addEventListener('click', () => { void panel.shareUrl().catch((err: Error) => window.alert(err.message)); });
   open.addEventListener('click', () => { backdrop.hidden = false; close.focus(); void refresh().catch(() => { list.textContent = 'ライブラリを読み込めませんでした。'; }); });
   close.addEventListener('click', dismiss);
   backdrop.addEventListener('click', (event) => { if (event.target === backdrop) dismiss(); });

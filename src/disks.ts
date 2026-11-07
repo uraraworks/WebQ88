@@ -15,6 +15,7 @@
 //   - API(insert_disk 等)でワーカーに直接入れられたディスクは、IndexedDB には
 //     保存しない(sourceKey を持たない一時的なディスク。画面には表示する)。
 
+import { registerSource, originalBytes } from './disk-source';
 import type { CoreProxy } from './core-proxy';
 import type { DiskPollEntry } from './core-protocol';
 import {
@@ -227,6 +228,14 @@ export class DiskPanel {
 
   /** ファイルを挿入する。同じキーの保存があればそちらを読む(前回の続き)。 */
   async insertFile(d: number, file: File): Promise<void> {
+    if (/\.(zip|lzh)$/i.test(file.name)) {
+      try {
+        const disks = await registerSource(file.name, new Uint8Array(await file.arrayBuffer()), `archive:${file.name}:${file.size}`);
+        await this.insertStored(d, disks[0].sourceKey);
+        this.setMessage(`${disks.length}枚をライブラリに登録しました`);
+      } catch (err) { this.setMessage(`展開に失敗しました: ${(err as Error).message}`); }
+      return;
+    }
     await this.withOp(async () => {
       try {
         const key = fileSourceKey(file.name, file.size);
@@ -303,6 +312,38 @@ export class DiskPanel {
         this.setMessage(`ドライブ${d + 1}に挿入しました`);
       } catch { this.render(); this.setMessage('ライブラリから挿入できませんでした'); }
     });
+  }
+
+  showMessage(message: string): void { this.setMessage(message); }
+
+  async resetStored(key: string): Promise<void> {
+    const disk = await getDisk(key);
+    if (!disk?.url) throw new Error('配布元URLがありません');
+    const bytes = await originalBytes(disk, message => this.setMessage(message));
+    await this.withOp(async () => {
+      for (let d = 0; d < 2; d++) {
+        if (this.slots[d].key !== key) continue;
+        await this.persisting[d];
+        const res = await this.proxy.diskRequest('eject', d);
+        if (!res.ok) throw new Error('ドライブを排出できませんでした');
+        this.slots[d] = emptySlot();
+      }
+      await putDisk({ ...disk, bytes, savedAt: Date.now() });
+      this.render(); await this.writeAssignment();
+      this.setMessage('配布元の状態に戻しました');
+    });
+  }
+
+  async shareUrl(): Promise<void> {
+    const url = new URL(location.href); url.search = ''; url.hash = '';
+    let count = 0;
+    for (let d = 0; d < 2; d++) {
+      const key = this.slots[d].key; const disk = key ? await getDisk(key) : undefined;
+      if (disk?.url) { url.searchParams.set(`fd${d + 1}`, disk.url); count++; }
+    }
+    if (!count) throw new Error('URL由来のディスクが挿入されていません');
+    await navigator.clipboard.writeText(url.href);
+    this.setMessage('共有URLをコピーしました');
   }
 
   async deleteStored(key: string): Promise<void> {

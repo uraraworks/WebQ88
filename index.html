@@ -14,6 +14,7 @@
           <button id="pause" class="icon-btn" type="button" title="一時停止" aria-label="一時停止" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14 M16 5v14" /></svg></button>
           <button id="fullscreen" class="icon-btn" type="button" title="全画面表示" aria-label="全画面表示" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4 M15 4h4a1 1 0 0 1 1 1v4 M20 15v4a1 1 0 0 1-1 1h-4 M9 20H5a1 1 0 0 1-1-1v-4" /></svg></button>
           <button id="screenshot" class="icon-btn" type="button" title="スクリーンショット" aria-label="スクリーンショット"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3"/></svg></button>
+          <button id="share-disks" type="button" title="挿入中のURL由来ディスクの共有URLをコピー">共有URLをコピー</button>
           <button id="disk-library" class="icon-btn" type="button" title="ディスクライブラリ" aria-label="ディスクライブラリ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16h13l3-3V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1z M4 20h13a3 3 0 0 0 3-3 M8 9h6v4H8z" /></svg></button>
           <div class="toolbar-menu-wrap">
             <button id="toolbar-more" class="icon-btn" type="button" title="その他の操作" aria-label="その他の操作" aria-expanded="false" aria-controls="toolbar-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01 M12 12h.01 M19 12h.01" /></svg></button>
@@ -45,7 +46,7 @@
           <button type="button" class="drive-insert" title="挿入" aria-label="挿入">＋</button>
           <button type="button" class="drive-eject" title="排出" aria-label="排出" disabled>⏏</button>
           <button type="button" class="drive-download" title="ダウンロード" aria-label="ダウンロード" disabled>↓</button>
-          <input type="file" class="drive-file-input" accept=".d88,.88d" hidden />
+          <input type="file" class="drive-file-input" accept=".d88,.88d,.zip,.lzh" hidden />
 
         </div>
         <div class="drive-row" data-drive="1">
@@ -56,7 +57,7 @@
           <button type="button" class="drive-eject" title="排出" aria-label="排出" disabled>⏏</button>
           <button type="button" class="drive-blank" title="ブランクFDを作成" aria-label="ブランクFDを作成">▤</button>
           <button type="button" class="drive-download" title="ダウンロード" aria-label="ダウンロード" disabled>↓</button>
-          <input type="file" class="drive-file-input" accept=".d88,.88d" hidden />
+          <input type="file" class="drive-file-input" accept=".d88,.88d,.zip,.lzh" hidden />
         </div>
         </div><div id="disk-msg" role="status"></div>
       </div>
