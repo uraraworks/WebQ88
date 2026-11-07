@@ -3,7 +3,7 @@ export function initDisplay(source: HTMLCanvasElement): { update: () => void; pr
   const stage = document.querySelector<HTMLElement>('#screen-stage')!;
   const player = document.querySelector<HTMLElement>('#player')!;
   const app = document.querySelector<HTMLElement>('#app')!;
-  const chrome = [document.querySelector<HTMLElement>('.app-header')!, document.querySelector<HTMLElement>('.app-footer')!, document.querySelector<HTMLElement>('.console-footer')!, document.querySelector<HTMLElement>('#status')!];
+  const chrome = [document.querySelector<HTMLElement>('.app-header')!, document.querySelector<HTMLElement>('.app-footer')!, document.querySelector<HTMLElement>('.console-footer')!, document.querySelector<HTMLElement>('#virtual-keyboard')!, document.querySelector<HTMLElement>('#status')!];
   const sharp = document.querySelector<HTMLCanvasElement>('#screen-sharp')!;
   const ctx = sharp.getContext('2d')!;
   const aspect = document.querySelector<HTMLSelectElement>('#aspect-mode')!;
@@ -32,7 +32,9 @@ export function initDisplay(source: HTMLCanvasElement): { update: () => void; pr
       const paddingV = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
       const gap = parseFloat(style.rowGap) || 0;
       const reserved = chrome.reduce((sum, element) => sum + element.getBoundingClientRect().height, 0) + paddingV + gap + 4;
-      const fit = Math.max(0, Math.min((window.innerWidth - paddingH) / targetW, (window.innerHeight - reserved) / targetH));
+      const widthFit = Math.max(0, (window.innerWidth - paddingH) / targetW);
+      // 高さが不足しても画面を等倍以下に潰さない。狭い画面では幅に収める。
+      const fit = Math.min(widthFit, Math.max(Math.min(1, widthFit), (window.innerHeight - reserved) / targetH));
       let scale = fit;
       if (fit >= 1) {
         const n = Math.floor(fit);

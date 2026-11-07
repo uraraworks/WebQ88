@@ -160,9 +160,16 @@ export type KeyStateListener = (retroKey: number, pressed: boolean) => void;
  * window の keydown/keyup をここに集約し、変換した RETROK を1つのコールバックへ渡す。
  * 呼び出し元を増やす場合もここを経由させ、配線を分散させない。
  */
-export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener, numpadAlt: () => boolean = () => false): () => void {
+export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener, numpadAlt: () => boolean = () => false): { setVirtualKey: (code: number, pressed: boolean) => void } {
   const activeKeys = new Map<string, number>();
   const keyDemand = new Map<number, number>();
+  const virtualKeys = new Set<number>();
+  const demand = (code: number, delta: number): void => {
+    const before = keyDemand.get(code) ?? 0;
+    const after = before + delta;
+    if (after > 0) keyDemand.set(code, after); else keyDemand.delete(code);
+    if ((before > 0) !== (after > 0)) onKeyState(code, after > 0);
+  };
   const altArrows: Record<string, number> = { ArrowUp: 8, ArrowDown: 2, ArrowLeft: 4, ArrowRight: 6 };
   const resolveKey = (code: string): number | null => {
     if (numpadAlt()) {
@@ -181,13 +188,7 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
   // 遷移でだけ実際に PC-88 へ送る（どちらか片方を離しても、もう片方がまだ
   // 要求していれば離さない）。これにより、SHIFT を押したまま記号→英字を
   // 続けて打っても英字の大文字化が壊れない。
-  let lshiftDemand = 0;
-  const setLShiftDemand = (delta: number) => {
-    const before = lshiftDemand > 0;
-    lshiftDemand += delta;
-    const after = lshiftDemand > 0;
-    if (before !== after) onKeyState(RETROK.LSHIFT, after);
-  };
+  const setLShiftDemand = (delta: number) => demand(RETROK.LSHIFT, delta);
 
   const onKeyDown = (ev: Event) => {
     const e = ev as KeyboardEvent;
@@ -201,9 +202,7 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
       if (controlRetroKey === RETROK.LSHIFT) {
         setLShiftDemand(1);
       } else {
-        const count = keyDemand.get(controlRetroKey) ?? 0;
-        keyDemand.set(controlRetroKey, count + 1);
-        if (count === 0) onKeyState(controlRetroKey, true);
+        demand(controlRetroKey, 1);
       }
       return;
     }
@@ -215,7 +214,7 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
     if (activeSymbolKeys.has(e.code)) return; // 押しっぱなし(auto-repeat)は無視
     activeSymbolKeys.set(e.code, { retroKey: resolved.code, shift: resolved.shift });
     if (resolved.shift) setLShiftDemand(1);
-    onKeyState(resolved.code, true);
+    demand(resolved.code, 1);
   };
 
   const onKeyUp = (ev: Event) => {
@@ -228,11 +227,7 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
       if (controlRetroKey === RETROK.LSHIFT) {
         setLShiftDemand(-1);
       } else {
-        const count = (keyDemand.get(controlRetroKey) ?? 1) - 1;
-        if (count === 0) {
-          keyDemand.delete(controlRetroKey);
-          onKeyState(controlRetroKey, false);
-        } else keyDemand.set(controlRetroKey, count);
+        demand(controlRetroKey, -1);
       }
       return;
     }
@@ -241,14 +236,15 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
     if (!active) return;
     e.preventDefault();
     activeSymbolKeys.delete(e.code);
-    onKeyState(active.retroKey, false);
+    demand(active.retroKey, -1);
     if (active.shift) setLShiftDemand(-1);
   };
 
   target.addEventListener('keydown', onKeyDown);
   target.addEventListener('keyup', onKeyUp);
-  return () => {
-    target.removeEventListener('keydown', onKeyDown);
-    target.removeEventListener('keyup', onKeyUp);
-  };
+  return { setVirtualKey: (code, pressed) => {
+    if (pressed === virtualKeys.has(code)) return;
+    if (pressed) virtualKeys.add(code); else virtualKeys.delete(code);
+    demand(code, pressed ? 1 : -1);
+  } };
 }

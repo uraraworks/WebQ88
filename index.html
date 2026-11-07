@@ -10,16 +10,18 @@
     <div id="app">
       <div id="player">
         <div id="screen-stage"><canvas id="screen" tabindex="0"></canvas><canvas id="screen-sharp" aria-hidden="true" hidden></canvas><div id="pause-overlay" hidden>一時停止中</div><div id="startup-overlay" class="overlay"><button id="startup-button" type="button">互換ROMで起動</button><p>音声再生を有効にするため、ボタンをクリックして起動してください。</p></div></div>
+        <div id="virtual-keyboard" class="kbd-panel" hidden aria-label="ソフトキーボード"></div>
         <div class="console-footer"><div class="toolbar" aria-label="操作バー"><div class="toolbar-center">
           <button id="pause" class="icon-btn" type="button" title="一時停止" aria-label="一時停止" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14 M16 5v14" /></svg></button>
           <button id="mute" class="icon-btn" type="button" title="ミュート" aria-label="ミュート" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M19 6a8 8 0 0 1 0 12" /></svg></button>
           <button id="fullscreen" class="icon-btn" type="button" title="全画面表示" aria-label="全画面表示" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4 M15 4h4a1 1 0 0 1 1 1v4 M20 15v4a1 1 0 0 1-1 1h-4 M9 20H5a1 1 0 0 1-1-1v-4" /></svg></button>
+          <button id="keyboard-toggle" class="icon-btn" type="button" title="ソフトキーボード" aria-label="ソフトキーボード" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z M6 10h.01 M9 10h.01 M12 10h.01 M15 10h.01 M18 10h.01 M6 13h.01 M9 13h.01 M12 13h.01 M15 13h.01 M18 13h.01 M8 16h8" /></svg></button>
           <button id="screenshot" class="icon-btn" type="button" title="スクリーンショット" aria-label="スクリーンショット"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3"/></svg></button>
-          <button id="share-disks" type="button" title="挿入中のURL由来ディスクの共有URLをコピー">共有URLをコピー</button>
           <button id="disk-library" class="icon-btn" type="button" title="ディスクライブラリ" aria-label="ディスクライブラリ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16h13l3-3V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1z M4 20h13a3 3 0 0 0 3-3 M8 9h6v4H8z" /></svg></button>
           <div class="toolbar-menu-wrap">
             <button id="toolbar-more" class="icon-btn" type="button" title="その他の操作" aria-label="その他の操作" aria-expanded="false" aria-controls="toolbar-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01 M12 12h.01 M19 12h.01" /></svg></button>
             <div id="toolbar-menu" class="toolbar-menu" hidden>
+              <button id="share-disks" type="button" title="挿入中のURL由来ディスクの共有URLをコピー">共有URLをコピー</button>
               <label for="volume">音量</label><input id="volume" type="range" min="0" max="100" value="100" />
               <label for="aspect-mode">表示比率</label><select id="aspect-mode"><option value="4:3">4:3</option><option value="native">ドット等倍</option></select>
               <label for="filter-mode">補間</label><select id="filter-mode"><option value="sharp">シャープ・バイリニア</option><option value="nearest">ニアレスト</option></select>
