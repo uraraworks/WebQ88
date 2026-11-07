@@ -160,10 +160,9 @@ export type KeyStateListener = (retroKey: number, pressed: boolean) => void;
  * window の keydown/keyup をここに集約し、変換した RETROK を1つのコールバックへ渡す。
  * 呼び出し元を増やす場合もここを経由させ、配線を分散させない。
  */
-export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener, numpadAlt: () => boolean = () => false): { setVirtualKey: (code: number, pressed: boolean) => void } {
+export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener, numpadAlt: () => boolean = () => false, hostMapping: () => Record<string, number> = () => ({})): { setVirtualKey: (code: number, pressed: boolean) => void; createKeySource: () => (code: number, pressed: boolean) => void } {
   const activeKeys = new Map<string, number>();
   const keyDemand = new Map<number, number>();
-  const virtualKeys = new Set<number>();
   const demand = (code: number, delta: number): void => {
     const before = keyDemand.get(code) ?? 0;
     const after = before + delta;
@@ -172,6 +171,8 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
   };
   const altArrows: Record<string, number> = { ArrowUp: 8, ArrowDown: 2, ArrowLeft: 4, ArrowRight: 6 };
   const resolveKey = (code: string): number | null => {
+    const mapped = hostMapping()[code];
+    if (mapped !== undefined) return mapped;
     if (numpadAlt()) {
       if (/^Digit[0-9]$/.test(code)) return RETROK.KP0 + Number(code.slice(5));
       if (code in altArrows) return RETROK.KP0 + altArrows[code];
@@ -242,9 +243,13 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
 
   target.addEventListener('keydown', onKeyDown);
   target.addEventListener('keyup', onKeyUp);
-  return { setVirtualKey: (code, pressed) => {
-    if (pressed === virtualKeys.has(code)) return;
-    if (pressed) virtualKeys.add(code); else virtualKeys.delete(code);
-    demand(code, pressed ? 1 : -1);
-  } };
+  const createKeySource = () => {
+    const keys = new Set<number>();
+    return (code: number, pressed: boolean): void => {
+      if (pressed === keys.has(code)) return;
+      if (pressed) keys.add(code); else keys.delete(code);
+      demand(code, pressed ? 1 : -1);
+    };
+  };
+  return { setVirtualKey: createKeySource(), createKeySource };
 }

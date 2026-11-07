@@ -15,6 +15,7 @@ import { CoreProxy } from './core-proxy';
 import type { RomFile, RomMode } from './core-protocol';
 import { attachKeyboard } from './keyboard';
 import { initVirtualKeyboard } from './virtual-keyboard';
+import { initInputControls } from './input-controls';
 import { convertRgb565ToImageData } from './rgb565';
 import { Bridge, resolveBridgeUrl } from './bridge';
 import { registerUrl } from './disk-source';
@@ -244,9 +245,11 @@ async function main(): Promise<void> {
 
   // 入力は1つの窓口（attachKeyboard）に集約し、そこから先は
   // CoreProxy.sendKey 経由でしか Worker に伝えない。
+  let hostMapping: () => Record<string, number> = () => ({});
   const keyboard = attachKeyboard(window, (retroKey, pressed) => {
     proxy.sendKey(retroKey, pressed);
-  }, () => numpadAlt.checked);
+  }, () => numpadAlt.checked, () => hostMapping());
+  hostMapping = initInputControls(keyboard.createKeySource);
 
   initVirtualKeyboard(keyboard.setVirtualKey, display.update);
 
