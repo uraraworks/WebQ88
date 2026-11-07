@@ -4,6 +4,7 @@
 // エミュレーション本体（コアの実行・入力の反映）は core-worker.js（Worker側）が持つ。
 
 import './style.css';
+import { initPlayerUi } from './player-ui';
 import { loadVerifiedBundledDisks, loadVerifiedCompatRoms, type VerifiedRom } from './compat-rom';
 import { DiskPanel } from './disks';
 import { CoreProxy } from './core-proxy';
@@ -11,6 +12,8 @@ import type { RomFile, RomMode } from './core-protocol';
 import { attachKeyboard } from './keyboard';
 import { convertRgb565ToImageData } from './rgb565';
 import { Bridge, resolveBridgeUrl } from './bridge';
+
+initPlayerUi();
 
 const statusEl = document.querySelector<HTMLDivElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#screen')!;

@@ -2,14 +2,29 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>WebQ88</title>
   </head>
   <body>
     <div id="app">
       <h1>WebQ88</h1>
       <div id="status">起動準備中…</div>
-      <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
+      <div id="player">
+        <div class="toolbar" aria-label="操作バー">
+          <div class="toolbar-menu-wrap">
+            <button id="toolbar-more" class="icon-btn" type="button" title="その他の操作" aria-label="その他の操作" aria-expanded="false" aria-controls="toolbar-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01 M12 12h.01 M19 12h.01" /></svg></button>
+            <div id="toolbar-menu" class="toolbar-menu" hidden>
+              <label for="rom-files">利用者ROMを選択（複数選択可・任意）</label>
+              <input type="file" id="rom-files" multiple />
+              <span>利用者ROMを渡すと制限モードになります。</span>
+            </div>
+          </div>
+          <button id="rom-boot" class="icon-btn" type="button" title="起動 / 再起動" aria-label="起動 / 再起動"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9 M6.3 5.7a8 8 0 1 0 11.4 0" /></svg></button>
+          <button id="fullscreen" class="icon-btn" type="button" title="全画面表示" aria-label="全画面表示" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4 M15 4h4a1 1 0 0 1 1 1v4 M20 15v4a1 1 0 0 1-1 1h-4 M9 20H5a1 1 0 0 1-1-1v-4" /></svg></button>
+          <button id="core-reset" class="icon-btn toolbar-end" type="button" title="リセット" aria-label="リセット"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8 M3 3v5h5" /></svg></button>
+        </div>
+        <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
+      </div>
       <div id="disks">
         <div class="disks-title">フロッピーディスク(ファイルをドライブ行へドラッグ＆ドロップでも挿入できます)</div>
         <div class="drive-row" data-drive="0">
@@ -38,12 +53,6 @@
           Safari で7日間使わなかったとき)。大事なディスクは「ダウンロード」で手元にも保存してください。
           書き込みは数秒おきにこのブラウザへ自動保存され、次に開いたときドライブへ自動で挿入し直します。
         </div>
-      </div>
-      <div id="rom-loader">
-        <label for="rom-files">利用者ROMを読み込む(複数選択可・任意。渡すと制限モードになります):</label>
-        <input type="file" id="rom-files" multiple />
-        <button id="rom-boot" type="button">起動 / 再起動</button>
-        <button id="core-reset" type="button">リセット</button>
       </div>
       <div id="mode-info"></div>
     </div>
