@@ -160,7 +160,17 @@ export type KeyStateListener = (retroKey: number, pressed: boolean) => void;
  * window の keydown/keyup をここに集約し、変換した RETROK を1つのコールバックへ渡す。
  * 呼び出し元を増やす場合もここを経由させ、配線を分散させない。
  */
-export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener): () => void {
+export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener, numpadAlt: () => boolean = () => false): () => void {
+  const activeKeys = new Map<string, number>();
+  const keyDemand = new Map<number, number>();
+  const altArrows: Record<string, number> = { ArrowUp: 8, ArrowDown: 2, ArrowLeft: 4, ArrowRight: 6 };
+  const resolveKey = (code: string): number | null => {
+    if (numpadAlt()) {
+      if (/^Digit[0-9]$/.test(code)) return RETROK.KP0 + Number(code.slice(5));
+      if (code in altArrows) return RETROK.KP0 + altArrows[code];
+    }
+    return codeToRetroKey(code);
+  };
   // 記号キー: 物理キー(e.code)ごとに「keydown 時に実際に送った PC-88 キーと、
   // 併せて仮想 SHIFT を押したか」を覚えておく。keyup 時の e.key は SHIFT の
   // 離し順で変わりうるため、keydown 時の対応をそのまま使って離す。
@@ -181,15 +191,19 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
 
   const onKeyDown = (ev: Event) => {
     const e = ev as KeyboardEvent;
+    if (e.target instanceof HTMLElement && e.target.closest('input, select, textarea')) return;
 
-    const controlRetroKey = codeToRetroKey(e.code);
+    const controlRetroKey = resolveKey(e.code);
     if (controlRetroKey !== null) {
       e.preventDefault();
-      if (e.repeat) return; // libretro 側はキー押しっぱなし状態を保持するのでリピートは無視してよい
+      if (e.repeat || activeKeys.has(e.code)) return; // libretro 側はキー押しっぱなし状態を保持するのでリピートは無視してよい
+      activeKeys.set(e.code, controlRetroKey);
       if (controlRetroKey === RETROK.LSHIFT) {
         setLShiftDemand(1);
       } else {
-        onKeyState(controlRetroKey, true);
+        const count = keyDemand.get(controlRetroKey) ?? 0;
+        keyDemand.set(controlRetroKey, count + 1);
+        if (count === 0) onKeyState(controlRetroKey, true);
       }
       return;
     }
@@ -207,13 +221,18 @@ export function attachKeyboard(target: EventTarget, onKeyState: KeyStateListener
   const onKeyUp = (ev: Event) => {
     const e = ev as KeyboardEvent;
 
-    const controlRetroKey = codeToRetroKey(e.code);
-    if (controlRetroKey !== null) {
+    const controlRetroKey = activeKeys.get(e.code);
+    if (controlRetroKey !== undefined) {
       e.preventDefault();
+      activeKeys.delete(e.code);
       if (controlRetroKey === RETROK.LSHIFT) {
         setLShiftDemand(-1);
       } else {
-        onKeyState(controlRetroKey, false);
+        const count = (keyDemand.get(controlRetroKey) ?? 1) - 1;
+        if (count === 0) {
+          keyDemand.delete(controlRetroKey);
+          onKeyState(controlRetroKey, false);
+        } else keyDemand.set(controlRetroKey, count);
       }
       return;
     }

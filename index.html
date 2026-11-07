@@ -19,6 +19,7 @@
             <div id="toolbar-menu" class="toolbar-menu" hidden>
               <label for="aspect-mode">表示比率</label><select id="aspect-mode"><option value="4:3">4:3</option><option value="native">ドット等倍</option></select>
               <label for="filter-mode">補間</label><select id="filter-mode"><option value="sharp">シャープ・バイリニア</option><option value="nearest">ニアレスト</option></select>
+              <label><input type="checkbox" id="numpad-alt" /> テンキー代替</label>
               <label for="rom-files">利用者ROMを選択（複数選択可・任意）</label>
               <input type="file" id="rom-files" multiple />
               <span>利用者ROMを渡すと制限モードになります。</span><button id="rom-boot" type="button">選択したROMで起動 / 再起動</button><div id="mode-info"></div>
@@ -60,7 +61,7 @@
       </div></div>
       <div id="status" role="status">起動待機中</div>
     </div>
-    <footer class="app-footer"><a href="https://www.urara-works.jp/" target="_blank" rel="noopener">© URARA-works</a> / <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">GitHubで見る</a><span class="footer-links"></span><div id="build-time" class="app-footer-version"></div></footer>
+    <footer class="app-footer"><a href="https://www.urara-works.jp/" target="_blank" rel="noopener">© URARA-works</a> / <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">GitHubで見る</a><span class="footer-links"> / <a href="./help.html">ヘルプ</a> / <a href="./about.html">About</a></span><div id="build-time" class="app-footer-version"></div></footer>
     <!--
       src/keyboard.ts の記号キー変換は public/api-dispatch.js(type_text)と
       同じ表(public/char-map.js)を使う(表を二重に持たない)。Vite変換前の

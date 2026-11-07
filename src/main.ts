@@ -17,6 +17,12 @@ import { Bridge, resolveBridgeUrl } from './bridge';
 
 initPlayerUi();
 
+const numpadAlt = document.querySelector<HTMLInputElement>('#numpad-alt')!;
+try { numpadAlt.checked = localStorage.getItem('webq88-numpad-alt') === 'true'; } catch { /* 既定OFF */ }
+numpadAlt.addEventListener('change', () => {
+  try { localStorage.setItem('webq88-numpad-alt', String(numpadAlt.checked)); } catch { /* 保存できなくても切替可能 */ }
+});
+
 const statusEl = document.querySelector<HTMLDivElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#screen')!;
 const ctx = canvas.getContext('2d')!;
@@ -188,7 +194,7 @@ async function main(): Promise<void> {
   // CoreProxy.sendKey 経由でしか Worker に伝えない。
   attachKeyboard(window, (retroKey, pressed) => {
     proxy.sendKey(retroKey, pressed);
-  });
+  }, () => numpadAlt.checked);
 
   canvas.addEventListener('click', () => canvas.focus());
 
