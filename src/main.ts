@@ -4,6 +4,7 @@
 // エミュレーション本体（コアの実行・入力の反映）は core-worker.js（Worker側）が持つ。
 
 import './style.css';
+import { initDisplay } from './display';
 import { initPlayerUi } from './player-ui';
 import { loadVerifiedBundledDisks, loadVerifiedCompatRoms, type VerifiedRom } from './compat-rom';
 import { DiskPanel } from './disks';
@@ -18,6 +19,12 @@ initPlayerUi();
 const statusEl = document.querySelector<HTMLDivElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#screen')!;
 const ctx = canvas.getContext('2d')!;
+const display = initDisplay(canvas);
+const pauseButton = document.querySelector<HTMLButtonElement>('#pause')!;
+const pauseOverlay = document.querySelector<HTMLElement>('#pause-overlay')!;
+const screenshotButton = document.querySelector<HTMLButtonElement>('#screenshot')!;
+pauseButton.disabled = true;
+screenshotButton.disabled = true;
 const romFilesInput = document.querySelector<HTMLInputElement>('#rom-files')!;
 const romBootButton = document.querySelector<HTMLButtonElement>('#rom-boot')!;
 const modeInfoEl = document.querySelector<HTMLDivElement>('#mode-info')!;
@@ -91,6 +98,8 @@ async function main(): Promise<void> {
     onReady: ({ width, height, fps, mode }) => {
       canvas.width = width;
       canvas.height = height;
+      display.update();
+      pauseButton.disabled = false;
       imageData = ctx.createImageData(width, height);
       pixelBuf32 = new Uint32Array(imageData.data.buffer);
       setStatus(`起動しました (${width}x${height} @ ${fps.toFixed(1)}fps) — クリックしてキー入力を有効化`);
@@ -106,14 +115,48 @@ async function main(): Promise<void> {
     },
     onFrame: ({ width, height, pitch, buffer, lamp }) => {
       diskPanel?.setLamp(lamp);
-      if (!imageData || !pixelBuf32) return;
-      if (width !== imageData.width || height !== imageData.height) return;
+      if (!imageData || width !== imageData.width || height !== imageData.height) {
+        canvas.width = width;
+        canvas.height = height;
+        imageData = ctx.createImageData(width, height);
+        pixelBuf32 = new Uint32Array(imageData.data.buffer);
+        display.update();
+      }
+      if (!pixelBuf32) return;
       convertRgb565ToImageData(new Uint8Array(buffer), pitch, width, height, pixelBuf32);
       ctx.putImageData(imageData, 0, 0);
+      display.present();
+      screenshotButton.disabled = false;
     },
     onError: (message) => {
       setStatus(`エラー: ${message}`);
     },
+  });
+
+  let paused = false;
+  pauseButton.addEventListener('click', () => {
+    paused = !paused;
+    proxy.setPaused(paused);
+    pauseOverlay.hidden = !paused;
+    pauseButton.classList.toggle('active', paused);
+    pauseButton.setAttribute('aria-pressed', String(paused));
+    pauseButton.title = paused ? '再開' : '一時停止';
+    pauseButton.setAttribute('aria-label', pauseButton.title);
+    pauseButton.querySelector('path')!.setAttribute('d', paused ? 'M8 5l11 7-11 7z' : 'M8 5v14 M16 5v14');
+  });
+  screenshotButton.addEventListener('click', () => {
+    const now = new Date();
+    const pad = (n: number): string => String(n).padStart(2, '0');
+    const filename = `webq88-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.png`;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
   });
 
   diskPanel = new DiskPanel(proxy, disksEl, { blankImage: blank2d ? new Uint8Array(blank2d.bytes) : null });

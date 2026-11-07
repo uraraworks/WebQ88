@@ -79,6 +79,7 @@ var fps = FALLBACK_FPS;
 var loopTimer = null;
 var lastTickMs = 0;
 var accumulatedMs = 0;
+var paused = false;
 
 // --- 自動操作API(docs/API-DESIGN.md)関連の状態 ---
 var pollCount = 0; // retro_input_poll が呼ばれた回数の累計(driveFramesの待ち合わせに使う)
@@ -192,6 +193,7 @@ function startLoop() {
   var frameDurationMs = 1000 / fps;
 
   function tick() {
+    if (paused) return;
     var now = performance.now();
     accumulatedMs += now - lastTickMs;
     lastTickMs = now;
@@ -633,6 +635,14 @@ self.onmessage = function (ev) {
       } else {
         keyHoldTracker.release(msg.code);
       }
+      break;
+    case 'pause':
+      paused = true;
+      break;
+    case 'resume':
+      paused = false;
+      accumulatedMs = 0;
+      lastTickMs = performance.now();
       break;
     case 'reset':
       if (moduleInstance) {

@@ -182,6 +182,11 @@ export class CoreProxy {
     this.worker.postMessage(payload);
   }
 
+  setPaused(paused: boolean): void {
+    const payload: MainToWorkerMessage = { type: paused ? 'pause' : 'resume' };
+    this.worker.postMessage(payload);
+  }
+
   reset(): void {
     const payload: MainToWorkerMessage = { type: 'reset' };
     this.worker.postMessage(payload);
