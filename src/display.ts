@@ -23,7 +23,10 @@ export function initDisplay(source: HTMLCanvasElement): { update: () => void; pr
     const targetW = aspect.value === '4:3' ? Math.max(w, h * 4 / 3) : w;
     const targetH = aspect.value === '4:3' ? Math.max(h, w * 3 / 4) : h;
     stage.style.aspectRatio = `${targetW} / ${targetH}`;
-    if (document.body.classList.contains('pseudo-fullscreen')) {
+    const fullscreen = document.body.classList.contains('pseudo-fullscreen');
+    const pad = document.querySelector<HTMLElement>('.virtual-pad');
+    const padVisible = !!pad && !pad.hidden;
+    if (fullscreen && !padVisible) {
       stage.style.width = '';
       player.style.width = '';
     } else {
@@ -31,10 +34,19 @@ export function initDisplay(source: HTMLCanvasElement): { update: () => void; pr
       const paddingH = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
       const paddingV = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
       const gap = parseFloat(style.rowGap) || 0;
-      const reserved = chrome.reduce((sum, element) => sum + element.getBoundingClientRect().height, 0) + paddingV + gap + 4;
-      const widthFit = Math.max(0, (window.innerWidth - paddingH) / targetW);
+      const playerStyle = getComputedStyle(player);
+      const fullPaddingH = (parseFloat(playerStyle.paddingLeft) || 0) + (parseFloat(playerStyle.paddingRight) || 0);
+      const fullPaddingV = (parseFloat(playerStyle.paddingTop) || 0) + (parseFloat(playerStyle.paddingBottom) || 0);
+      const sides = padVisible && window.innerWidth > window.innerHeight;
+      const padHeight = padVisible && !sides ? Math.min(260, Math.max(160, Math.round(window.innerWidth * .7))) : 0;
+      const reserved = (fullscreen ? chrome.slice(2, 4) : chrome).reduce((sum, element) => sum + element.getBoundingClientRect().height, 0) + (fullscreen ? fullPaddingV : paddingV + gap) + padHeight + 4;
+      const availableWidth = window.innerWidth - (fullscreen ? fullPaddingH : paddingH);
+      // 左右の領域は画面サイズから逆算せず、先にビューポート幅から確保する。
+      const maxWidth = sides ? Math.min(availableWidth, Math.max(340, window.innerWidth * .67)) : availableWidth;
+      const widthFit = Math.max(0, maxWidth / targetW);
       // 高さが不足しても画面を等倍以下に潰さない。狭い画面では幅に収める。
-      const fit = Math.min(widthFit, Math.max(Math.min(1, widthFit), (window.innerHeight - reserved) / targetH));
+      const heightFit = (window.innerHeight - reserved) / targetH;
+      const fit = Math.min(widthFit, fullscreen ? Math.max(Math.min(340 / targetW, widthFit), heightFit) : Math.max(Math.min(1, widthFit), heightFit));
       let scale = fit;
       if (fit >= 1) {
         const n = Math.floor(fit);
@@ -46,8 +58,9 @@ export function initDisplay(source: HTMLCanvasElement): { update: () => void; pr
       }
       const width = `${Math.max(1, Math.floor(targetW * scale))}px`;
       stage.style.width = width;
-      player.style.width = width;
+      player.style.width = fullscreen ? '' : width;
     }
+    window.dispatchEvent(new Event('vpad-layout'));
     sharp.hidden = filter.value !== 'sharp';
     if (sharp.hidden) return;
     const rect = stage.getBoundingClientRect();
@@ -71,6 +84,7 @@ export function initDisplay(source: HTMLCanvasElement): { update: () => void; pr
   const chromeObserver = new ResizeObserver(update);
   for (const element of chrome) chromeObserver.observe(element);
   window.addEventListener('resize', update);
+  window.addEventListener('vpad-change', update);
   window.addEventListener('player-fullscreen-change', update);
   document.addEventListener('fullscreenchange', update);
   document.addEventListener('webkitfullscreenchange', update);
