@@ -9,6 +9,7 @@ import { initDisplay } from './display';
 import { initPlayerUi } from './player-ui';
 import { loadVerifiedBundledDisks, loadVerifiedCompatRoms, type VerifiedRom } from './compat-rom';
 import { DiskPanel } from './disks';
+import { initLibrary } from './library';
 import { CoreProxy } from './core-proxy';
 import type { RomFile, RomMode } from './core-protocol';
 import { attachKeyboard } from './keyboard';
@@ -167,6 +168,8 @@ async function main(): Promise<void> {
   });
 
   diskPanel = new DiskPanel(proxy, disksEl, { blankImage: blank2d ? new Uint8Array(blank2d.bytes) : null });
+
+  initLibrary(diskPanel);
 
   // 初回は同梱の互換ROMだけで起動する。
   proxy.init(bundledRoms, []);

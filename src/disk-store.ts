@@ -133,3 +133,25 @@ export function newBlankSourceKey(): string {
   const rand = Math.random().toString(36).slice(2, 8);
   return `blank:${Date.now().toString(36)}-${rand}`;
 }
+
+export async function listDisks(): Promise<StoredDisk[]> {
+  const db = await openDb();
+  return reqToPromise(db.transaction(STORE_DISKS, 'readonly').objectStore(STORE_DISKS).getAll());
+}
+
+export async function renameDisk(key: string, displayName: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(STORE_DISKS, 'readwrite');
+  const done = txDone(tx);
+  const store = tx.objectStore(STORE_DISKS);
+  const disk = await reqToPromise(store.get(key)) as StoredDisk | undefined;
+  if (disk) store.put({ ...disk, displayName: displayName.trim() || undefined });
+  await done;
+}
+
+export async function deleteDisk(key: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(STORE_DISKS, 'readwrite');
+  tx.objectStore(STORE_DISKS).delete(key);
+  await txDone(tx);
+}

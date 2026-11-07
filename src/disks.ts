@@ -18,6 +18,7 @@
 import type { CoreProxy } from './core-proxy';
 import type { DiskPollEntry } from './core-protocol';
 import {
+  deleteDisk,
   fileSourceKey,
   getAssignment,
   getDisk,
@@ -231,6 +232,15 @@ export class DiskPanel {
         const key = fileSourceKey(file.name, file.size);
         const fileBytes = new Uint8Array(await file.arrayBuffer());
         await this.persist(d); // 差し替え前の中身を保存
+        const other = 1 - d;
+        if (this.slots[other].key === key) {
+          await this.persist(other);
+          const ejected = await this.proxy.diskRequest('eject', other);
+          if (!ejected.ok) throw new Error('ドライブを排出できませんでした');
+          this.slots[other] = emptySlot();
+          this.render();
+          await this.writeAssignment();
+        }
         let stored: Awaited<ReturnType<typeof getDisk>>;
         try {
           stored = await getDisk(key);
@@ -266,6 +276,47 @@ export class DiskPanel {
       } catch (err) {
         this.setMessage(`挿入に失敗しました: ${(err as Error).message}`);
       }
+    });
+  }
+
+  /** ライブラリの保存済みイメージを挿入する。 */
+  async insertStored(d: number, key: string): Promise<void> {
+    await this.withOp(async () => {
+      try {
+        await this.persist(d);
+        // 同一イメージを両ドライブで別々に書き戻さない。
+        const other = 1 - d;
+        if (this.slots[other].key === key) {
+          await this.persist(other);
+          const ejected = await this.proxy.diskRequest('eject', other);
+          if (!ejected.ok) throw new Error('ドライブを排出できませんでした');
+          this.slots[other] = emptySlot();
+          await this.writeAssignment();
+        }
+        const disk = await getDisk(key);
+        if (!disk) throw new Error('ディスクが見つかりません');
+        const res = await this.proxy.diskRequest('insert', d, { name: disk.name, bytes: disk.bytes.slice().buffer });
+        if (!res.ok) throw new Error('ディスクを挿入できませんでした');
+        this.adopt(d, key, disk.name, res);
+        this.render();
+        await this.writeAssignment();
+        this.setMessage(`ドライブ${d + 1}に挿入しました`);
+      } catch { this.render(); this.setMessage('ライブラリから挿入できませんでした'); }
+    });
+  }
+
+  async deleteStored(key: string): Promise<void> {
+    await this.withOp(async () => {
+      for (let d = 0; d < 2; d++) {
+        if (this.slots[d].key !== key) continue;
+        await this.persist(d);
+        const res = await this.proxy.diskRequest('eject', d);
+        if (!res.ok) throw new Error('ドライブを排出できませんでした');
+        this.slots[d] = emptySlot();
+        this.render();
+        await this.writeAssignment();
+      }
+      await deleteDisk(key);
     });
   }
 
