@@ -36,6 +36,8 @@ Q88().then((M) => {
   M.stringToUTF8('/sys', sysPath, 64);
   M.FS.mkdir('/sys');
   for (const f of fs.readdirSync(romDir)) {
+    // build_main_rom.py は出力先に作業フォルダ(ext_bank_layout/)も作るので、ファイルだけを渡す。
+    if (!fs.statSync(path.join(romDir, f)).isFile()) continue;
     M.FS.writeFile('/sys/' + f, fs.readFileSync(path.join(romDir, f)));
   }
 

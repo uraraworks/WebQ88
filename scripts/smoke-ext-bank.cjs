@@ -70,6 +70,7 @@ async function main() {
   const tmpRomDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webq88-ext-bank-'));
   for (const f of fs.readdirSync(romDir)) {
     if (omit && f === omit) continue;
+    if (!fs.statSync(path.join(romDir, f)).isFile()) continue;
     fs.copyFileSync(path.join(romDir, f), path.join(tmpRomDir, f));
   }
 
