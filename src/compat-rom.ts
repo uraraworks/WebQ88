@@ -14,6 +14,7 @@ import n88Ext0RomUrl from '../compat-rom/N88_0.ROM?url';
 import n88Ext1RomUrl from '../compat-rom/N88_1.ROM?url';
 import n88Ext2RomUrl from '../compat-rom/N88_2.ROM?url';
 import n88Ext3RomUrl from '../compat-rom/N88_3.ROM?url';
+import n88nRomUrl from '../compat-rom/N88N.ROM?url';
 import blank2dUrl from '../compat-rom/BLANK2D.D88?url';
 import manifest from '../compat-rom/manifest.json';
 
@@ -38,6 +39,7 @@ const ROM_URLS: Record<string, string> = {
   'N88_1.ROM': n88Ext1RomUrl,
   'N88_2.ROM': n88Ext2RomUrl,
   'N88_3.ROM': n88Ext3RomUrl,
+  'N88N.ROM': n88nRomUrl,
   'BLANK2D.D88': blank2dUrl,
 };
 
