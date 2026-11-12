@@ -104,6 +104,11 @@ npm run build     # 型チェック + 本番ビルド (dist/)
 npm run preview   # ビルド成果物のプレビュー
 ```
 
+使い方ページの画像を撮り直すには、別ターミナルで `npm run dev` を起動し、
+`npm run capture-help` を実行します。必要に応じて `CHROME_PATH` に Chrome の実行ファイル、
+`WEBQ88_URL` に開発サーバーの URL（既定: `http://localhost:5173`）を指定してください。
+プレイヤーの UI は現在日本語のみのため、英語版の画像にも日本語が表示されます。
+
 ### clone 後の設定
 
 このリポジトリは公開前提の混入検査（公式 ROM・ディスクイメージ等の誤コミット防止）を

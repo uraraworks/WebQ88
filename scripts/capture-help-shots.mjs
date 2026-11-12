@@ -1,0 +1,91 @@
+// 開発サーバーを別途起動してから npm run capture-help を実行する。
+// プレイヤーの UI は現在日本語のみ。両言語のヘルプに実際の UI を掲載する。
+import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import puppeteer from 'puppeteer-core';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+const output = resolve(root, 'public/help');
+const base = new URL(process.env.WEBQ88_URL ?? 'http://localhost:5173');
+// サブパス指定にも対応し、起動用クエリは持ち込まない。
+if (!base.pathname.endsWith('/')) base.pathname += '/';
+base.search = '';
+base.hash = '';
+const chrome = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const blank = await readFile(resolve(root, 'compat-rom/BLANK2D.D88'));
+await mkdir(output, { recursive: true });
+const profile = await mkdtemp(join(tmpdir(), 'webq88-shots-'));
+let browser;
+try {
+  browser = await puppeteer.launch({ executablePath: chrome, userDataDir: profile, headless: true, args: ['--hide-scrollbars'] });
+  for (const lang of ['ja', 'en']) {
+    const context = await browser.createBrowserContext();
+    try {
+      const page = await context.newPage();
+      await page.setViewport({ width: 900, height: 700, deviceScaleFactor: 2 });
+      await page.setExtraHTTPHeaders({ 'Accept-Language': lang });
+      const suffix = lang === 'ja' ? '' : '-en';
+      const shoot = async (selector, name) => {
+        const element = await page.waitForSelector(selector, { visible: true });
+        await element.screenshot({ path: join(output, `${name}${suffix}.png`) });
+        console.log(`撮影: ${name}${suffix}.png`);
+      };
+      await page.goto(base.href, { waitUntil: 'networkidle2' });
+      await shoot('#player', 'overlay');
+      await page.click('#startup-button');
+      // 最初のフレームが描画されたときに有効になるボタンで起動を判定する。
+      await page.waitForFunction(() => !document.querySelector('#screenshot').disabled, { timeout: 60000 });
+      // 最初のフレームはまだ黒いので、互換 ROM の起動画面(文字)が描かれるまで待つ。
+      await page.waitForFunction(() => {
+        const c = document.querySelector('#screen');
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let lit = 0;
+        for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] > 96) lit++;
+        return lit > 500;
+      }, { timeout: 60000, polling: 250 });
+      // 起動メッセージの表示が出そろうまで少し待つ。
+      await new Promise((r) => setTimeout(r, 2000));
+      await shoot('#player', 'overview');
+
+      // 互換 ROM に同梱された空ディスクのみを、撮影専用プロファイルへ登録する。
+      await page.evaluate(async (data) => {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('webq88-disks', 1);
+          request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains('disks')) db.createObjectStore('disks', { keyPath: 'sourceKey' });
+            if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'id' });
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction('disks', 'readwrite');
+          tx.objectStore('disks').put({ sourceKey: 'sample:1', name: 'SAMPLE1.D88', bytes: new Uint8Array(data), savedAt: Date.UTC(2026, 0, 1) });
+          tx.oncomplete = resolve;
+          tx.onabort = () => reject(tx.error);
+          tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+      }, Array.from(blank));
+      await page.click('#disk-library');
+      await page.waitForFunction(() => document.querySelector('#library-list .library-item-name')?.textContent === 'SAMPLE1.D88');
+      await shoot('#library-backdrop .library-modal', 'library');
+      await page.click('#library-close');
+      await page.click('#keyboard-toggle');
+      await shoot('#virtual-keyboard', 'keyboard');
+      await page.click('#keyboard-toggle');
+      await page.click('#toolbar-more');
+      await page.click('#input-settings');
+      // 入力設定は縦に長く、700px だと下端が切れるので撮影時だけ高さを広げる。
+      await page.setViewport({ width: 900, height: 1100, deviceScaleFactor: 2 });
+      await shoot('.input-backdrop .library-modal', 'gamepad');
+    } finally {
+      await context.close();
+    }
+  }
+} finally {
+  try { if (browser) await browser.close(); } finally { await rm(profile, { recursive: true, force: true }); }
+}

@@ -128,6 +128,14 @@
         padding-left: 22px;
       }
 
+      .help-card img {
+        max-width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: block;
+        margin: 12px 0;
+      }
+
       .help-card code {
         background: var(--code-bg);
         padding: 1px 5px;
@@ -247,6 +255,7 @@
         <section class="help-card">
           <div class="lang-ja">
             <h2>起動する</h2>
+            <img src="./help/overlay.png" alt="互換ROMで起動するボタンを表示した起動画面" />
             <ol>
               <li>ページを開くと「互換ROMで起動」ボタンが表示されます。</li>
               <li>ボタンをクリックすると起動します。音声を有効にするため、起動にはこのクリックが必要です。</li>
@@ -262,6 +271,7 @@
           </div>
           <div class="lang-en">
             <h2>Starting the emulator</h2>
+            <img src="./help/overlay-en.png" alt="Startup screen with the compatible ROM boot button" />
             <ol>
               <li>When the page opens, a "Boot with compatible ROM" button is shown (labeled in Japanese in the player).</li>
               <li>Click it to start. This click is required because browsers only allow audio after a user action.</li>
@@ -389,6 +399,7 @@
         <section class="help-card">
           <div class="lang-ja">
             <h2>ディスクライブラリ</h2>
+            <img src="./help/library.png" alt="サンプルディスクを表示したディスクライブラリ" />
             <p>
               ツールバーの「ディスクライブラリ」ボタンで、これまでに読み込んだディスクの一覧が開きます。
               新しく保存した順に並び、各ディスクに対して次の操作ができます。
@@ -403,6 +414,7 @@
           </div>
           <div class="lang-en">
             <h2>Disk Library</h2>
+            <img src="./help/library-en.png" alt="Disk Library with a sample disk" />
             <p>
               The toolbar's Disk Library button opens a list of the disks you have loaded so far, newest
               first. For each disk you can:
@@ -462,6 +474,7 @@
         <section class="help-card">
           <div class="lang-ja">
             <h2>ツールバーのボタン一覧</h2>
+            <img src="./help/overview.png" alt="互換ROM起動後の画面とツールバー" />
             <table class="info-table">
               <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
               <tbody>
@@ -479,6 +492,7 @@
           </div>
           <div class="lang-en">
             <h2>Toolbar buttons</h2>
+            <img src="./help/overview-en.png" alt="Compatible ROM screen and toolbar after startup" />
             <table class="info-table">
               <thead><tr><th>Button</th><th>Action</th></tr></thead>
               <tbody>
@@ -501,6 +515,7 @@
         <section class="help-card">
           <div class="lang-ja">
             <h2>キーボード</h2>
+            <img src="./help/keyboard.png" alt="画面上のソフトキーボード" />
             <p>
               英数字、Enter、矢印、Shift、Ctrl、F1〜F10 などは、対応するキーで入力します。記号は、
               入力された文字に合わせて PC-88 のキーへ変換します。画面をクリックすると、キー入力が画面に戻ります。
@@ -517,6 +532,7 @@
           </div>
           <div class="lang-en">
             <h2>Keyboard</h2>
+            <img src="./help/keyboard-en.png" alt="On-screen soft keyboard" />
             <p>
               Letters, digits, Enter, arrow keys, Shift, Ctrl, F1–F10 and so on work with the matching keys.
               Symbols are converted to the PC-88 keys according to the character you typed. Click the screen
@@ -538,6 +554,7 @@
         <section class="help-card">
           <div class="lang-ja">
             <h2>ゲームパッド・キー割当とバーチャルパッド</h2>
+            <img src="./help/gamepad.png" alt="ゲームパッドとキーの入力設定" />
             <p>
               ツールバーの「バーチャルパッド」で、タッチ用の十字キーとボタンを画面に表示できます。
               物理的なゲームパッドは、接続すると使えます。
@@ -559,6 +576,7 @@
           </div>
           <div class="lang-en">
             <h2>Gamepad, key assignment, and the virtual pad</h2>
+            <img src="./help/gamepad-en.png" alt="Gamepad and key assignment settings" />
             <p>
               The toolbar's Virtual pad button shows touch-friendly directional keys and buttons on the
               screen. A physical gamepad works once it is connected.

@@ -111,6 +111,11 @@ npm run build     # 型チェック + 本番ビルド (dist/)
 npm run preview   # ビルド成果物のプレビュー
 ```
 
+To refresh the help screenshots, start `npm run dev` in a separate terminal, then run
+`npm run capture-help`. Set `CHROME_PATH` to your Chrome executable if needed and
+`WEBQ88_URL` to the development server URL (default: `http://localhost:5173`).
+The player UI is currently Japanese, including in the English screenshots.
+
 ### Setup after cloning
 
 This repository runs a contamination check (to prevent accidentally committing
