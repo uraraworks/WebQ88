@@ -85,3 +85,13 @@ int webq88_test_window_read(int bank, unsigned char *dst)
 
     return 0;
 }
+
+/* 試験専用: 指定ワード番地を OUT し、E8/E9 の読み取りを返す。 */
+extern byte main_io_in(byte port);
+int webq88_test_kanji_read(int address)
+{
+    if (webq88_is_restricted() || address < 0 || address > 0xffff) return -1;
+    main_io_out(0xe8, (byte)address);
+    main_io_out(0xe9, (byte)(address >> 8));
+    return main_io_in(0xe8) | (main_io_in(0xe9) << 8);
+}

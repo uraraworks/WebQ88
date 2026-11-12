@@ -1,6 +1,6 @@
 # compat-rom/
 
-ここには **PC88Behavior のビルド成果物（MIT ライセンス）だけ** を置く。
+ここには **PC88Behavior のビルド成果物だけ** を置く。ライセンスは生成元と使用フォントを参照。
 
 **公式ROMは絶対に置かない。**
 
@@ -19,3 +19,12 @@
 - **起動用ではないデータディスク**。起動用セクタ (0,0,1) は読めない形にしてあり、
   公式ROM でも起動できない。ドライブ2などのデータ用に使う。
 - 生成は決定論的で、SHA-256 は `manifest.json` に記録する。
+
+## 漢字 ROM（KANJI1.ROM・KANJI2.ROM）
+
+PC88Behavior の `tools/make_kanji_rom.py` が東雲フォントから生成する。
+東雲はパブリックドメインで、ライセンス原文は
+`../PC88Behavior/fonts/shinonome-0.9.11/LICENSE` にある。半角の一部には
+既存 FONT.ROM の生成元フォントも使う。配置の出所と詳細は
+`../PC88Behavior/docs/notes/kanji-rom-layout.md` を参照。
+生成元コミットは manifest の `kanjiSourceCommit` に記録する。

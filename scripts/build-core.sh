@@ -75,9 +75,6 @@ else
     [ -e "$p" ] || continue
     echo "  適用チェック: $(basename "$p")"
     git -C "$SRC_DIR" apply --check "$p"
-  done
-  for p in "$PATCH_DIR"/*.patch; do
-    [ -e "$p" ] || continue
     echo "  適用: $(basename "$p")"
     git -C "$SRC_DIR" apply "$p"
     APPLIED_PATCHES+=("$p")
@@ -140,7 +137,7 @@ if [ "$TEST_SHIM" = "1" ]; then
   fi
   emcc -c "$TEST_SHIM_SRC" -O2 -o "$TEST_SHIM_OBJ"
   TEST_SHIM_OBJS=("$TEST_SHIM_OBJ")
-  EXPORTED_FUNCTIONS="$EXPORTED_FUNCTIONS,_webq88_test_window_read"
+  EXPORTED_FUNCTIONS="$EXPORTED_FUNCTIONS,_webq88_test_window_read,_webq88_test_kanji_read"
 fi
 
 echo "== emcc でリンクし wasm/js を生成 =="

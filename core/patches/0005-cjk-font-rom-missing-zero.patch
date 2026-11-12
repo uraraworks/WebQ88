@@ -1,0 +1,14 @@
+--- a/src/LIBRETRO/libretro.c
++++ b/src/LIBRETRO/libretro.c
+@@ -575,7 +575,10 @@
+    load_system_file(EXT3_ROM,  main_rom_ext[3], 0x02000);
+    load_system_file(N_ROM,     main_rom_n,      0x08000);
+    knj1_loaded = load_system_file(KNJ1_ROM,  kanji_rom[0][0], 0x20000);
+-   load_system_file(KNJ2_ROM,  kanji_rom[1][0], 0x20000);
++   if (!knj1_loaded)
++      memset(kanji_rom[0][0], 0, 0x20000);
++   if (!load_system_file(KNJ2_ROM, kanji_rom[1][0], 0x20000))
++      memset(kanji_rom[1][0], 0, 0x20000);
+    load_system_file(JISHO_ROM, jisho_rom[0],    0x80000);
+ 
+    /* == Font files == */

@@ -39,14 +39,17 @@ NO_PATCH=1 OUT_DIR=/tmp/q88-no-patch ./scripts/build-core.sh
 TEST_SHIM=1 OUT_DIR=/tmp/q88-test-shim ./scripts/build-core.sh
 node scripts/smoke-ext-bank.cjs /tmp/q88-test-shim compat-rom
 node scripts/smoke-ext-bank.cjs /tmp/q88-test-shim compat-rom --omit N88_2.ROM  # 陰性対照
+node scripts/smoke-cjk-font.cjs /tmp/q88-test-shim compat-rom
+node scripts/smoke-cjk-font.cjs /tmp/q88-test-shim compat-rom --omit  # 陰性対照
 ```
 
-`core/patches/` の4本のパッチは、上流 libretro.c / memory.c にある
+`core/patches/` の5本のパッチは、上流 libretro.c / memory.c にある
 「フォントROM読み込み成功時にも内蔵フォント・漢字ROMで上書きしてしまう」
+「漢字 ROM が無い場合の読み出し値が 0xFF になる」
 「N88.ROM/DISK.ROM が無いと出所不明の疑似BIOSにフォールバックする」
 「load_system_file の rom_filename が初期化されないまま参照される」
 「handle_input() の識別マッピングループが KEY88_AT(='@')を取りこぼし、
-'@'キーが一切反応しない」という4つの不具合を修正します。font.h・
+'@'キーが一切反応しない」という5つの不具合を修正します。font.h・
 pseudo_bios.h の削除は（中身が長大なバイト列のため）パッチではなく
 ビルドスクリプトの `rm` で行います。
 

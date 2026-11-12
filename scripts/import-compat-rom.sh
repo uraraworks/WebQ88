@@ -27,6 +27,9 @@ echo "== 空のデータディスク BLANK2D.D88 を公開規則から生成 =="
 # docs/spec/l3-disk-format.md 第4節。公式ディスクは入力にしない。起動用ではないデータディスク。
 python3 "$PC88BEHAVIOR_DIR/tools/build_blank_data_disk.py" "$TMP_DIR/BLANK2D.D88"
 
+echo "== 漢字 ROM を生成 =="
+python3 "$PC88BEHAVIOR_DIR/tools/make_kanji_rom.py" --output-dir "$TMP_DIR"
+
 echo "== 生成元コミットを記録 =="
 REV="$(git -C "$PC88BEHAVIOR_DIR" rev-parse HEAD)"
 DIRTY=""
@@ -36,33 +39,44 @@ fi
 
 echo "== compat-rom/ へコピー =="
 mkdir -p "$OUT_DIR"
-FILES="N88.ROM DISK.ROM FONT.ROM N88_0.ROM N88_1.ROM N88_2.ROM N88_3.ROM BLANK2D.D88"
+FILES="N88.ROM N88N.ROM DISK.ROM FONT.ROM N88_0.ROM N88_1.ROM N88_2.ROM N88_3.ROM BLANK2D.D88"
+changed=0
 for f in $FILES; do
   if [ ! -f "$TMP_DIR/$f" ]; then
     echo "エラー: 生成結果に $f がありません。" >&2
     exit 1
   fi
+  if [ -f "$OUT_DIR/$f" ] && ! cmp -s "$TMP_DIR/$f" "$OUT_DIR/$f"; then
+    echo "既存ファイルと生成結果が異なります: ${f}（既存を保持）"
+    changed=1
+  fi
+done
+# 一つでも差がある場合、既存 ROM とディスクをすべて保持する。
+if [ "$changed" = 0 ]; then
+  for f in $FILES; do cp "$TMP_DIR/$f" "$OUT_DIR/$f"; done
+fi
+for f in KANJI1.ROM KANJI2.ROM; do
+  test -f "$TMP_DIR/$f"
   cp "$TMP_DIR/$f" "$OUT_DIR/$f"
 done
 
-echo "== manifest.json を作成 =="
-MANIFEST="$OUT_DIR/manifest.json"
-{
-  echo "{"
-  echo "  \"generatedBy\": \"PC88Behavior\","
-  echo "  \"sourceCommit\": \"$REV$DIRTY\","
-  echo "  \"license\": \"MIT\","
-  echo "  \"files\": ["
-  first=1
-  for f in $FILES; do
-    size=$(stat -f%z "$OUT_DIR/$f" 2>/dev/null || stat -c%s "$OUT_DIR/$f")
-    sha=$(shasum -a 256 "$OUT_DIR/$f" | awk '{print $1}')
-    if [ "$first" = "1" ]; then first=0; else echo "    ,"; fi
-    echo "    {\"name\": \"$f\", \"size\": $size, \"sha256\": \"$sha\"}"
-  done
-  echo "  ]"
-  echo "}"
-} > "$MANIFEST"
+# 生成対象外の N88N.ROM を含め、既存エントリーとその出所を保持する。
+python3 - "$OUT_DIR" "$REV$DIRTY" <<'PYTHON'
+import hashlib, json, sys
+from pathlib import Path
+out, rev = Path(sys.argv[1]), sys.argv[2]
+manifest = out / 'manifest.json'
+data = json.loads(manifest.read_text())
+data['kanjiSourceCommit'] = rev
+names = [entry['name'] for entry in data['files']]
+for name in ('KANJI1.ROM', 'KANJI2.ROM'):
+    if name not in names:
+        names.append(name)
+data['files'] = [dict(name=name, size=(out / name).stat().st_size,
+                      sha256=hashlib.sha256((out / name).read_bytes()).hexdigest())
+                 for name in names]
+manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+PYTHON
 
 echo "== 完了 =="
-cat "$MANIFEST"
+cat "$OUT_DIR/manifest.json"

@@ -3,22 +3,61 @@
   "sourceCommit": "0e899fd4d6bcd913eccd33a871d21c8eb3b895e4",
   "license": "MIT",
   "files": [
-    {"name": "N88.ROM", "size": 32768, "sha256": "5478d4c3f65f03880ef10355804e8903a9909e30947235be37a7c845fcd39e28"}
-    ,
-    {"name": "DISK.ROM", "size": 8192, "sha256": "bb6a1b0c76eb211d504793e8fca98e5b27df0f30a805fb1edd53cafd81d960d4"}
-    ,
-    {"name": "FONT.ROM", "size": 4096, "sha256": "53d8cc9418149528c43174b309f34ec08138bdf45c54947cd8159956af3f2b97"}
-    ,
-    {"name": "N88_0.ROM", "size": 8192, "sha256": "c275b0d62acee5fb5a254bf3c297223673b16d9ed2138de03af29e464fe0b0ee"}
-    ,
-    {"name": "N88_1.ROM", "size": 8192, "sha256": "7534dd0c0d9c7537c11ae81b8f61aa1908b6044e17d46807d277a8258658e85c"}
-    ,
-    {"name": "N88_2.ROM", "size": 8192, "sha256": "d2f3f71d842bf79846e39066e5f30b75597361db15d5590e49c56e202b332f9a"}
-    ,
-    {"name": "N88N.ROM", "size": 32768, "sha256": "421e16d3e409f01568055458b6d1655d9de3b29220d1ba651f8b54c5d0ab1fea"}
-    ,
-    {"name": "N88_3.ROM", "size": 8192, "sha256": "d19bd336c95e5b5b4765332b19223229cefdf17495d1871925b6d190e9d39265"}
-    ,
-    {"name": "BLANK2D.D88", "size": 348848, "sha256": "d057262db4fbcce07949c5be9536e83314a67baa4b02acc44fd07157ef02247e"}
-  ]
+    {
+      "name": "N88.ROM",
+      "size": 32768,
+      "sha256": "5478d4c3f65f03880ef10355804e8903a9909e30947235be37a7c845fcd39e28"
+    },
+    {
+      "name": "DISK.ROM",
+      "size": 8192,
+      "sha256": "bb6a1b0c76eb211d504793e8fca98e5b27df0f30a805fb1edd53cafd81d960d4"
+    },
+    {
+      "name": "FONT.ROM",
+      "size": 4096,
+      "sha256": "53d8cc9418149528c43174b309f34ec08138bdf45c54947cd8159956af3f2b97"
+    },
+    {
+      "name": "N88_0.ROM",
+      "size": 8192,
+      "sha256": "c275b0d62acee5fb5a254bf3c297223673b16d9ed2138de03af29e464fe0b0ee"
+    },
+    {
+      "name": "N88_1.ROM",
+      "size": 8192,
+      "sha256": "7534dd0c0d9c7537c11ae81b8f61aa1908b6044e17d46807d277a8258658e85c"
+    },
+    {
+      "name": "N88_2.ROM",
+      "size": 8192,
+      "sha256": "d2f3f71d842bf79846e39066e5f30b75597361db15d5590e49c56e202b332f9a"
+    },
+    {
+      "name": "N88N.ROM",
+      "size": 32768,
+      "sha256": "421e16d3e409f01568055458b6d1655d9de3b29220d1ba651f8b54c5d0ab1fea"
+    },
+    {
+      "name": "N88_3.ROM",
+      "size": 8192,
+      "sha256": "d19bd336c95e5b5b4765332b19223229cefdf17495d1871925b6d190e9d39265"
+    },
+    {
+      "name": "BLANK2D.D88",
+      "size": 348848,
+      "sha256": "d057262db4fbcce07949c5be9536e83314a67baa4b02acc44fd07157ef02247e"
+    },
+    {
+      "name": "KANJI1.ROM",
+      "size": 131072,
+      "sha256": "34762d3312b84c6e6ab8c08aeedba1c18c60da55281827013c5121043ae36313"
+    },
+    {
+      "name": "KANJI2.ROM",
+      "size": 131072,
+      "sha256": "1d338710a95e9a54442c499ed038efe8e698404bccca7adbf079ce6d57a5881e"
+    }
+  ],
+  "kanjiSourceCommit": "8927a0c1e2673ba1a9fb5c728155c9c915da5de6 (作業ツリーに未コミットの変更あり)"
 }
