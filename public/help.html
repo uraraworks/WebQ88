@@ -643,13 +643,13 @@
             </ol>
             <p>
               操作できる内容の例は、状態の取得、リセット、キー入力、文字列の入力、画面の確認(画面の署名)、
-              画面の変化の待機などです。コマンドの一覧は
+              画面の変化の待機、ディスクの挿入・排出・一覧(<code>insert_disk</code> / <code>eject_disk</code> / <code>list_disks</code>)などです。コマンドの一覧は
               <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
               を参照してください。
             </p>
             <p>
               <strong>制限モード</strong>(利用者ROMで起動しているとき)では、画面本文の取得、スクリーンショット、
-              メモリの読み書きなど、一部のコマンドが拒否されます。
+              メモリの読み書き、ドライブのディスクイメージの取り出し(<code>get_disk_image</code>)など、一部のコマンドが拒否されます。
             </p>
           </div>
           <div class="lang-en">
@@ -665,13 +665,14 @@
             </ol>
             <p>
               Examples of what can be done: getting the status, resetting, key presses, typing text,
-              checking the screen (a screen signature), and waiting for the screen to change. See
+              checking the screen (a screen signature), waiting for the screen to change, and inserting, ejecting and listing disks
+              (<code>insert_disk</code> / <code>eject_disk</code> / <code>list_disks</code>). See
               <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
               for the command list.
             </p>
             <p>
               In <strong>restricted mode</strong> (when running with your own ROMs), some commands are
-              rejected, such as reading screen text, taking screenshots, and reading or writing memory.
+              rejected, such as reading screen text, taking screenshots, reading or writing memory, and fetching a drive's disk image (<code>get_disk_image</code>).
             </p>
           </div>
         </section>
