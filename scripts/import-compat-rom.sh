@@ -40,36 +40,25 @@ fi
 echo "== compat-rom/ へコピー =="
 mkdir -p "$OUT_DIR"
 FILES="N88.ROM N88N.ROM DISK.ROM FONT.ROM N88_0.ROM N88_1.ROM N88_2.ROM N88_3.ROM BLANK2D.D88"
-changed=0
-for f in $FILES; do
+for f in $FILES KANJI1.ROM KANJI2.ROM; do
   if [ ! -f "$TMP_DIR/$f" ]; then
     echo "エラー: 生成結果に $f がありません。" >&2
     exit 1
   fi
-  if [ -f "$OUT_DIR/$f" ] && ! cmp -s "$TMP_DIR/$f" "$OUT_DIR/$f"; then
-    echo "既存ファイルと生成結果が異なります: ${f}（既存を保持）"
-    changed=1
-  fi
 done
-# 一つでも差がある場合、既存 ROM とディスクをすべて保持する。
-if [ "$changed" = 0 ]; then
-  for f in $FILES; do cp "$TMP_DIR/$f" "$OUT_DIR/$f"; done
-fi
-for f in KANJI1.ROM KANJI2.ROM; do
-  test -f "$TMP_DIR/$f"
-  cp "$TMP_DIR/$f" "$OUT_DIR/$f"
-done
+for f in $FILES KANJI1.ROM KANJI2.ROM; do cp "$TMP_DIR/$f" "$OUT_DIR/$f"; done
 
-# 生成対象外の N88N.ROM を含め、既存エントリーとその出所を保持する。
+# 全ファイルを生成元コミットから取り込み、manifest を作り直す（既存の他の項目は保持）。
 python3 - "$OUT_DIR" "$REV$DIRTY" <<'PYTHON'
 import hashlib, json, sys
 from pathlib import Path
 out, rev = Path(sys.argv[1]), sys.argv[2]
 manifest = out / 'manifest.json'
 data = json.loads(manifest.read_text())
-data['kanjiSourceCommit'] = rev
+data['sourceCommit'] = rev
+data.pop('kanjiSourceCommit', None)
 names = [entry['name'] for entry in data['files']]
-for name in ('KANJI1.ROM', 'KANJI2.ROM'):
+for name in ('N88.ROM','N88N.ROM','DISK.ROM','FONT.ROM','N88_0.ROM','N88_1.ROM','N88_2.ROM','N88_3.ROM','BLANK2D.D88','KANJI1.ROM', 'KANJI2.ROM'):
     if name not in names:
         names.append(name)
 data['files'] = [dict(name=name, size=(out / name).stat().st_size,
