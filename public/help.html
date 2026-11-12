@@ -1,23 +1,757 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ヘルプ | WebQ88</title><style>body{font:16px/1.7 sans-serif;max-width:48rem;margin:2rem auto;padding:0 1rem;color:#eee;background:#222}a{color:#8bc5ff}h1,h2{line-height:1.3}li{margin:.4em 0}</style></head><body>
-<h1>WebQ88 ヘルプ</h1>
-<p><a href="./">WebQ88 に戻る</a> · <a href="./about.html">About</a></p>
-<h2>起動と操作バー</h2>
-<p>「互換ROMで起動」を押して開始します。画面をクリックするとキーボード操作に戻れます。</p>
-<ul>
-<li>一時停止：動作を停止・再開します。</li><li>全画面表示：画面を拡大し、もう一度押すと戻ります。</li><li>スクリーンショット：画面を PNG で保存します。</li><li>…：表示比率、補間、テンキー代替、利用者ROMを設定します。利用者ROMは複数選択して起動・再起動できます。</li><li>リセット：エミュレータをリセットします。</li>
-</ul>
-<h2>ディスク</h2>
-<p>FDD1 または FDD2 の「＋」で D88／88D ファイルを選択するか、ドライブ行にドラッグ＆ドロップします。「⏏」で排出、「↓」で現在のディスクをダウンロードできます。FDD2 のブランクFD作成ボタンでは空のディスクを作成できます。</p>
-<p>書き込みは数秒おきにブラウザへ自動保存され、次回は自動で挿入されます。サイトデータの削除などで保存が失われることがあるため、大切なディスクはダウンロードして保管してください。</p>
-<h2>キーボード</h2>
-<p>英数字、Enter、矢印、Shift、Ctrl、F1〜F10 などは対応するキーで操作します。記号は入力された文字に応じて PC-88 のキーに変換します。</p>
-<p>テンキーのない機種では、… メニューの「テンキー代替」をオンにすると、メインの数字キー 0〜9 がテンキーの 0〜9、矢印キーの上・下・左・右がテンキーの 8・2・4・6 になります。既定はオフで、設定はブラウザに保存されます。</p>
-<section>
-<h2>URLでディスクを指定して起動</h2>
-<p><code>?fd1=URL&amp;fd2=URL&amp;run=1</code> で各ドライブのディスクを指定できます。URLはパーセントエンコードしてください。<code>run=1</code> は起動画面を省略します。<code>lib=URL</code> は複数回指定でき、挿入せずライブラリに登録します。</p>
-<p>ZIP/LZHは展開し、.d88/.88dをすべて登録して先頭を挿入します。ローカルファイルやドラッグ＆ドロップでも利用できます。再訪時は保存済みの変更を復元し、ライブラリの「配布元に戻す」で再取得できます。共有URLをコピーするボタンも利用できます。</p>
-<p>配布元にはCORS対応が必要です。Dropboxのファイル共有リンクは自動変換します。Google Driveは中継サービス（VITE_DISK_PROXY）の設定が必要です。OneDriveには対応していません。</p>
-</section>
-<section><h2>ゲームパッド・キー割当</h2><p>操作バーの「バーチャルパッド」でタッチ用の十字キーとボタンを表示できます。その他の操作にある「ゲームパッド・キー割当」で、接続状態、ボタンと軸、デッドゾーン、バーチャルパッドの各部品、物理キーボードの変換先を設定できます。プリセット「テンキー移動＋SPACE/RETURN」も利用できます。設定はブラウザに保存されます。</p><p>テンキー代替は従来の設定を引き継ぎます。個別のキーボード割当はテンキー代替より優先されます。コアの制約により割当先は PC-88 のキーです。</p></section>
-</body></html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebQ88 使い方</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fafafa;
+        --bg-panel: #ffffff;
+        --border: #d5d5d5;
+        --text: #1a1a1a;
+        --text-dim: #666666;
+        --accent: #4a90d9;
+        --accent-dim: #2c5a86;
+        --danger: #d32f2f;
+        --header-bg: #0c0c0c;
+        --header-text: #f2f2f2;
+        --header-tagline-text: #a8a8a8;
+        --page-footer-bg: #ececec;
+        --page-footer-text: #6b6b6b;
+        --page-footer-border: rgba(0, 0, 0, 0.12);
+        --footer-btn-bg: #4a4a4a;
+        --footer-btn-border: #202020;
+        --footer-text: #e6e6e6;
+        --code-bg: #f1f1f1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header.help-header {
+        flex: 0 0 auto;
+        background: var(--header-bg);
+        padding: 10px 16px;
+        box-shadow:
+          inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+          0 2px 6px rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .help-header-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .help-header-title h1 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--header-text);
+        letter-spacing: 0.03em;
+      }
+
+      .lang-toggle-btn {
+        flex: 0 0 auto;
+        padding: 6px 14px;
+        font-size: 12px;
+        border-radius: 5px;
+        border: 1px solid var(--footer-btn-border);
+        background: var(--footer-btn-bg);
+        color: var(--footer-text);
+        cursor: pointer;
+      }
+
+      .lang-toggle-btn:hover {
+        background: #5c5c5c;
+      }
+
+      main {
+        flex: 1 1 auto;
+        display: flex;
+        justify-content: center;
+        padding: 24px 16px 40px;
+      }
+
+      .help-content {
+        width: 100%;
+        max-width: 800px;
+      }
+
+      .help-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+
+      .help-card h2 {
+        font-size: 17px;
+        margin: 0 0 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .help-card p {
+        line-height: 1.8;
+        font-size: 14px;
+      }
+
+      .help-card ul,
+      .help-card ol {
+        line-height: 1.8;
+        font-size: 14px;
+        padding-left: 22px;
+      }
+
+      .help-card code {
+        background: var(--code-bg);
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+
+      .help-card a {
+        color: var(--accent-dim);
+      }
+
+      .note-box {
+        background: #fff7e6;
+        border: 1px solid #e6c46a;
+        border-radius: 6px;
+        padding: 10px 14px;
+        font-size: 13px;
+        line-height: 1.7;
+        margin: 12px 0;
+      }
+
+      footer.help-footer {
+        flex: 0 0 auto;
+        width: 100%;
+        font-size: 11px;
+        color: var(--page-footer-text);
+        text-align: center;
+        padding: 8px 16px;
+        background: var(--page-footer-bg);
+        border-top: 1px solid var(--page-footer-border);
+      }
+
+      footer.help-footer a {
+        color: var(--page-footer-text);
+      }
+
+      .lang-en {
+        display: none;
+      }
+
+      /* body[data-lang] で日英を切り替える。 */
+      body[data-lang='en'] .lang-ja {
+        display: none;
+      }
+
+      body[data-lang='en'] .lang-en {
+        display: block;
+      }
+
+      table.info-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin: 12px 0;
+      }
+
+      table.info-table th,
+      table.info-table td {
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.6;
+      }
+
+      table.info-table th {
+        background: var(--code-bg);
+      }
+    </style>
+  </head>
+  <body data-lang="ja">
+    <header class="help-header">
+      <div class="help-header-title">
+        <h1 class="lang-ja">WebQ88 使い方</h1>
+        <h1 class="lang-en">WebQ88 Help</h1>
+      </div>
+      <button type="button" class="lang-toggle-btn" id="langToggleBtn"></button>
+    </header>
+
+    <main>
+      <div class="help-content">
+        <!-- 1. はじめに -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>はじめに</h2>
+            <p>
+              WebQ88 は、PC-8801 の動作をブラウザ上で再現する Web プレイヤーです。エミュレーションには
+              QUASI88 を libretro 化した QUASI88-libretro の wasm ビルドを使っています。公式ROMの代わりに
+              クリーンルームで作った互換ROM(PC88Behavior)を同梱しているので、URL を開くだけで
+              N88-BASIC 互換の画面まで起動します。
+            </p>
+            <p>
+              PC-8801 の公式ROM・市販ソフトのディスクイメージは同梱していません。お手元のディスク
+              イメージ(D88 など)は、ドライブ行へドラッグ＆ドロップするなどして読み込めます。
+              読み込んだディスクはサーバーへ送信されず、ブラウザの中だけで扱われます。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Introduction</h2>
+            <p>
+              WebQ88 is a web player that reproduces the PC-8801 in your browser. It runs a WebAssembly
+              build of QUASI88-libretro, a libretro port of QUASI88. Instead of the official ROM it bundles
+              a compatible ROM (PC88Behavior) written in a clean-room fashion, so just opening the URL
+              boots to an N88-BASIC-compatible screen.
+            </p>
+            <p>
+              Official PC-8801 ROMs and commercial software disk images are not bundled. You can load
+              your own disk images (D88 and so on) by, for example, dragging and dropping them onto a drive
+              row. Loaded disks are never sent to a server; they are handled only inside your browser.
+            </p>
+          </div>
+        </section>
+
+        <!-- 2. 起動する -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>起動する</h2>
+            <ol>
+              <li>ページを開くと「互換ROMで起動」ボタンが表示されます。</li>
+              <li>ボタンをクリックすると起動します。音声を有効にするため、起動にはこのクリックが必要です。</li>
+              <li>起動後、画面をクリックするとキーボード操作が画面に戻ります。</li>
+            </ol>
+            <p>
+              URLに <code>run=1</code> を付けると、ボタンを押さずに自動で起動します(→「URLでディスクを指定して起動」)。
+            </p>
+            <div class="note-box">
+              起動直後は互換ROMによる N88-BASIC 互換の画面になります。ディスクを入れて起動したい場合は、
+              起動前にドライブへディスクを入れておくか、URLでディスクを指定してください。
+            </div>
+          </div>
+          <div class="lang-en">
+            <h2>Starting the emulator</h2>
+            <ol>
+              <li>When the page opens, a "Boot with compatible ROM" button is shown (labeled in Japanese in the player).</li>
+              <li>Click it to start. This click is required because browsers only allow audio after a user action.</li>
+              <li>After it starts, click the screen to return keyboard focus to it.</li>
+            </ol>
+            <p>
+              Add <code>run=1</code> to the URL to start automatically without pressing the button (see
+              "Boot with disks specified in the URL").
+            </p>
+            <div class="note-box">
+              Right after startup you get the N88-BASIC-compatible screen provided by the compatible ROM.
+              To boot from a disk, insert it into a drive before starting, or specify it in the URL.
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. 画面表示 -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>画面表示（4:3 / ドット等倍 / 補間）</h2>
+            <p>
+              既定では、実機のモニタのように4:3で表示します。ツールバーの「…」(その他の操作)メニューで
+              次の設定を変えられます。設定はブラウザに保存されます。
+            </p>
+            <ul>
+              <li><strong>表示比率</strong> — 「4:3」と「ドット等倍」を切り替えます。ドット等倍はエミュレータの解像度をそのまま正方形ピクセルで表示します。</li>
+              <li><strong>補間</strong> — 「シャープ・バイリニア」と「ニアレスト」を切り替えます。</li>
+            </ul>
+            <p>「全画面表示」ボタンで画面を拡大でき、「スクリーンショット」ボタンで画面を PNG で保存できます。</p>
+          </div>
+          <div class="lang-en">
+            <h2>Screen display (4:3 / 1:1 pixels / interpolation)</h2>
+            <p>
+              By default the screen is shown at 4:3, like a real monitor. The toolbar's "…" (More actions)
+              menu lets you change the following. The settings are saved in your browser.
+            </p>
+            <ul>
+              <li><strong>Aspect ratio</strong> — switches between "4:3" and "Dot-by-dot" (1:1 pixels), which shows the emulator's native resolution at square pixels.</li>
+              <li><strong>Interpolation</strong> — switches between "Sharp bilinear" and "Nearest".</li>
+            </ul>
+            <p>The Fullscreen button enlarges the screen, and the Screenshot button saves the screen as a PNG.</p>
+          </div>
+        </section>
+
+        <!-- 4. ディスクイメージを読み込む -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ディスクイメージを読み込む</h2>
+            <p>画面の下に、FDD1 と FDD2 の2つのドライブ行があります。</p>
+            <ul>
+              <li><strong>＋</strong> — D88 / 88D / ZIP / LZH ファイルを選んで挿入します。</li>
+              <li><strong>ドラッグ＆ドロップ</strong> — ドライブ行へファイルをドロップしても挿入できます。</li>
+              <li><strong>⏏</strong> — ディスクを排出します。</li>
+              <li><strong>↓</strong> — 現在のディスクをダウンロードします。</li>
+              <li><strong>ブランクFD</strong>(FDD2 のみ) — 空の N88-BASIC 2D データディスクを作成して挿入します。起動用ではありません。</li>
+            </ul>
+            <p>
+              ドライブ行のランプは、実際にディスクへアクセスしたときだけ点灯します。ZIP/LZH を選んだ場合は
+              展開して、中の .d88 / .88d をすべてライブラリに登録し、先頭の1枚を挿入します。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Loading disk images</h2>
+            <p>Below the screen there are two drive rows, FDD1 and FDD2.</p>
+            <ul>
+              <li><strong>＋</strong> — choose a D88 / 88D / ZIP / LZH file to insert.</li>
+              <li><strong>Drag and drop</strong> — you can also drop a file onto a drive row.</li>
+              <li><strong>⏏</strong> — ejects the disk.</li>
+              <li><strong>↓</strong> — downloads the current disk.</li>
+              <li><strong>Blank FD</strong> (FDD2 only) — creates and inserts an empty N88-BASIC 2D data disk. It is not a boot disk.</li>
+            </ul>
+            <p>
+              The lamp on each drive row lights up only while the disk is actually being accessed. When you
+              choose a ZIP or LZH, it is extracted, every .d88 / .88d inside is registered in the library,
+              and the first one is inserted.
+            </p>
+          </div>
+        </section>
+
+        <!-- 5. URLでディスクを指定 -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>URLでディスクを指定して起動</h2>
+            <p>URLパラメータでディスクを指定して開くと、挿入済みの状態で起動できます。</p>
+            <table class="info-table">
+              <thead><tr><th>パラメータ</th><th>内容</th></tr></thead>
+              <tbody>
+                <tr><td><code>fd1=URL</code> / <code>fd2=URL</code></td><td>ドライブ1・ドライブ2に入れるディスクイメージのURL(パーセントエンコードしてください)</td></tr>
+                <tr><td><code>lib=URL</code></td><td>挿入せず、ディスクライブラリに登録します。複数回指定できます</td></tr>
+                <tr><td><code>run=1</code></td><td>起動ボタンを押さずに自動で起動します</td></tr>
+                <tr><td><code>bridge=1</code></td><td>AIエージェント用の WebSocket ブリッジにつなぎます(→「AIから操作する」)</td></tr>
+              </tbody>
+            </table>
+            <p>例: <code>./?fd1=https%3A%2F%2Fexample.com%2Fdisk.zip&amp;run=1</code></p>
+            <ul>
+              <li>ZIP/LZH は展開し、中の .d88 / .88d をすべてライブラリに登録して先頭を挿入します。</li>
+              <li>配布元のサーバーは CORS に対応している必要があります。Dropbox の共有リンクは自動で変換します。Google Drive は中継サービス(ビルド時の <code>VITE_DISK_PROXY</code>)が必要です。OneDrive には対応していません。</li>
+              <li>2回目以降は、保存済みの変更を復元します。ライブラリの「配布元に戻す」で取り直せます。</li>
+              <li>「…」メニューの「共有URLをコピー」で、挿入中のURL由来ディスクの共有URLをコピーできます。</li>
+            </ul>
+          </div>
+          <div class="lang-en">
+            <h2>Boot with disks specified in the URL</h2>
+            <p>Open the player with URL parameters to start with the disks already inserted.</p>
+            <table class="info-table">
+              <thead><tr><th>Parameter</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>fd1=URL</code> / <code>fd2=URL</code></td><td>URL of the disk image to put in drive 1 / drive 2 (percent-encode it)</td></tr>
+                <tr><td><code>lib=URL</code></td><td>Registers the disk in the Disk Library without inserting it. Can be given multiple times</td></tr>
+                <tr><td><code>run=1</code></td><td>Starts automatically without pressing the boot button</td></tr>
+                <tr><td><code>bridge=1</code></td><td>Connects to the WebSocket bridge for AI agents (see "Controlling WebQ88 from AI agents")</td></tr>
+              </tbody>
+            </table>
+            <p>Example: <code>./?fd1=https%3A%2F%2Fexample.com%2Fdisk.zip&amp;run=1</code></p>
+            <ul>
+              <li>ZIP/LZH archives are extracted, every .d88 / .88d inside is registered in the library, and the first one is inserted.</li>
+              <li>The host serving the file must support CORS. Dropbox share links are converted automatically. Google Drive needs a relay service (the build-time <code>VITE_DISK_PROXY</code>). OneDrive is not supported.</li>
+              <li>On later visits, your saved changes are restored. "Restore from source" in the library fetches the original again.</li>
+              <li>"Copy share URL" in the "…" menu copies a shareable URL for the inserted disks that came from a URL.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 6. ディスクライブラリ -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ディスクライブラリ</h2>
+            <p>
+              ツールバーの「ディスクライブラリ」ボタンで、これまでに読み込んだディスクの一覧が開きます。
+              新しく保存した順に並び、各ディスクに対して次の操作ができます。
+            </p>
+            <ul>
+              <li><strong>FDD1へ挿入 / FDD2へ挿入</strong></li>
+              <li><strong>名前変更</strong> — 表示名を変更します。</li>
+              <li><strong>ダウンロード</strong> — 書き込み内容を含む現在のイメージを保存します。</li>
+              <li><strong>配布元に戻す</strong>(URLから読み込んだディスクのみ) — 保存済みの変更を破棄して、配布元から再取得します。</li>
+              <li><strong>削除</strong></li>
+            </ul>
+          </div>
+          <div class="lang-en">
+            <h2>Disk Library</h2>
+            <p>
+              The toolbar's Disk Library button opens a list of the disks you have loaded so far, newest
+              first. For each disk you can:
+            </p>
+            <ul>
+              <li><strong>Insert into FDD1 / FDD2</strong></li>
+              <li><strong>Rename</strong> — change the display name.</li>
+              <li><strong>Download</strong> — save the current image, including what was written to it.</li>
+              <li><strong>Restore from source</strong> (only for disks loaded from a URL) — discard saved changes and fetch the original again.</li>
+              <li><strong>Delete</strong></li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 7. ディスクの保存と消える条件 -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ディスクの保存と、データが消える条件</h2>
+            <p>
+              ゲストが書き込んだ内容は、数秒おきにこのブラウザ(IndexedDB)へ自動保存され、次に開いたときに
+              ドライブへ自動で挿入し直されます。保存先はこのブラウザの中だけで、サーバーへは送信されません。
+            </p>
+            <div class="note-box">
+              ブラウザの保存は消えることがあります。次のような場合に注意してください。
+              <ul>
+                <li>サイトデータ(Cookie など)を削除したとき</li>
+                <li>シークレットウィンドウで開いたとき</li>
+                <li>端末の容量が不足したとき</li>
+                <li>Safari で7日間使わなかったとき</li>
+                <li>別のブラウザ・別の端末で開いたとき(保存は共有されません)</li>
+              </ul>
+              大事なディスクは、ドライブ行やライブラリの「ダウンロード」で手元にも保存してください。
+            </div>
+          </div>
+          <div class="lang-en">
+            <h2>How disks are saved, and when the data disappears</h2>
+            <p>
+              Whatever the guest writes is automatically saved into this browser (IndexedDB) every few
+              seconds, and re-inserted into the drives the next time you open the page. The data stays
+              inside this browser and is never sent to a server.
+            </p>
+            <div class="note-box">
+              Browser storage can be lost. Watch out in these cases:
+              <ul>
+                <li>You delete site data (cookies and so on)</li>
+                <li>You use a private/incognito window</li>
+                <li>The device runs low on storage</li>
+                <li>You don't use Safari for 7 days</li>
+                <li>You open the page in a different browser or on a different device (saved data isn't shared)</li>
+              </ul>
+              For any disk you care about, keep a copy with "Download" on the drive row or in the library.
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. ツールバーのボタン一覧 -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ツールバーのボタン一覧</h2>
+            <table class="info-table">
+              <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+              <tbody>
+                <tr><td>一時停止</td><td>動作を止める・再開する</td></tr>
+                <tr><td>ミュート</td><td>音を消す・戻す(音量は「…」メニュー)</td></tr>
+                <tr><td>全画面表示</td><td>画面を拡大する(もう一度押すと戻ります)</td></tr>
+                <tr><td>ソフトキーボード</td><td>画面上に PC-88 配列のキーボードを出す</td></tr>
+                <tr><td>バーチャルパッド</td><td>タッチ用の十字キーとボタンを出す</td></tr>
+                <tr><td>スクリーンショット</td><td>画面を PNG で保存する</td></tr>
+                <tr><td>ディスクライブラリ</td><td>保存済みのディスクを選んで挿入する</td></tr>
+                <tr><td>…(その他の操作)</td><td>共有URLをコピー、音量、表示比率、補間、ゲームパッド・キー割当、テンキー代替、利用者ROMの選択</td></tr>
+                <tr><td>リセット</td><td>マシンをリセットする</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="lang-en">
+            <h2>Toolbar buttons</h2>
+            <table class="info-table">
+              <thead><tr><th>Button</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr><td>Pause</td><td>Stops and resumes the machine</td></tr>
+                <tr><td>Mute</td><td>Silences and restores sound (volume is in the "…" menu)</td></tr>
+                <tr><td>Fullscreen</td><td>Enlarges the screen (press again to go back)</td></tr>
+                <tr><td>Soft keyboard</td><td>Shows an on-screen keyboard in the PC-88 layout</td></tr>
+                <tr><td>Virtual pad</td><td>Shows touch-friendly directional keys and buttons</td></tr>
+                <tr><td>Screenshot</td><td>Saves the screen as a PNG</td></tr>
+                <tr><td>Disk Library</td><td>Pick a saved disk and insert it</td></tr>
+                <tr><td>… (More actions)</td><td>Copy share URL, volume, aspect ratio, interpolation, gamepad / key assignment, numpad substitute, choosing your own ROMs</td></tr>
+                <tr><td>Reset</td><td>Resets the machine</td></tr>
+              </tbody>
+            </table>
+            <p>Note: the button labels in the player itself are in Japanese.</p>
+          </div>
+        </section>
+
+        <!-- 9. キーボード -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>キーボード</h2>
+            <p>
+              英数字、Enter、矢印、Shift、Ctrl、F1〜F10 などは、対応するキーで入力します。記号は、
+              入力された文字に合わせて PC-88 のキーへ変換します。画面をクリックすると、キー入力が画面に戻ります。
+            </p>
+            <p>
+              テンキーのないパソコンでは、「…」メニューの「テンキー代替」をオンにしてください。
+              メインの数字キー 0〜9 がテンキーの 0〜9 に、矢印キーの上・下・左・右がテンキーの 8・2・4・6 に
+              なります。既定はオフで、設定はブラウザに保存されます。
+            </p>
+            <p>
+              タッチ操作や、キーボードのない環境では、ツールバーの「ソフトキーボード」で画面上に
+              PC-88 配列のキーボードを出せます。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Keyboard</h2>
+            <p>
+              Letters, digits, Enter, arrow keys, Shift, Ctrl, F1–F10 and so on work with the matching keys.
+              Symbols are converted to the PC-88 keys according to the character you typed. Click the screen
+              to return keyboard input to it.
+            </p>
+            <p>
+              On computers without a numeric keypad, turn on "Numpad substitute" in the "…" menu. The main
+              number keys 0–9 then act as keypad 0–9, and the arrow keys up / down / left / right act as
+              keypad 8 / 2 / 4 / 6. It is off by default, and the setting is saved in your browser.
+            </p>
+            <p>
+              For touch use or when there is no keyboard, the toolbar's Soft keyboard button shows an
+              on-screen keyboard in the PC-88 layout.
+            </p>
+          </div>
+        </section>
+
+        <!-- 10. ゲームパッド・キー割当・バーチャルパッド -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ゲームパッド・キー割当とバーチャルパッド</h2>
+            <p>
+              ツールバーの「バーチャルパッド」で、タッチ用の十字キーとボタンを画面に表示できます。
+              物理的なゲームパッドは、接続すると使えます。
+            </p>
+            <p>
+              「…」メニューの「ゲームパッド・キー割当」では、次の内容を設定できます。
+            </p>
+            <ul>
+              <li>接続中のゲームパッドの状態</li>
+              <li>ゲームパッドのボタンと軸の割当、デッドゾーン</li>
+              <li>バーチャルパッドの各部品の割当</li>
+              <li>物理キーボードの変換先</li>
+            </ul>
+            <p>
+              プリセット「テンキー移動＋SPACE/RETURN」も利用できます。設定はブラウザに保存されます。
+              「テンキー代替」の設定は引き継がれますが、個別に割り当てたキーボードの設定が
+              「テンキー代替」より優先されます。割当先はコアの制約により PC-88 のキーです。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Gamepad, key assignment, and the virtual pad</h2>
+            <p>
+              The toolbar's Virtual pad button shows touch-friendly directional keys and buttons on the
+              screen. A physical gamepad works once it is connected.
+            </p>
+            <p>
+              "Gamepad / key assignment" in the "…" menu lets you configure:
+            </p>
+            <ul>
+              <li>The state of connected gamepads</li>
+              <li>Button and axis assignments and the dead zone for gamepads</li>
+              <li>The assignment of each part of the virtual pad</li>
+              <li>What physical keyboard keys are converted to</li>
+            </ul>
+            <p>
+              A preset, "Numpad move + SPACE/RETURN", is also available. Settings are saved in your
+              browser. Your existing "Numpad substitute" setting is carried over, and keyboard assignments
+              you make individually take priority over it. Because of core limitations, assignment targets
+              are PC-88 keys.
+            </p>
+          </div>
+        </section>
+
+        <!-- 11. 手持ちのROM -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>手持ちのROMで起動する（制限モード）</h2>
+            <ol>
+              <li>「…」メニューの「利用者ROMを選択（複数選択可・任意）」で、お持ちのROMファイルを選びます。</li>
+              <li>「選択したROMで起動 / 再起動」を押すと、そのROMで起動し直します。</li>
+            </ol>
+            <p>
+              ROM はブラウザの中だけで使い、どこにも送信しません。利用者ROMで起動している間は
+              <strong>制限モード</strong>になり、AIから操作する機能の一部が使えなくなります
+              (→「AIから操作する」)。ROM の入手と使用は、利用者自身が適法に行ってください。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Booting with your own ROMs (restricted mode)</h2>
+            <ol>
+              <li>In the "…" menu, choose your ROM files with the "Select your own ROMs" file picker (multiple files allowed, optional).</li>
+              <li>Press the "Boot / reboot with selected ROMs" button to restart with those ROMs.</li>
+            </ol>
+            <p>
+              ROMs are used only inside your browser and are never sent anywhere. While running with your
+              own ROMs, the player is in <strong>restricted mode</strong>, and some of the AI-control
+              features become unavailable (see "Controlling WebQ88 from AI agents"). Obtaining and using
+              ROMs lawfully is your own responsibility.
+            </p>
+          </div>
+        </section>
+
+        <!-- 12. AI操作 -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>AIから操作する（MCP連携）</h2>
+            <p>
+              ローカルで動かす MCP サーバー経由で、Claude Code などの AI エージェントから WebQ88 を
+              操作できます。MCP サーバーはあなたのマシン上で動きます。
+            </p>
+            <ol>
+              <li>リポジトリの <code>mcp/</code> で MCP サーバーをセットアップします(手順は
+                <a href="https://github.com/uraraworks/WebQ88/tree/main/mcp" target="_blank" rel="noopener">mcp/README.md</a>)。</li>
+              <li>ブラウザで WebQ88 を <code>?bridge=1</code> 付きで開きます。ページがローカルの MCP サーバーへ接続します(既定のポートは 3188。<code>?bridge=ポート番号</code> でも指定できます)。</li>
+            </ol>
+            <p>
+              操作できる内容の例は、状態の取得、リセット、キー入力、文字列の入力、画面の確認(画面の署名)、
+              画面の変化の待機などです。コマンドの一覧は
+              <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
+              を参照してください。
+            </p>
+            <p>
+              <strong>制限モード</strong>(利用者ROMで起動しているとき)では、画面本文の取得、スクリーンショット、
+              メモリの読み書きなど、一部のコマンドが拒否されます。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Controlling WebQ88 from AI agents (MCP)</h2>
+            <p>
+              Through an MCP server running on your own machine, AI agents such as Claude Code can drive
+              WebQ88. The MCP server always runs on your own machine.
+            </p>
+            <ol>
+              <li>Set up the MCP server from the repository's <code>mcp/</code> folder (steps in
+                <a href="https://github.com/uraraworks/WebQ88/tree/main/mcp" target="_blank" rel="noopener">mcp/README.md</a>).</li>
+              <li>Open WebQ88 in your browser with <code>?bridge=1</code>. The page connects to the local MCP server (default port 3188; you can also give a port as <code>?bridge=PORT</code>).</li>
+            </ol>
+            <p>
+              Examples of what can be done: getting the status, resetting, key presses, typing text,
+              checking the screen (a screen signature), and waiting for the screen to change. See
+              <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
+              for the command list.
+            </p>
+            <p>
+              In <strong>restricted mode</strong> (when running with your own ROMs), some commands are
+              rejected, such as reading screen text, taking screenshots, and reading or writing memory.
+            </p>
+          </div>
+        </section>
+
+        <!-- 13. トラブルシューティング -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>トラブルシューティング</h2>
+            <ul>
+              <li><strong>音が出ない</strong> — ブラウザの制限により、起動ボタンをクリックして起動する必要があります。ミュートがオンになっていないか、「…」メニューの音量も確認してください。</li>
+              <li><strong>漢字が表示されない</strong> — 漢字ROMを同梱していないため、漢字を使うソフトでは漢字が表示されません。</li>
+              <li><strong>公式環境で SAVE した BASIC プログラムが読めない</strong> — 中間言語形式のBASICプログラムは読めません。プログラムのやり取りは ASCII 形式(<code>SAVE "x",A</code>)で行ってください。</li>
+              <li><strong>動かないソフトがある</strong> — 互換ROMは公式ROMと完全に同じではないため、動作しないソフトがあります。</li>
+              <li><strong>ディスクが消えた</strong> — ブラウザの保存は、サイトデータの削除などで消えます。大事なディスクはダウンロードして保管してください(→「ディスクの保存と、データが消える条件」)。</li>
+              <li><strong>ステートセーブ / ロードは使えますか</strong> — 現在は未対応です。</li>
+            </ul>
+          </div>
+          <div class="lang-en">
+            <h2>Troubleshooting</h2>
+            <ul>
+              <li><strong>No sound</strong> — Because of browser restrictions, you must start the machine by clicking the boot button. Also check that Mute isn't on and look at the volume in the "…" menu.</li>
+              <li><strong>Kanji aren't displayed</strong> — A kanji ROM isn't bundled, so software that uses kanji won't show them.</li>
+              <li><strong>A BASIC program saved in an official environment can't be read</strong> — BASIC programs in the intermediate-code format can't be read. Exchange programs in ASCII format (<code>SAVE "x",A</code>).</li>
+              <li><strong>Some software doesn't run</strong> — The compatible ROM is not completely identical to the official ROM, so some software doesn't work.</li>
+              <li><strong>My disk disappeared</strong> — Browser storage is lost when site data is deleted, among other cases. Download disks you care about and keep copies (see "How disks are saved, and when the data disappears").</li>
+              <li><strong>Can I save and load states?</strong> — Not currently supported.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="help-footer">
+      <span class="lang-ja">
+        <a href="./">WebQ88 プレイヤーに戻る</a> /
+        <a href="./about.html?lang=ja">WebQ88について</a> /
+        <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">GitHubで見る</a> /
+        © <a href="https://www.urara-works.jp/" target="_blank" rel="noopener">URARA-works</a>
+      </span>
+      <span class="lang-en">
+        <a href="./">Back to the WebQ88 player</a> /
+        <a href="./about.html?lang=en">About WebQ88</a> /
+        <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">View on GitHub</a> /
+        © <a href="https://www.urara-works.jp/" target="_blank" rel="noopener">URARA-works</a>
+      </span>
+    </footer>
+
+    <script>
+      (function () {
+        'use strict';
+
+        var STORAGE_KEY = 'webq88-lang';
+        var TITLES = { ja: 'WebQ88 使い方', en: 'WebQ88 Help' };
+
+        function readStoredLang() {
+          try {
+            var v = localStorage.getItem(STORAGE_KEY);
+            return v === 'ja' || v === 'en' ? v : null;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        // 優先順位: URL ?lang= ＞ localStorage ＞ navigator.language(ja判定) ＞ 既定 'en'。
+        function resolveLang() {
+          var params = new URLSearchParams(location.search);
+          var fromUrl = params.get('lang');
+          if (fromUrl === 'ja' || fromUrl === 'en') return fromUrl;
+
+          var stored = readStoredLang();
+          if (stored) return stored;
+
+          if (navigator.language && navigator.language.toLowerCase().indexOf('ja') === 0) return 'ja';
+
+          return 'en';
+        }
+
+        function setLang(lang) {
+          try {
+            localStorage.setItem(STORAGE_KEY, lang);
+          } catch (e) {
+            // localStorage が使えない環境ではメモリ上の切替のみ有効。
+          }
+          document.body.setAttribute('data-lang', lang);
+          document.documentElement.setAttribute('lang', lang);
+          document.title = TITLES[lang];
+          var toggleBtn = document.getElementById('langToggleBtn');
+          if (toggleBtn) toggleBtn.textContent = lang === 'ja' ? 'EN' : '日本語';
+        }
+
+        var currentLang = resolveLang();
+        setLang(currentLang);
+
+        document.getElementById('langToggleBtn').addEventListener('click', function () {
+          currentLang = currentLang === 'ja' ? 'en' : 'ja';
+          setLang(currentLang);
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,11 +1,613 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>About | WebQ88</title><style>body{font:16px/1.7 sans-serif;max-width:48rem;margin:2rem auto;padding:0 1rem;color:#eee;background:#222}a{color:#8bc5ff}h1,h2{line-height:1.3}</style></head><body>
-<h1>WebQ88 について</h1>
-<p><a href="./">WebQ88 に戻る</a> · <a href="./help.html">ヘルプ</a></p>
-<p>WebQ88 は、PC-8801 の動作をブラウザで再現するエミュレータです。エミュレーションには QUASI88 を基にした QUASI88-libretro を使用しています。</p>
-<h2>互換ROMと利用者ROM</h2>
-<p>同梱の互換ROM PC88Behavior は、公式ROMを使わずクリーンルームで作られた実装です。起動時にはこの互換ROMを使用します。</p>
-<p>利用者が選択したROMは利用者のブラウザ内でのみ使用し、送信しません。利用者ROMを使うと制限モードになります。</p>
-<h2>ライセンス</h2>
-<p>WebQ88 および使用コンポーネントのライセンス表記は、<a href="https://github.com/uraraworks/WebQ88">WebQ88 のリポジトリ</a>に掲載します。QUASI88-libretro は BSD 3-Clause ライセンスです。</p>
-</body></html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebQ88 とは</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fafafa;
+        --bg-panel: #ffffff;
+        --border: #d5d5d5;
+        --text: #1a1a1a;
+        --text-dim: #666666;
+        --accent: #4a90d9;
+        --accent-dim: #2c5a86;
+        --danger: #d32f2f;
+        --header-bg: #0c0c0c;
+        --header-text: #f2f2f2;
+        --header-tagline-text: #a8a8a8;
+        --page-footer-bg: #ececec;
+        --page-footer-text: #6b6b6b;
+        --page-footer-border: rgba(0, 0, 0, 0.12);
+        --footer-btn-bg: #4a4a4a;
+        --footer-btn-border: #202020;
+        --footer-text: #e6e6e6;
+        --code-bg: #f1f1f1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header.help-header {
+        flex: 0 0 auto;
+        background: var(--header-bg);
+        padding: 10px 16px;
+        box-shadow:
+          inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+          0 2px 6px rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .help-header-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .help-header-title h1 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--header-text);
+        letter-spacing: 0.03em;
+      }
+
+      .lang-toggle-btn {
+        flex: 0 0 auto;
+        padding: 6px 14px;
+        font-size: 12px;
+        border-radius: 5px;
+        border: 1px solid var(--footer-btn-border);
+        background: var(--footer-btn-bg);
+        color: var(--footer-text);
+        cursor: pointer;
+      }
+
+      .lang-toggle-btn:hover {
+        background: #5c5c5c;
+      }
+
+      main {
+        flex: 1 1 auto;
+        display: flex;
+        justify-content: center;
+        padding: 24px 16px 40px;
+      }
+
+      .help-content {
+        width: 100%;
+        max-width: 800px;
+      }
+
+      .help-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+
+      .help-card h2 {
+        font-size: 17px;
+        margin: 0 0 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .help-card p {
+        line-height: 1.8;
+        font-size: 14px;
+      }
+
+      .help-card ul,
+      .help-card ol {
+        line-height: 1.8;
+        font-size: 14px;
+        padding-left: 22px;
+      }
+
+      .help-card code {
+        background: var(--code-bg);
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+
+      .help-card a {
+        color: var(--accent-dim);
+      }
+
+      .note-box {
+        background: #fff7e6;
+        border: 1px solid #e6c46a;
+        border-radius: 6px;
+        padding: 10px 14px;
+        font-size: 13px;
+        line-height: 1.7;
+        margin: 12px 0;
+      }
+
+      footer.help-footer {
+        flex: 0 0 auto;
+        width: 100%;
+        font-size: 11px;
+        color: var(--page-footer-text);
+        text-align: center;
+        padding: 8px 16px;
+        background: var(--page-footer-bg);
+        border-top: 1px solid var(--page-footer-border);
+      }
+
+      footer.help-footer a {
+        color: var(--page-footer-text);
+      }
+
+      .lang-en {
+        display: none;
+      }
+
+      /* body[data-lang] で日英を切り替える。 */
+      body[data-lang='en'] .lang-ja {
+        display: none;
+      }
+
+      body[data-lang='en'] .lang-en {
+        display: block;
+      }
+
+      table.info-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin: 12px 0;
+      }
+
+      table.info-table th,
+      table.info-table td {
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.6;
+      }
+
+      table.info-table th {
+        background: var(--code-bg);
+      }
+
+      /* ヒーローセクション: キャッチコピー+CTAボタン。 */
+      .hero-card {
+        text-align: center;
+      }
+
+      .hero-card h2 {
+        font-size: 22px;
+        border-bottom: none;
+        padding-bottom: 0;
+        margin: 0 0 10px;
+      }
+
+      .hero-card .hero-lead {
+        font-size: 14px;
+        color: var(--text-dim);
+        margin: 0 0 20px;
+        line-height: 1.8;
+      }
+
+      .hero-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-bottom: 4px;
+      }
+
+      .hero-btn {
+        display: inline-block;
+        padding: 12px 26px;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid var(--footer-btn-border);
+      }
+
+      /* .help-card a (詳細度0,1,1) に文字色を上書きされないよう a 込みで指定する */
+      .help-card a.hero-btn-primary {
+        background: var(--accent);
+        color: #ffffff;
+        border-color: var(--accent-dim);
+      }
+
+      .hero-btn-primary:hover {
+        background: var(--accent-dim);
+      }
+
+      /* 特徴セクション: 見出し+本文のカードを縦に並べる。 */
+      .feature-card h2 {
+        font-size: 16px;
+      }
+
+      .feature-badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #ffffff;
+        background: var(--accent-dim);
+        border-radius: 4px;
+        padding: 2px 8px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+  <body data-lang="ja">
+    <header class="help-header">
+      <div class="help-header-title">
+        <h1 class="lang-ja">WebQ88 とは</h1>
+        <h1 class="lang-en">About WebQ88</h1>
+      </div>
+      <button type="button" class="lang-toggle-btn" id="langToggleBtn"></button>
+    </header>
+
+    <main>
+      <div class="help-content">
+        <!-- ヒーロー -->
+        <section class="help-card hero-card">
+          <div class="lang-ja">
+            <h2>URLを開くだけで動く、ブラウザの中のPC-8801。</h2>
+            <p class="hero-lead">
+              WebQ88 は、PC-8801 エミュレータ QUASI88 を libretro 化した QUASI88-libretro の wasm ビルドを
+              ブラウザで動かす Webプレイヤーです。公式ROMの代わりにクリーンルームで作った互換ROM
+              PC88Behavior を同梱しているため、何も用意しなくても、ページを開くだけで N88-BASIC 互換の
+              画面まで起動します。
+            </p>
+            <div class="hero-buttons">
+              <a class="hero-btn hero-btn-primary" href="./">今すぐ試す</a>
+            </div>
+          </div>
+          <div class="lang-en">
+            <h2>A PC-8801 in your browser. Just open the URL.</h2>
+            <p class="hero-lead">
+              WebQ88 is a web player that runs a WebAssembly build of QUASI88-libretro — a libretro port of
+              the PC-8801 emulator QUASI88 — directly in your browser. It bundles a compatible ROM,
+              PC88Behavior, written in a clean-room fashion instead of the official ROM, so it boots to an
+              N88-BASIC-compatible screen with nothing else to prepare — just open the page.
+            </p>
+            <div class="hero-buttons">
+              <a class="hero-btn hero-btn-primary" href="./">Try it now</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- 特徴1: インストール不要 -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>インストール不要・ブラウザ完結</h2>
+            <p>
+              エミュレータ本体は wasm としてブラウザの中で動くため、アプリのインストールもブラウザ
+              プラグインも不要です。対応ブラウザで URL を開けば、その場で PC-8801 が起動します。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>No install — runs entirely in the browser</h2>
+            <p>
+              The emulator itself runs as WebAssembly inside your browser, so there's no app to install and
+              no browser plugin needed. Open the URL in a supported browser and the PC-8801 starts right
+              there.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴2: 互換ROM -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>互換ROM同梱で、公式ROM無しに起動</h2>
+            <p>
+              同梱の互換ROM
+              <a href="https://github.com/uraraworks/PC88Behavior" target="_blank" rel="noopener">PC88Behavior</a>
+              は、外部から観測できる振る舞いだけを手がかりに書いたクリーンルーム実装で、公式ROMの
+              バイト列を含みません。そのため、公式ROMを用意しなくても URL を開いてボタンを1つ押すだけで
+              起動できます。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Boots without an official ROM, thanks to a bundled compatible ROM</h2>
+            <p>
+              The bundled compatible ROM,
+              <a href="https://github.com/uraraworks/PC88Behavior" target="_blank" rel="noopener">PC88Behavior</a>,
+              is a clean-room implementation written using only externally observable behavior as a
+              guide, and it contains no bytes from the official ROM. That's why you can start the
+              machine just by opening the URL and pressing one button, with no official ROM on hand.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴3: URLでディスク指定 -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>URLでディスクを指定して起動</h2>
+            <p>
+              <code>?fd1=URL&amp;fd2=URL&amp;run=1</code> のようにURLパラメータでディスクイメージを
+              指定すると、ボタンを押さずにそのまま起動できます。ZIP/LZH は自動で展開され、中の
+              D88 イメージがライブラリに登録されます。ディスクを入れた状態の共有URLをコピーして、
+              そのまま人に渡すこともできます。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Boot with disks specified in the URL</h2>
+            <p>
+              Pass disk image URLs as parameters, as in <code>?fd1=URL&amp;fd2=URL&amp;run=1</code>, and
+              the machine starts right away without any button press. ZIP and LZH archives are extracted
+              automatically and the D88 images inside are registered in the library. You can also copy a
+              shareable URL for the disks currently inserted and hand it to someone else.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴4: ディスクの自動保存とライブラリ -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>ディスクの自動保存とライブラリ</h2>
+            <p>
+              ゲストが書き込んだ内容は数秒おきにブラウザ(IndexedDB)へ自動保存され、次に開いたときに
+              自動で挿入し直されます。読み込んだディスクは「ディスクライブラリ」から選んで挿入、
+              名前変更、ダウンロード、削除ができます。読み込んだディスクや保存内容はサーバーへ送信されません。
+              ブラウザの保存はサイトデータの削除などで消えるため、大事なディスクはダウンロードして
+              保管してください。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Automatic disk saving and a disk library</h2>
+            <p>
+              Whatever the guest writes is automatically saved into your browser (IndexedDB) every few
+              seconds and re-inserted the next time you open the page. Disks you've loaded appear in the
+              Disk Library, where you can insert, rename, download, or delete them. Loaded disks and saved
+              data are never sent to a server. Browser storage is cleared when site data is deleted, so
+              download any disk you care about to keep a copy.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴5: サウンド -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>BGM・効果音に対応</h2>
+            <p>
+              BGM や効果音を再生できます。ツールバーのミュートボタンで音を消し、「…」メニューで
+              音量を調整できます(設定はブラウザに保存されます)。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>BGM and sound effects</h2>
+            <p>
+              Background music and sound effects are played. Use the toolbar's Mute button to silence
+              them and the volume slider in the "…" menu to adjust the level (the settings are saved in
+              your browser).
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴6: 表示 -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>4:3表示と補間</h2>
+            <p>
+              既定では実機のモニタのように4:3で表示します。「…」メニューの「表示比率」でドット等倍表示に、
+              「補間」でシャープ・バイリニアとニアレストを切り替えられます(設定は保存されます)。
+              スクリーンショットは PNG で保存でき、全画面表示にも対応しています。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>4:3 display and interpolation</h2>
+            <p>
+              By default the screen is shown at 4:3, like a real monitor. The "Aspect ratio" setting in
+              the "…" menu switches to 1:1 pixel display, and "Interpolation" switches between
+              sharp bilinear and nearest-neighbor (both are saved). You can save screenshots as PNG, and
+              fullscreen display is supported too.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴7: 入力 -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>キーボードにもゲームパッドにも、スマホにも</h2>
+            <p>
+              画面上に PC-88 配列の<strong>ソフトキーボード</strong>を出せるので、タッチ操作でも入力できます。
+              タッチ用の十字キーとボタンを出す<strong>バーチャルパッド</strong>、接続した物理
+              <strong>ゲームパッド</strong>、ボタンや軸・物理キーボードの割当先を変えられる
+              <strong>キー割当</strong>にも対応しています。テンキーの無いパソコンでは「テンキー代替」で
+              メインの数字キーや矢印キーをテンキーとして使えます。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Keyboard, gamepad, and touch screens</h2>
+            <p>
+              An on-screen <strong>soft keyboard</strong> in the PC-88 layout lets you type by touch. A
+              <strong>virtual pad</strong> shows touch-friendly directional keys and buttons, connected
+              physical <strong>gamepads</strong> are supported, and <strong>key assignment</strong> lets
+              you change what buttons, axes, and physical keyboard keys map to. On computers without a
+              numeric keypad, "Numpad substitute" lets the main number keys and arrow keys act as the
+              keypad.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴8: AI操作(MCP) -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>AIがPC-8801を直接操作できる<span class="feature-badge">MCP対応</span></h2>
+            <p>
+              手元で動かす MCP サーバー経由で、Claude Code などの AI エージェントから WebQ88 を
+              操作できます。ブラウザで <code>?bridge=1</code> を付けて開くと、ページが
+              <code>127.0.0.1</code> 上のローカルの MCP サーバーへ接続し、キー入力、文字列の入力、
+              画面の確認、リセットなどを行えます。MCP サーバーはあなたのマシン上で動きます。
+              セットアップの詳細は
+              <a href="https://github.com/uraraworks/WebQ88/tree/main/mcp" target="_blank" rel="noopener">mcp/README.md</a>
+              を参照してください。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>AI agents can operate the PC-8801 directly<span class="feature-badge">MCP support</span></h2>
+            <p>
+              Through an MCP server running on your own machine, AI agents such as Claude Code can drive
+              WebQ88. Open the page with <code>?bridge=1</code> and it connects to the local MCP server on
+              <code>127.0.0.1</code>, letting the agent send key presses, type text, check the screen,
+              reset the machine, and more. The MCP server runs on your own machine. See
+              <a href="https://github.com/uraraworks/WebQ88/tree/main/mcp" target="_blank" rel="noopener">mcp/README.md</a>
+              for setup details.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴9: 手持ちのROM -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>手持ちの ROM も使える(制限モード)</h2>
+            <p>
+              お持ちの ROM ファイルを「…」メニューから選んで、そちらで起動し直すこともできます。
+              ROM はブラウザの中だけで使い、どこにも送信しません。利用者の ROM で起動している間は
+              <strong>制限モード</strong>になり、AI から操作する機能の一部(画面本文の取得、
+              スクリーンショット、メモリの読み書きなど)は使えなくなります。ROM の入手と使用は、
+              利用者自身が適法に行ってください。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Bring your own ROMs (restricted mode)</h2>
+            <p>
+              You can also pick your own ROM files from the "…" menu and restart with them. ROMs are used
+              only inside your browser and are never sent anywhere. While running with your own ROMs, the
+              player is in <strong>restricted mode</strong>, and some of the AI-control features (reading
+              screen text, screenshots, reading and writing memory, and so on) become unavailable. Obtaining
+              and using ROMs lawfully is your own responsibility.
+            </p>
+          </div>
+        </section>
+
+        <!-- 特徴10: プライバシーとライセンス -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>プライバシーとライセンス</h2>
+            <p>
+              利用者が読み込んだディスクイメージ・ROM は、あなたのブラウザの中でのみ扱われ、サーバーへ
+              送信されることはありません。それらの取り扱い・権利関係については利用者自身の責任となります。
+            </p>
+            <p>
+              本リポジトリのコード自体のライセンスは特に定めていません。コア(QUASI88-libretro)は
+              BSD 3-Clause ライセンス、同梱の互換ROM(PC88Behavior のビルド成果物)は MIT ライセンスです。
+              PC-8801 の公式 ROM・市販ソフトウェアのディスクイメージは一切同梱していません。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Privacy and licensing</h2>
+            <p>
+              Any disk image or ROM you load is handled only inside your own browser and is never sent to
+              a server. You're responsible for the rights and handling of any such files you choose to
+              load.
+            </p>
+            <p>
+              No particular license is specified for this repository's own code. The core
+              (QUASI88-libretro) is under the BSD 3-Clause license, and the bundled compatible ROM
+              (a build artifact of PC88Behavior) is under the MIT license. No official PC-8801 ROMs and
+              no commercial software disk images are bundled.
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="help-footer">
+      <span class="lang-ja">
+        <a href="./">WebQ88 プレイヤーに戻る</a> /
+        <a href="./help.html?lang=ja">使い方</a> /
+        <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">GitHubで見る</a> /
+        © <a href="https://www.urara-works.jp/" target="_blank" rel="noopener">URARA-works</a>
+      </span>
+      <span class="lang-en">
+        <a href="./">Back to the WebQ88 player</a> /
+        <a href="./help.html?lang=en">How to use</a> /
+        <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">View on GitHub</a> /
+        © <a href="https://www.urara-works.jp/" target="_blank" rel="noopener">URARA-works</a>
+      </span>
+    </footer>
+
+    <script>
+      (function () {
+        'use strict';
+
+        var STORAGE_KEY = 'webq88-lang';
+        var TITLES = { ja: 'WebQ88 とは', en: 'About WebQ88' };
+
+        function readStoredLang() {
+          try {
+            var v = localStorage.getItem(STORAGE_KEY);
+            return v === 'ja' || v === 'en' ? v : null;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        // 優先順位: URL ?lang= ＞ localStorage ＞ navigator.language(ja判定) ＞ 既定 'en'。
+        function resolveLang() {
+          var params = new URLSearchParams(location.search);
+          var fromUrl = params.get('lang');
+          if (fromUrl === 'ja' || fromUrl === 'en') return fromUrl;
+
+          var stored = readStoredLang();
+          if (stored) return stored;
+
+          if (navigator.language && navigator.language.toLowerCase().indexOf('ja') === 0) return 'ja';
+
+          return 'en';
+        }
+
+        function setLang(lang) {
+          try {
+            localStorage.setItem(STORAGE_KEY, lang);
+          } catch (e) {
+            // localStorage が使えない環境ではメモリ上の切替のみ有効。
+          }
+          document.body.setAttribute('data-lang', lang);
+          document.documentElement.setAttribute('lang', lang);
+          document.title = TITLES[lang];
+          var toggleBtn = document.getElementById('langToggleBtn');
+          if (toggleBtn) toggleBtn.textContent = lang === 'ja' ? 'EN' : '日本語';
+        }
+
+        var currentLang = resolveLang();
+        setLang(currentLang);
+
+        document.getElementById('langToggleBtn').addEventListener('click', function () {
+          currentLang = currentLang === 'ja' ? 'en' : 'ja';
+          setLang(currentLang);
+        });
+      })();
+    </script>
+  </body>
+</html>
