@@ -9,7 +9,7 @@
 //   WEBQ88_BRIDGE_PORT=3188 node mcp/test-client.mjs [--restricted]
 //
 // --restricted を付けると、restricted系コマンド(screen_text/screenshot/
-// read_memory/get_state_blob)がエラーになることを検査するモードになる
+// read_memory/get_state_blob/get_disk_image)がエラーになることを検査するモードになる
 // (ページ側が制限モードで起動済みであることが前提。互換モードのまま
 // このフラグを付けると期待どおりに失敗する)。
 //
@@ -19,6 +19,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const restricted = process.argv.includes('--restricted');
@@ -65,6 +66,7 @@ async function main() {
     'insert_disk',
     'eject_disk',
     'list_disks',
+    'get_disk_image',
   ];
   const missing = expected.filter((n) => !toolNames.has(n));
   const extra = [...toolNames].filter((n) => !expected.includes(n));
@@ -115,16 +117,41 @@ async function main() {
       arguments: { region: 0, offset: 0, length: 16 },
     });
     record('read_memory', !mem.isError, textOf(mem).slice(0, 200));
+
+    const disk = await readFile(path.join(__dirname, '../compat-rom/BLANK2D.D88'));
+    const diskArgs = { drive: 2, name: 'mcp-test.d88', base64: disk.toString('base64') };
+    const inserted = await client.callTool({ name: 'insert_disk', arguments: diskArgs });
+    record('insert_disk drive 2', !inserted.isError, textOf(inserted).slice(0, 200));
+
+    const listed = await client.callTool({ name: 'list_disks', arguments: {} });
+    const drive2 = !listed.isError && JSON.parse(textOf(listed)).disks.find((d) => d.drive === 2);
+    record('list_disks contains inserted disk', !!drive2 && drive2.name === 'mcp-test.d88' && drive2.empty === false, textOf(listed).slice(0, 300));
+
+    const imageResult = await client.callTool({ name: 'get_disk_image', arguments: { drive: 2 } });
+    record('get_disk_image size', !imageResult.isError && JSON.parse(textOf(imageResult)).size === disk.length);
+
+    const invalid = await client.callTool({ name: 'insert_disk', arguments: { ...diskArgs, drive: 3 } });
+    record('insert_disk invalid drive', invalid.isError === true && textOf(invalid) === 'invalid args: drive must be 1 or 2', textOf(invalid));
+
+    const ejected = await client.callTool({ name: 'eject_disk', arguments: { drive: 2 } });
+    record('eject_disk occupied', !ejected.isError && JSON.parse(textOf(ejected)).hadDisk === true, textOf(ejected));
+    const ejectedAgain = await client.callTool({ name: 'eject_disk', arguments: { drive: 2 } });
+    record('eject_disk empty', !ejectedAgain.isError && JSON.parse(textOf(ejectedAgain)).hadDisk === false, textOf(ejectedAgain));
+    const listedAgain = await client.callTool({ name: 'list_disks', arguments: {} });
+    const emptyDrive2 = !listedAgain.isError && JSON.parse(textOf(listedAgain)).disks.find((d) => d.drive === 2);
+    record('list_disks shows empty drive 2', !!emptyDrive2 && emptyDrive2.empty === true, textOf(listedAgain).slice(0, 300));
   } else {
     // --- 制限モード想定の検査: ×のコマンドがエラーになること ---
-    for (const name of ['screen_text', 'screenshot', 'read_memory', 'get_state_blob']) {
-      const args = name === 'read_memory' ? { region: 0, offset: 0, length: 16 } : {};
+    for (const name of ['screen_text', 'screenshot', 'read_memory', 'get_state_blob', 'get_disk_image']) {
+      const args = name === 'read_memory' ? { region: 0, offset: 0, length: 16 } : name === 'get_disk_image' ? { drive: 2 } : {};
       const res = await client.callTool({ name, arguments: args });
       const detail = textOf(res);
       record(`${name} rejected in restricted mode`, res.isError === true, detail.slice(0, 200));
     }
     const okStill = await client.callTool({ name: 'screen_signature', arguments: {} });
     record('screen_signature still works in restricted mode', !okStill.isError, textOf(okStill).slice(0, 200));
+    const disksStill = await client.callTool({ name: 'list_disks', arguments: {} });
+    record('list_disks still works in restricted mode', !disksStill.isError, textOf(disksStill).slice(0, 200));
   }
 
   await client.close();

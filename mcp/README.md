@@ -67,7 +67,10 @@ npm run dev -- --port 5188 --strictPort
 | `read_memory` / `write_memory` | ゲストのメモリ領域の読み書き | ×(エラー) |
 | `save_state` / `load_state` | 実行状態の保存・復元(中身は返さずサイズのみ) | ○ |
 | `get_state_blob` | 保存済みステートの中身(base64) | ×(エラー) |
-| `insert_disk` / `eject_disk` / `list_disks` | ディスク操作 | 常にエラー(未実装) |
+| `insert_disk` | D88イメージを挿入(UIの保存対象外) | ○ |
+| `eject_disk` | ディスクを排出(空でも成功、hadDiskで区別) | ○ |
+| `list_disks` | ドライブの状態一覧(中身は返さない) | ○ |
+| `get_disk_image` | 現在のイメージ全体(base64) | ×(エラー) |
 
 「×(エラー)」は、`isError: true` とともに `public/api-dispatch.js` が返した
 理由文字列(例: `restricted: official ROM loaded in this session`)がそのまま本文に入ります。

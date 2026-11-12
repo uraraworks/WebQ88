@@ -318,23 +318,34 @@ server.tool(
 
 server.tool(
   'insert_disk',
-  'ディスクをドライブへ挿入する(ディスク機能は現状未実装のため常にエラーを返す)。',
-  {},
-  async () => callDispatch('insert_disk')
+  '指定ドライブへD88イメージを挿入する。不正イメージはエラー。UIの保存(IndexedDB)の対象外。',
+  {
+    drive: z.number().describe('ドライブ番号(1または2)'),
+    name: z.string().describe('ディスク名'),
+    base64: z.string().describe('D88イメージ(base64)'),
+  },
+  async ({ drive, name, base64 }) => callDispatch('insert_disk', { drive, name, base64 })
 );
 
 server.tool(
   'eject_disk',
-  'ドライブからディスクを取り出す(ディスク機能は現状未実装のため常にエラーを返す)。',
-  {},
-  async () => callDispatch('eject_disk')
+  'ドライブからディスクを排出する。空でも成功し、hadDiskで区別する。',
+  { drive: z.number().describe('ドライブ番号(1または2)') },
+  async ({ drive }) => callDispatch('eject_disk', { drive })
 );
 
 server.tool(
   'list_disks',
-  'ドライブの状態を一覧する(ディスク機能は現状未実装のため常にエラーを返す)。',
+  'ドライブの状態を一覧する。ディスクの中身は返さない。',
   {},
   async () => callDispatch('list_disks')
+);
+
+server.tool(
+  'get_disk_image',
+  '現在のディスクイメージ全体をbase64で取得する。制限モードでは拒否される。',
+  { drive: z.number().describe('ドライブ番号(1または2)') },
+  async ({ drive }) => callDispatch('get_disk_image', { drive })
 );
 
 const transport = new StdioServerTransport();
