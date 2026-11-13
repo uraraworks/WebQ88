@@ -91,7 +91,7 @@ becomes unavailable (see [docs/API-DESIGN.md](docs/API-DESIGN.md) for the reason
 - PC88Behavior is a clean-room implementation written using only externally
   observable behavior as a guide, and contains none of the official ROM's bytes.
 - The boot screen shows the compatible ROM's name, date and commit.
-- No kanji ROM is bundled (kanji are not displayed).
+- A self-made kanji ROM generated from the free Shinonome font is bundled (glyphs differ from real hardware).
 - See [compat-rom/README.md](compat-rom/README.md) for details.
 
 ## MCP support (remote control from AI agents)
@@ -168,6 +168,7 @@ build script rather than with a patch.
 - The license for this repository's own code is unspecified.
 - The core (QUASI88-libretro) is BSD 3-Clause licensed.
 - The compatible ROM in `compat-rom/` (PC88Behavior's build output) is MIT licensed.
+  The Shinonome font used to generate the bundled kanji ROM is in the public domain.
 - **No official PC-8801 ROM or commercial software disk images are bundled.**
   A pre-commit hook (`tools/check_publishable.sh`) checks for accidental commits.
 - Users are responsible for legally obtaining and using any ROM or disk image they load.
@@ -188,7 +189,7 @@ build script rather than with a patch.
 
 ## Not supported / known caveats
 
-- No kanji ROM is bundled, so kanji are not displayed in software that uses them.
+- The bundled kanji ROM is self-made from the Shinonome font, so its glyphs differ from real hardware.
 - The compatible ROM is not identical to the official ROM. Some commercial software does not run.
 - BASIC programs in intermediate-code format (SAVEd by the official ROM) cannot be read. Exchange
   programs in ASCII format (`SAVE "x",A`).
