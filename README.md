@@ -1,108 +1,101 @@
 # WebQ88
 
-[日本語](README.ja.md)
+[English](README.en.md)
 
-A web player that runs QUASI88-libretro — a libretro port of the PC-8801 emulator
-[QUASI88](https://www.eonet.ne.jp/~showtime/quasi88/) — in the browser, compiled
-to WebAssembly with emscripten. Instead of the official ROM, it bundles a
-clean-room compatible ROM,
-[PC88Behavior](https://github.com/uraraworks/PC88Behavior), so it's a "just open
-the URL and boot to an N88-BASIC-compatible screen" experience.
+PC-8801 エミュレータ [QUASI88](https://www.eonet.ne.jp/~showtime/quasi88/) を libretro 化した
+QUASI88-libretro を emscripten で wasm ビルドし、ブラウザ上で動かす Web プレイヤーです。
+公式 ROM の代わりに、クリーンルームで作った互換 ROM
+[PC88Behavior](https://github.com/uraraworks/PC88Behavior) を同梱しているため、
+URL を開くだけで N88-BASIC 互換の画面まで起動します。
 
-See [docs/API-DESIGN.md](docs/API-DESIGN.md) for the design of the automation API.
+自動操作 API の設計は [docs/API-DESIGN.md](docs/API-DESIGN.md) を参照してください。
 
-## Try it now
+## 今すぐ試す
 
-- **Live site**: <https://uraraworks.github.io/WebQ88/> (coming soon; for now, run it locally by following "Development")
+- **公開ページ**: <https://uraraworks.github.io/WebQ88/>（準備中。今は「開発方法」の手順でローカルで動かしてください）
 
-No official ROM or commercial software disk images are bundled. You can load your own
-D88 images by dragging and dropping them onto a drive row.
+公式 ROM・市販ソフトのディスクイメージは同梱していません。手元の D88 イメージは
+ドライブ行へのドラッグ&ドロップで読み込めます。
 
-## Usage
+## 使い方
 
-An introduction page highlighting WebQ88's features is available at
-<https://uraraworks.github.io/WebQ88/about.html>.
+WebQ88 の特徴を紹介する紹介ページは
+<https://uraraworks.github.io/WebQ88/about.html> にあります。
 
-A player-facing usage page is available at
-<https://uraraworks.github.io/WebQ88/help.html>.
-Both pages can be switched between Japanese and English with the button at the
-top right (`?lang=ja` / `?lang=en`). They can also be opened from **"Help"** at
-the bottom of the screen.
+プレイヤー向けの使い方ページは
+<https://uraraworks.github.io/WebQ88/help.html> にあります。
+どちらもページ右上のボタンで日本語と英語を切り替えられます（`?lang=ja` / `?lang=en`）。
+画面下の **「ヘルプ」** からも開けます。
 
-### URL parameters
+### URL パラメータ
 
-| Parameter | Meaning |
+| パラメータ | 内容 |
 |---|---|
-| `fd1=URL` / `fd2=URL` | URL of a disk image to put in drive 1 / drive 2 (percent-encode it) |
-| `lib=URL` | Register it in the Disk Library without inserting it. Can be given multiple times |
-| `run=1` | Boot automatically without pressing the start button |
-| `bridge=1` | Connect to the WebSocket bridge for AI agents (see "MCP support") |
+| `fd1=URL` / `fd2=URL` | ドライブ1・ドライブ2に入れるディスクイメージの URL（パーセントエンコードする） |
+| `lib=URL` | 挿入せずディスクライブラリに登録する。複数回指定できる |
+| `run=1` | 起動ボタンを押さずに自動で起動する |
+| `bridge=1` | AI エージェント用の WebSocket ブリッジにつなぐ（→「MCP対応」） |
 
-- ZIP/LZH archives are extracted; every .d88/.88d inside is registered in the library and the first one is inserted.
-- The host must support CORS. Dropbox share links are converted automatically.
-  Google Drive needs a relay service (`VITE_DISK_PROXY` at build time). OneDrive is not supported.
-- On later visits, your saved changes are restored. "Restore from source" in the library lets you fetch the image again.
+- ZIP/LZH は展開し、中の .d88/.88d をすべてライブラリに登録して先頭を挿入します。
+- 配布元には CORS 対応が必要です。Dropbox の共有リンクは自動で変換します。
+  Google Drive は中継サービス（ビルド時の `VITE_DISK_PROXY`）が必要です。OneDrive には対応していません。
+- 2回目以降は保存済みの変更を復元します。ライブラリの「配布元に戻す」で取り直せます。
 
-### Toolbar
+### ツールバー
 
-| Button | Action |
+| ボタン | 動作 |
 |---|---|
-| Pause | Stop / resume emulation |
-| Mute | Turn sound off / on (volume is in the "..." menu) |
-| Fullscreen | Enlarge the screen |
-| Soft keyboard | Show a PC-88 layout keyboard on screen |
-| Virtual pad | Show a touch D-pad and buttons |
-| Screenshot | Save the screen as a PNG |
-| Disk Library | Pick a saved disk and insert it |
-| ... (more actions) | Copy share URL, volume, display ratio, interpolation, gamepad/key assignment, numpad substitute, user ROM |
-| Reset | Reset the machine |
+| 一時停止 | 動作を止める・再開する |
+| ミュート | 音を消す・戻す（音量は「…」メニュー） |
+| 全画面表示 | 画面を拡大する |
+| ソフトキーボード | 画面上に PC-88 配列のキーボードを出す |
+| バーチャルパッド | タッチ用の十字キーとボタンを出す |
+| スクリーンショット | 画面を PNG で保存する |
+| ディスクライブラリ | 保存済みのディスクを選んで挿入する |
+| …（その他の操作） | 共有 URL のコピー、音量、表示比率、補間、ゲームパッド・キー割当、テンキー代替、利用者 ROM |
+| リセット | マシンをリセットする |
 
-### Drives (FDD1 / FDD2)
+### ドライブ (FDD1 / FDD2)
 
-- Use "+" to pick a D88/88D/ZIP/LZH file, or drag and drop onto a drive row.
-- "⏏" ejects, and "↓" downloads the current disk.
-- "Blank FD" on FDD2 creates an empty N88-BASIC 2D data disk (not bootable).
-- Writes are saved automatically to the browser (IndexedDB) every few seconds and
-  inserted automatically next time. Clearing site data also clears the saves, so
-  download any disk you care about.
+- 「＋」で D88/88D/ZIP/LZH を選ぶか、ドライブ行へドラッグ&ドロップします。
+- 「⏏」で排出、「↓」で今のディスクをダウンロードします。
+- FDD2 の「ブランクFD」で空の N88-BASIC 2D データディスクを作れます（起動用ではありません）。
+- 書き込みは数秒おきにブラウザ（IndexedDB）へ自動保存され、次回は自動で挿入されます。
+  サイトデータを消すと保存も消えるので、大切なディスクはダウンロードしておいてください。
 
-### Keyboard and gamepad
+### キーボード・ゲームパッド
 
-- Alphanumerics, Enter, arrows, Shift, Ctrl, F1-F10 and so on are typed with the
-  corresponding keys. Symbols are converted to PC-88 keys according to the
-  character you typed.
-- Turning on "Numpad substitute" makes the main number keys act as the numpad,
-  and the arrow keys act as numpad 8, 2, 4 and 6 (for PCs without a numpad).
-- "Gamepad / key assignment" lets you change the physical gamepad's buttons and
-  axes, the dead zone, the virtual pad's parts, and the targets of the physical
-  keyboard's keys. Settings are saved in the browser.
+- 英数字・Enter・矢印・Shift・Ctrl・F1〜F10 などは対応するキーで入力します。記号は入力された
+  文字に合わせて PC-88 のキーへ変換します。
+- 「テンキー代替」をオンにすると、メインの数字キーがテンキーに、矢印キーがテンキーの 8・2・4・6
+  になります（テンキーの無いパソコン向け）。
+- 「ゲームパッド・キー割当」で、物理ゲームパッドのボタン・軸、デッドゾーン、バーチャルパッドの
+  部品、物理キーボードの割当先を変えられます。設定はブラウザに保存されます。
 
-### User ROM (restricted mode)
+### 利用者 ROM（制限モード）
 
-"..." → User ROM lets you pick a ROM file of your own and restart with it. The
-ROM is used only inside the browser and is never sent anywhere. While running
-with a user ROM, you are in **restricted mode**, and part of the automation API
-becomes unavailable (see [docs/API-DESIGN.md](docs/API-DESIGN.md) for the reason and scope).
+「…」→ 利用者 ROM で手元の ROM ファイルを選ぶと、そちらで起動し直せます。ROM はブラウザの中だけで
+使い、どこにも送信しません。利用者 ROM で起動している間は **制限モード** になり、自動操作 API の
+一部が使えなくなります（理由と範囲は [docs/API-DESIGN.md](docs/API-DESIGN.md)）。
 
-## Bundled compatible ROM
+## 同梱している互換 ROM
 
-`compat-rom/` contains only PC88Behavior's build output.
+`compat-rom/` には PC88Behavior のビルド成果物だけを置いています。
 
-- PC88Behavior is a clean-room implementation written using only externally
-  observable behavior as a guide, and contains none of the official ROM's bytes.
-- The boot screen shows the compatible ROM's name, date and commit.
-- A self-made kanji ROM generated from the free Shinonome font is bundled (glyphs differ from real hardware).
-- See [compat-rom/README.md](compat-rom/README.md) for details.
+- PC88Behavior は外部から観測できる振る舞いだけを手がかりに書いたクリーンルーム実装で、
+  公式 ROM のバイト列を含みません。
+- 起動時の画面には互換 ROM の名前・日付・コミットが表示されます。
+- 漢字 ROM は、フリーの東雲フォントから生成した自作のものを同梱しています（字形は実機と異なります）。
+- 詳しくは [compat-rom/README.md](compat-rom/README.md) を参照してください。
 
-## MCP support (remote control from AI agents)
+## MCP対応 (AIエージェントからの遠隔操作)
 
-`mcp/` contains an MCP server that lets AI agents operate WebQ88. Open the page
-in a browser with `?bridge=1` and it connects to the MCP server on your machine,
-allowing key input, text input, screen state queries, inserting and ejecting disks, and more. For setup, see
-[mcp/README.md](mcp/README.md); for the list of commands and which are available,
-see [docs/AUTOMATION.md](docs/AUTOMATION.md).
+`mcp/` に、AI エージェントから WebQ88 を操作する MCP サーバーがあります。ブラウザで
+`?bridge=1` 付きで開くと、手元の MCP サーバーとつながり、キー入力・文字列入力・画面の状態取得、
+ディスクの挿入・排出などを行えます。セットアップは [mcp/README.md](mcp/README.md)、コマンドの一覧と可否は
+[docs/AUTOMATION.md](docs/AUTOMATION.md) を参照してください。
 
-## Development
+## 開発方法
 
 ```sh
 npm install
@@ -111,30 +104,29 @@ npm run build     # 型チェック + 本番ビルド (dist/)
 npm run preview   # ビルド成果物のプレビュー
 ```
 
-To refresh the help screenshots, start `npm run dev` in a separate terminal, then run
-`npm run capture-help`. Set `CHROME_PATH` to your Chrome executable if needed and
-`WEBQ88_URL` to the development server URL (default: `http://localhost:5173`).
-The player UI is currently Japanese, including in the English screenshots.
+使い方ページの画像を撮り直すには、別ターミナルで `npm run dev` を起動し、
+`npm run capture-help` を実行します。必要に応じて `CHROME_PATH` に Chrome の実行ファイル、
+`WEBQ88_URL` に開発サーバーの URL（既定: `http://localhost:5173`）を指定してください。
+プレイヤーの UI は現在日本語のみのため、英語版の画像にも日本語が表示されます。
 
-### Setup after cloning
+### clone 後の設定
 
-This repository runs a contamination check (to prevent accidentally committing
-official ROMs, disk images and the like) in a pre-commit hook, on the assumption
-that it will be made public. After cloning, run the following.
+このリポジトリは公開前提の混入検査（公式 ROM・ディスクイメージ等の誤コミット防止）を
+pre-commit フックで行っています。clone 後、以下を実行してください。
 
 ```sh
 git config core.hooksPath tools/hooks
 ```
 
-### Building the core
+### コアのビルド
 
-The upstream source (quasi88-libretro) is not included in this repository.
-`scripts/build-core.sh` fetches the pinned commit from `core/UPSTREAM`, applies
-the distribution patches in `core/patches/`, and then builds with emscripten.
+上流ソース（quasi88-libretro）はこのリポジトリに含めません。
+`scripts/build-core.sh` が `core/UPSTREAM` の固定コミットを取得し、
+`core/patches/` の配布用パッチを当ててから emscripten でビルドします。
 
-Prerequisites:
-- emsdk installed at `~/emsdk`, with `emcc` 6.0.7
-- [PC88Behavior](../PC88Behavior) located next to this repository, to generate the compatible ROM
+前提:
+- `~/emsdk` に emsdk 導入済み、`emcc` は 6.0.7
+- コンパット ROM 生成用に [PC88Behavior](../PC88Behavior) が隣にあること
 
 ```sh
 ./scripts/build-core.sh
@@ -152,46 +144,49 @@ NO_PATCH=1 OUT_DIR=/tmp/q88-no-patch ./scripts/build-core.sh
 TEST_SHIM=1 OUT_DIR=/tmp/q88-test-shim ./scripts/build-core.sh
 node scripts/smoke-ext-bank.cjs /tmp/q88-test-shim compat-rom
 node scripts/smoke-ext-bank.cjs /tmp/q88-test-shim compat-rom --omit N88_2.ROM  # 陰性対照
+node scripts/smoke-cjk-font.cjs /tmp/q88-test-shim compat-rom
+node scripts/smoke-cjk-font.cjs /tmp/q88-test-shim compat-rom --omit  # 陰性対照
 ```
 
-The four patches in `core/patches/` fix four bugs in upstream libretro.c /
-memory.c: "the built-in font and kanji ROM overwrite the font even when the font
-ROM loaded successfully", "without N88.ROM/DISK.ROM it falls back to a
-pseudo-BIOS of unknown origin", "`rom_filename` is referenced uninitialized in
-load_system_file", and "the identity-mapping loop in handle_input() misses
-KEY88_AT (='@'), so the '@' key never responds at all". Removing font.h and
-pseudo_bios.h (their contents are huge byte arrays) is done with `rm` in the
-build script rather than with a patch.
+`core/patches/` の5本のパッチは、上流 libretro.c / memory.c にある
+「フォントROM読み込み成功時にも内蔵フォント・漢字ROMで上書きしてしまう」
+「漢字 ROM が無い場合の読み出し値が 0xFF になる」
+「N88.ROM/DISK.ROM が無いと出所不明の疑似BIOSにフォールバックする」
+「load_system_file の rom_filename が初期化されないまま参照される」
+「handle_input() の識別マッピングループが KEY88_AT(='@')を取りこぼし、
+'@'キーが一切反応しない」という5つの不具合を修正します。font.h・
+pseudo_bios.h の削除は（中身が長大なバイト列のため）パッチではなく
+ビルドスクリプトの `rm` で行います。
 
-## License and bundled content
+## ライセンス・同梱物について
 
-- The license for this repository's own code is unspecified.
-- The core (QUASI88-libretro) is BSD 3-Clause licensed.
-- The compatible ROM in `compat-rom/` (PC88Behavior's build output) is MIT licensed.
-  The Shinonome font used to generate the bundled kanji ROM is in the public domain.
-- **No official PC-8801 ROM or commercial software disk images are bundled.**
-  A pre-commit hook (`tools/check_publishable.sh`) checks for accidental commits.
-- Users are responsible for legally obtaining and using any ROM or disk image they load.
+- 本リポジトリのコード自体のライセンスは特に定めていません。
+- コア（QUASI88-libretro）は BSD 3-Clause ライセンスです。
+- `compat-rom/` の互換 ROM（PC88Behavior のビルド成果物）は MIT ライセンスです。
+  同梱の漢字 ROM の元になった東雲フォントはパブリックドメインです。
+- **PC-8801 の公式 ROM・市販ソフトウェアのディスクイメージは一切同梱していません。**
+  pre-commit フック（`tools/check_publishable.sh`）で誤コミットを検査しています。
+- 利用者が読み込ませる ROM・ディスクイメージは、各自が適法に入手・使用する責任を負います。
 
-## Implemented features
+## 実装済みの主な機能
 
-- ROM-less boot with the compatible ROM (open the URL and start with one button; auto-start with `run=1`)
-- Disk loading via URL parameters with fetch progress display, drag & drop, ZIP/LZH extraction
-- Automatic disk saving via IndexedDB, with automatic insertion on the next launch
-- Disk Library, blank FD creation, disk download, share URL copy
-- Drive access lamps
-- BGM and sound effects playback (audio output via AudioWorklet), mute and volume (settings saved in the browser)
-- Pause, reset, fullscreen, screenshot (PNG)
-- Switchable display ratio (4:3 / dot-for-dot) and interpolation (sharp bilinear / nearest)
-- Soft keyboard, virtual pad, physical gamepad, key assignment, numpad substitute
-- Boot with a user ROM (restricted mode)
-- Automation via the MCP server and WebSocket bridge
+- 互換 ROM による ROM 無し起動（URL を開いてボタン1つで起動、`run=1` で自動起動）
+- URL パラメータでのディスク読込・fetch 進捗表示、ドラッグ&ドロップ、ZIP/LZH 展開
+- IndexedDB によるディスクの自動保存と、次回起動時の自動挿入
+- ディスクライブラリ、ブランクFD作成、ディスクのダウンロード、共有 URL のコピー
+- ドライブアクセスランプ
+- BGM・効果音の再生（AudioWorklet による音声出力）、ミュート・音量（設定はブラウザに保存）
+- 一時停止、リセット、フルスクリーン、スクリーンショット（PNG）
+- 表示比率（4:3 / ドット等倍）と補間（シャープ・バイリニア / ニアレスト）の切替
+- ソフトキーボード、バーチャルパッド、物理ゲームパッド、キー割当、テンキー代替
+- 利用者 ROM での起動（制限モード）
+- MCP サーバー・WebSocket ブリッジによる自動操作
 
-## Not supported / known caveats
+## 未対応・既知の注意点
 
-- The bundled kanji ROM is self-made from the Shinonome font, so its glyphs differ from real hardware.
-- The compatible ROM is not identical to the official ROM. Some commercial software does not run.
-- BASIC programs in intermediate-code format (SAVEd by the official ROM) cannot be read. Exchange
-  programs in ASCII format (`SAVE "x",A`).
-- Save states / load states are not supported.
-- The player screen (buttons and menus) is Japanese only. The About and Help pages are available in both Japanese and English.
+- 同梱の漢字 ROM は東雲フォントから作った自作のもので、字形は実機と異なります。
+- 互換 ROM は公式 ROM と完全には同じではありません。動かない市販ソフトもあります。
+- 中間言語形式の BASIC プログラム（公式で SAVE したもの）は読めません。プログラムのやり取りは
+  ASCII 形式（`SAVE "x",A`）で行ってください。
+- ステートセーブ / ロードは未対応です。
+- プレイヤー画面（ボタン・メニュー）は日本語のみです。紹介・使い方ページは日英に対応しています。
