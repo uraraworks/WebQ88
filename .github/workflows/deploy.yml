@@ -1,0 +1,70 @@
+name: GitHub Pages デプロイ
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # ソースを取得する。
+      - uses: actions/checkout@v4
+      # emsdk を再利用する。
+      - uses: actions/cache@v4
+        id: emsdk-cache
+        with:
+          path: ~/emsdk
+          key: emsdk-6.0.7-${{ runner.os }}
+      # 指定バージョンを用意する。
+      - name: emsdk の準備
+        if: steps.emsdk-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
+          cd "$HOME/emsdk"
+          ./emsdk install 6.0.7
+          ./emsdk activate 6.0.7
+      # エミュレータコアをビルドする。
+      - name: コアのビルド
+        run: EMSDK_DIR="$HOME/emsdk" JOBS="$(nproc)" ./scripts/build-core.sh
+      # Node.js と npm キャッシュを用意する。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # 依存関係を固定版で導入する。
+      - run: npm ci
+      # 配布物を生成する。
+      - run: npm run build
+      # 検査自体を陰性対照で確認する。
+      - run: bash tools/check_dist_publishable_selftest.sh
+      # 配布物への混入と取り込み漏れを確認する。
+      - run: bash tools/check_dist_publishable.sh dist
+      # 追跡ファイルの公開可否を確認する。
+      - run: bash tools/check_publishable.sh --all
+      # Pages 用成果物を保存する。
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Pages に公開する。
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          timeout: 1800000
