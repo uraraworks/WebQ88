@@ -1,0 +1,25 @@
+Subject: fdc: 状態の問い合わせだけのコマンドではアクセスランプを点けない
+
+リセット後、空のドライブへ SENSE DEVICE STATUS が繰り返されると
+get_drive_ready() がそのたびに「処理中」を返し、何も読んでいないのに
+ランプが点滅し続けた(Node で再現: 排出後500フレーム中204回点灯)。
+SENSE INT STATUS・SENSE DEVICE STATUS・SPECIFY はヘッドもモータも
+動かさないので、ランプ判定では待機中と同じ扱いにする。
+---
+diff --git a/src/fdc.c b/src/fdc.c
+index 435910f..d4959f6 100644
+--- a/src/fdc.c
++++ b/src/fdc.c
+@@ -3150,6 +3150,12 @@ int	fdc_ctrl( int interval )
+ int	get_drive_ready( int drv )
+ {
+   if( fdc.command==WAIT ) return 1;
++  /* WebQ88: 状態を問い合わせるだけのコマンド(ヘッドもモータも動かさない)では
++     ランプを点けない。リセット後に空ドライブへ SENSE DEVICE STATUS を
++     繰り返すと、何も読んでいないのにランプが点滅し続けるため。 */
++  else if( fdc.command==SENSE_INT_STATUS ||
++	   fdc.command==SENSE_DEVICE_STATUS ||
++	   fdc.command==SPECIFY ) return 1;
+   else{
+     if( fdc.us==drv ) return 0;
+     else              return 1;
