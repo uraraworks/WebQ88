@@ -578,9 +578,9 @@ function buildApiCtx() {
       if (!saved) throw new Error('no saved state in slot: ' + slot);
       return saved;
     },
-    diskInsert: function (index, name, bytes) {
+    diskInsert: function (index, name, bytes, image) {
       if (!disks) throw new Error('not booted');
-      return disks.insert(index, name, bytes);
+      return disks.insert(index, name, bytes, image);
     },
     diskEject: function (index) {
       if (!disks) throw new Error('not booted');
@@ -624,8 +624,8 @@ function handleDisk(msg) {
     if (!disks) throw new Error('not booted');
     switch (msg.op) {
       case 'insert': {
-        var res = disks.insert(msg.drive, msg.name, new Uint8Array(msg.bytes));
-        postMessage({ type: 'diskResult', requestId: requestId, ok: true, gen: res.gen, size: res.size, mtime: res.mtime });
+        var res = disks.insert(msg.drive, msg.name, new Uint8Array(msg.bytes), msg.image, msg.key);
+        postMessage({ type: 'diskResult', requestId: requestId, ok: true, gen: res.gen, size: res.size, mtime: res.mtime, image: res.image, imageCount: res.imageCount });
         break;
       }
       case 'eject': {

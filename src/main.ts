@@ -103,7 +103,7 @@ async function filesToRomFiles(files: FileList | null): Promise<RomFile[]> {
   return out;
 }
 
-async function main(): Promise<void> {
+async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   setStatus('互換ROMを検証中…');
   let bundledRoms: VerifiedRom[];
   let bundledDisks: VerifiedRom[] = [];
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
   }
   const blank2d = bundledDisks.find((d) => /^BLANK2D\.D88$/i.test(d.name));
 
-  setStatus('コアを起動中…');
+  setStatus('起動待ち');
 
   let imageData: ImageData | null = null;
   let pixelBuf32: Uint32Array | null = null;
@@ -221,8 +221,8 @@ async function main(): Promise<void> {
 
   initLibrary(diskPanel);
 
-  // 初回は同梱の互換ROMだけで起動する。
-  proxy.init(bundledRoms, []);
+  // 初回は起動操作を待ち、同梱の互換ROMで起動する。
+  void startRequested.then(userRoms => proxy.init(bundledRoms, userRoms));
 
   // 利用者ROM読み込みUI: ファイル名・役割だけを扱い、中身は表示・ログ出力しない。
   // 渡したファイルは同梱ROMより優先され、足りない役割は同梱ROMで補う(混成可)。
@@ -232,7 +232,8 @@ async function main(): Promise<void> {
       // 再起動でディスクの状態が変わりうるので、先にゲストの書き込みを保存する。
       await diskPanel?.flushAll();
       setStatus('起動中…');
-      proxy.init(bundledRoms, userRoms);
+      if (!startupRequested) start(userRoms);
+      else proxy.init(bundledRoms, userRoms);
     })();
   });
 
@@ -274,13 +275,19 @@ async function main(): Promise<void> {
 }
 
 const startupOverlay = document.querySelector<HTMLElement>('#startup-overlay')!;
-const start = (): void => {
+let requestStart!: (roms: RomFile[]) => void;
+let startupRequested = false;
+const startRequested = new Promise<RomFile[]>(resolve => { requestStart = resolve; });
+void main(startRequested);
+const start = (roms: RomFile[] = []): void => {
+  if (startupRequested) return;
+  startupRequested = true;
   startupOverlay.hidden = true;
-  void main();
+  requestStart(roms);
 };
 if (new URLSearchParams(window.location.search).has('bridge') || (new URLSearchParams(window.location.search).get('run') === '1' && !new URLSearchParams(window.location.search).has('lib'))) {
   start();
 } else {
-  document.querySelector<HTMLButtonElement>('#startup-button')!.addEventListener('click', start, { once: true });
+  document.querySelector<HTMLButtonElement>('#startup-button')!.addEventListener('click', () => start(), { once: true });
 }
 document.querySelector<HTMLElement>('#build-time')!.textContent = `Build: ${__BUILD_TIME__}`;

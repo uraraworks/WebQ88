@@ -71,6 +71,8 @@ export type MainToWorkerMessage =
       op: 'insert' | 'eject' | 'dump' | 'poll';
       drive?: number;
       name?: string;
+      image?: number;
+      key?: string;
       bytes?: ArrayBuffer;
     };
 
@@ -102,6 +104,8 @@ export interface DiskResult {
   gen?: number;
   size?: number;
   mtime?: number;
+  image?: number;
+  imageCount?: number;
   had?: boolean;
   bytes?: ArrayBuffer;
   drives?: DiskPollEntry[];
@@ -114,6 +118,8 @@ export interface DiskPollEntry {
   gen?: number;
   size?: number;
   mtime?: number;
+  image?: number;
+  imageCount?: number;
 }
 
 export const WORKER_SCRIPT_PATH = 'core-worker.js';

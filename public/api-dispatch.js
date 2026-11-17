@@ -516,8 +516,10 @@
             typeof Buffer !== 'undefined'
               ? new Uint8Array(Buffer.from(args.base64, 'base64'))
               : base64ToBytesBrowser(args.base64);
-          var inRes = ctx.diskInsert(inDrive, args.name, imgBytes);
-          return { ok: true, drive: inDrive + 1, name: args.name, size: imgBytes.length, gen: inRes.gen };
+          var image = args.image === undefined ? 0 : args.image;
+          if (!Number.isInteger(image) || image < 0) return { error: 'invalid args: image must be a non-negative integer' };
+          var inRes = ctx.diskInsert(inDrive, args.name, imgBytes, image);
+          return { ok: true, drive: inDrive + 1, name: args.name, size: imgBytes.length, gen: inRes.gen, image: inRes.image, imageCount: inRes.imageCount };
         }
 
         case 'eject_disk': {

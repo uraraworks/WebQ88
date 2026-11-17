@@ -25,11 +25,13 @@ export interface StoredDisk {
   url?: string;
   archiveEntry?: string;
   sourceOrder?: number;
+  lastImages?: [number, number];
 }
 
 export interface DriveAssignment {
   /** 添字0=ドライブ1, 1=ドライブ2。空なら null。 */
   keys: [string | null, string | null];
+  images?: [number, number];
 }
 
 const DB_NAME = 'webq88-disks';
@@ -114,15 +116,15 @@ export async function getAssignment(): Promise<DriveAssignment | undefined> {
   const db = await openDb();
   const tx = db.transaction(STORE_META, 'readonly');
   const r = (await reqToPromise(tx.objectStore(STORE_META).get(META_DRIVES_ID))) as
-    | { id: string; keys: [string | null, string | null] }
+    | ({ id: string } & DriveAssignment)
     | undefined;
-  return r ? { keys: r.keys } : undefined;
+  return r ? { keys: r.keys, images: r.images } : undefined;
 }
 
 export async function putAssignment(a: DriveAssignment): Promise<void> {
   const db = await openDb();
   const tx = db.transaction(STORE_META, 'readwrite');
-  tx.objectStore(STORE_META).put({ id: META_DRIVES_ID, keys: a.keys });
+  tx.objectStore(STORE_META).put({ id: META_DRIVES_ID, keys: a.keys, images: a.images });
   await txDone(tx);
 }
 
@@ -157,4 +159,19 @@ export async function deleteDisk(key: string): Promise<void> {
   const tx = db.transaction(STORE_DISKS, 'readwrite');
   tx.objectStore(STORE_DISKS).delete(key);
   await txDone(tx);
+}
+
+/** ディスクごと・ドライブごとの前回の選択を保持する。 */
+export async function rememberDiskImage(key: string, drive: number, image: number): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(STORE_DISKS, 'readwrite');
+  const done = txDone(tx);
+  const store = tx.objectStore(STORE_DISKS);
+  const disk = (await reqToPromise(store.get(key))) as StoredDisk | undefined;
+  if (disk) {
+    const images: [number, number] = disk.lastImages ? [...disk.lastImages] : [0, 0];
+    images[drive] = image;
+    store.put({ ...disk, lastImages: images });
+  }
+  await done;
 }

@@ -74,33 +74,42 @@
       return ptr;
     }
 
-    function coreInsert(index) {
-      var p = pathPtr(diskPath(index));
+    function coreInsert(index, path, image) {
+      var p = pathPtr(path);
       try {
-        return M._webq88_disk_insert(index, p) === 1;
+        return M._webq88_disk_insert(index, p, image) === 1;
       } finally {
         M._free(p);
       }
     }
 
-    function insert(index, name, bytes) {
+    function insert(index, name, bytes, image, key) {
+      image = image === undefined ? 0 : image;
+      if (!Number.isInteger(image) || image < 0) throw new Error("invalid image number");
       checkIndex(index);
       if (!(bytes instanceof Uint8Array)) throw new Error('invalid args: bytes must be Uint8Array');
       if (bytes.length < D88_HEADER_SIZE) {
         throw new Error('invalid disk image: smaller than a D88 header (' + D88_HEADER_SIZE + ' bytes)');
       }
       // 先に取り出して上流の状態と JS 側の記録を揃える(挿入に失敗しても空にする)
+      var other = drives[1 - index];
+      var current = drives[index];
+      var shared = key && other && other.key === key ? other : (key && current && current.key === key ? current : null);
+      var path = shared ? shared.path : (other && other.path === diskPath(index) ? diskPath(1 - index) : diskPath(index));
       M._webq88_disk_eject(index);
       drives[index] = null;
       gen++;
-      M.FS.writeFile(diskPath(index), bytes);
-      if (!coreInsert(index)) {
+      if (!shared) M.FS.writeFile(path, bytes);
+      if (!coreInsert(index, path, image)) {
         throw new Error('insert failed: not a usable D88 image');
       }
+      var count = M._webq88_disk_image_count(index);
+      var selected = M._webq88_disk_image_selected(index);
+      if (selected !== image) { M._webq88_disk_eject(index); throw new Error('invalid image number'); }
       gen++;
-      drives[index] = { name: String(name), gen: gen, orig: bytes.slice() };
+      drives[index] = { name: String(name), gen: gen, orig: shared ? shared.orig : bytes.slice(), path: path, key: key, image: image, imageCount: count };
       var st = stat(index);
-      return { gen: gen, size: st.size, mtime: st.mtime };
+      return { gen: gen, size: st.size, mtime: st.mtime, image: image, imageCount: count };
     }
 
     function eject(index) {
@@ -122,11 +131,11 @@
     function dump(index, opts) {
       requireDisk(index);
       if (!(opts && opts.noFlush) && typeof M._fflush === 'function') M._fflush(0);
-      return new Uint8Array(M.FS.readFile(diskPath(index))); // readFile は内部バッファの別コピーを返す
+      return new Uint8Array(M.FS.readFile(drives[index].path)); // readFile は内部バッファの別コピーを返す
     }
 
     function stat(index) {
-      var st = M.FS.stat(diskPath(index));
+      var st = M.FS.stat(drives[index].path);
       return { size: st.size, mtime: +st.mtime };
     }
 
@@ -140,7 +149,7 @@
           continue;
         }
         var st = stat(i);
-        out.push({ present: true, name: d.name, gen: d.gen, size: st.size, mtime: st.mtime });
+        out.push({ present: true, name: d.name, gen: d.gen, size: st.size, mtime: st.mtime, image: d.image, imageCount: d.imageCount });
       }
       return out;
     }
@@ -165,7 +174,7 @@
       var n = 0;
       for (var i = 0; i < 2; i++) {
         if (!drives[i]) continue;
-        if (coreInsert(i)) {
+        if (coreInsert(i, drives[i].path, drives[i].image)) {
           n++;
         } else {
           drives[i] = null;

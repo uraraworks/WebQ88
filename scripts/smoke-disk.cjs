@@ -100,7 +100,7 @@ async function boot(opts) {
         M._free(ptr);
       }
     },
-    diskInsert: (i, name, bytes) => disks.insert(i, name, bytes),
+    diskInsert: (i, name, bytes, image) => disks.insert(i, name, bytes, image),
     diskEject: (i) => disks.eject(i),
     diskList: () => disks.list(),
     diskDump: (i) => disks.dump(i),
@@ -259,6 +259,19 @@ async function main() {
   await dumpScreen(d1, 'ドライブ1ブランク起動');
   await type(d1, 'PRINT 1+1\n', 60);
   check('ドライブ1ブランクでも BASIC まで立ち上がる(PRINT 1+1 → 2)', screenHas(await screen(d1), /^\s*2\s*$/));
+
+  const multi = Buffer.concat([Buffer.from(BLANK), Buffer.from(BLANK)]);
+  const multiRes = await ApiDispatch.exec(d1.ctx, 'insert_disk', { drive: 2, name: 'multi.d88', base64: multi.toString('base64'), image: 1 });
+  check('連結 D88 の2枚目を選択', !!multiRes.ok && multiRes.imageCount === 2 && multiRes.image === 1, JSON.stringify(multiRes));
+  d1.disks.insert(0, 'multi.d88', new Uint8Array(multi), 0, 'multi');
+  d1.disks.insert(1, 'multi.d88', new Uint8Array(multi), 1, 'multi');
+  const sharedPath = d1.M.FS.open('/disk/drive1.d88', 'r+');
+  d1.M.FS.write(sharedPath, new Uint8Array([42]), 0, 1, multi.length - 1);
+  d1.M.FS.close(sharedPath);
+  check('同一ファイルの別イメージは書き込みを共有', d1.disks.dump(0)[multi.length - 1] === 42 && d1.disks.dump(1)[multi.length - 1] === 42);
+  d1.reboot();
+  const multiPoll = d1.disks && d1.disks.poll();
+  if (multiPoll) check('再起動後も2枚目', multiPoll[1].image === 1 && multiPoll[1].imageCount === 2);
 
   // ---- 9. 引数・異常系 ----
   const e1 = await ApiDispatch.exec(d1.ctx, 'insert_disk', { drive: 1, name: 'garbage.d88', base64: Buffer.alloc(400000, 7).toString('base64') });

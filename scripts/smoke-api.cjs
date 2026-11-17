@@ -216,7 +216,7 @@ async function bootCore(files, isUserRoms) {
         if (!saved) throw new Error('no saved state in slot: ' + slot);
         return saved;
       },
-      diskInsert: (i, name, bytes) => disks.insert(i, name, bytes),
+      diskInsert: (i, name, bytes, image) => disks.insert(i, name, bytes, image),
       diskEject: (i) => disks.eject(i),
       diskList: () => disks.list(),
       diskDump: (i) => disks.dump(i),

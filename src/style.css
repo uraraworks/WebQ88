@@ -125,3 +125,5 @@ body.vpad-shown #player { min-width: min(340px, 100%); }
 .input-grid label, .host-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 .input-grid select, .host-row select { min-width: 85px; max-width: 120px; }
 .host-row { max-width: 350px; margin: 4px 0; }
+
+.drive-image { flex: 0 0 auto; max-width: 7em; font-size: 12px; }

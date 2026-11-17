@@ -171,13 +171,13 @@ export class CoreProxy {
   diskRequest(
     op: 'insert' | 'eject' | 'dump' | 'poll',
     drive?: number,
-    extra: { name?: string; bytes?: ArrayBuffer } = {},
+    extra: { name?: string; bytes?: ArrayBuffer; image?: number; key?: string } = {},
   ): Promise<DiskResult> {
     const requestId = nextRequestId++;
     const promise = new Promise<DiskResult>((resolve) => {
       this.pendingDisks.set(requestId, resolve);
     });
-    const payload: MainToWorkerMessage = { type: 'disk', requestId, op, drive, name: extra.name, bytes: extra.bytes };
+    const payload: MainToWorkerMessage = { type: 'disk', requestId, op, drive, name: extra.name, bytes: extra.bytes, image: extra.image, key: extra.key };
     this.worker.postMessage(payload, extra.bytes ? [extra.bytes] : []);
     return promise;
   }

@@ -320,6 +320,7 @@
         <section class="help-card">
           <div class="lang-ja">
             <h2>ディスクイメージを読み込む</h2>
+            <p>複数枚入りのファイルは、起動後にドライブ行で枚数を選べます。</p>
             <p>画面の下に、FDD1 と FDD2 の2つのドライブ行があります。</p>
             <ul>
               <li><strong>＋</strong> — D88 / 88D / ZIP / LZH ファイルを選んで挿入します。</li>
@@ -335,6 +336,7 @@
           </div>
           <div class="lang-en">
             <h2>Loading disk images</h2>
+            <p>For a file containing multiple disk images, choose an image in the drive row after startup. The API insert_disk command accepts an optional zero-based image number.</p>
             <p>Below the screen there are two drive rows, FDD1 and FDD2.</p>
             <ul>
               <li><strong>＋</strong> — choose a D88 / 88D / ZIP / LZH file to insert.</li>
@@ -643,7 +645,7 @@
             </ol>
             <p>
               操作できる内容の例は、状態の取得、リセット、キー入力、文字列の入力、画面の確認(画面の署名)、
-              画面の変化の待機、ディスクの挿入・排出・一覧(<code>insert_disk</code> / <code>eject_disk</code> / <code>list_disks</code>)などです。コマンドの一覧は
+              画面の変化の待機、ディスクの挿入・排出・一覧(<code>insert_disk</code> / <code>eject_disk</code> / <code>list_disks</code>)などです。複数枚入りのファイルは起動後にドライブ行で選択でき、insert_disk の image は 0 始まりで省略できます。コマンドの一覧は
               <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
               を参照してください。
             </p>

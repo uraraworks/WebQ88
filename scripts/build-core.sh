@@ -121,10 +121,10 @@ if [ ! -f "$SHIM_SRC" ]; then
   echo "エラー: $SHIM_SRC が見つかりません。" >&2
   exit 1
 fi
-emcc -c "$SHIM_SRC" -O2 -o "$SHIM_OBJ"
+emcc -c "$SHIM_SRC" -Isrc -Isrc/LIBRETRO -Isrc/LIBRETRO/libretro-common/include -O2 -o "$SHIM_OBJ"
 
 TEST_SHIM_OBJS=()
-EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free,_webq88_restrict,_webq88_is_restricted,_webq88_ram_read,_webq88_ram_write,_webq88_text_cols,_webq88_text_snapshot,_webq88_disk_insert,_webq88_disk_eject,_webq88_drive_busy,_fflush"
+EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free,_webq88_restrict,_webq88_is_restricted,_webq88_ram_read,_webq88_ram_write,_webq88_text_cols,_webq88_text_snapshot,_webq88_disk_insert,_webq88_disk_image_count,_webq88_disk_image_selected,_webq88_disk_eject,_webq88_drive_busy,_fflush"
 
 if [ "$TEST_SHIM" = "1" ]; then
   echo "== 試験ビルド専用シム(core/shim/webq88_test_shim.c)をコンパイル =="

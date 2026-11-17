@@ -217,14 +217,17 @@ int webq88_text_snapshot(unsigned char *dst, unsigned int maxLen)
  *                         選択して処理中」のとき 0 を返す(status.c のランプ判定と同じ)。
  *                         ランプONなら 1。
  */
+#include "quasi88.h"
+#include "drive.h"
+
 extern int quasi88_disk_insert(int drv, const char *filename, int image, int ro);
 extern void quasi88_disk_eject(int drv);
 extern int get_drive_ready(int drv);
 
-int webq88_disk_insert(int drv, const char *path)
+int webq88_disk_insert(int drv, const char *path, int image)
 {
     if (drv < 0 || drv > 1 || !path) return 0;
-    return quasi88_disk_insert(drv, path, 0, 0);
+    return quasi88_disk_insert(drv, path, image, 0);
 }
 
 void webq88_disk_eject(int drv)
@@ -237,4 +240,14 @@ int webq88_drive_busy(int drv)
 {
     if (drv < 0 || drv > 1) return 0;
     return get_drive_ready(drv) ? 0 : 1;
+}
+
+/* 挿入済みファイルの上流の情報を返す。未挿入・範囲外は 0 / -1。 */
+int webq88_disk_image_count(int drv)
+{
+    return (drv >= 0 && drv < 2 && disk_image_exist(drv)) ? disk_image_num(drv) : 0;
+}
+int webq88_disk_image_selected(int drv)
+{
+    return (drv >= 0 && drv < 2 && disk_image_exist(drv)) ? disk_image_selected(drv) : -1;
 }
