@@ -293,7 +293,7 @@
           <div class="lang-ja">
             <h2>画面表示（4:3 / ドット等倍 / 補間）</h2>
             <p>
-              既定では、実機のモニタのように4:3で表示します。ツールバーの「…」(その他の操作)メニューで
+              既定では、実機のモニタのように4:3で表示します。ツールバーの「…」メニューの「表示」で
               次の設定を変えられます。設定はブラウザに保存されます。
             </p>
             <ul>
@@ -305,7 +305,7 @@
           <div class="lang-en">
             <h2>Screen display (4:3 / 1:1 pixels / interpolation)</h2>
             <p>
-              By default the screen is shown at 4:3, like a real monitor. The toolbar's "…" (More actions)
+              By default the screen is shown at 4:3, like a real monitor. The toolbar's "…" (More actions) → "表示" (Display)
               menu lets you change the following. The settings are saved in your browser.
             </p>
             <ul>
@@ -370,7 +370,7 @@
               <li>ZIP/LZH は展開し、中の .d88 / .88d をすべてライブラリに登録して先頭を挿入します。</li>
               <li>配布元のサーバーは CORS に対応している必要があります。Dropbox の共有リンクは自動で変換します。Google Drive は中継サービス(ビルド時の <code>VITE_DISK_PROXY</code>)が必要です。OneDrive には対応していません。</li>
               <li>2回目以降は、保存済みの変更を復元します。ライブラリの「配布元に戻す」で取り直せます。</li>
-              <li>「…」メニューの「共有URLをコピー」で、挿入中のURL由来ディスクの共有URLをコピーできます。</li>
+              <li>「…」メニューの「ディスク」→「共有URLをコピー」で、挿入中のURL由来ディスクの共有URLをコピーできます。</li>
             </ul>
           </div>
           <div class="lang-en">
@@ -390,7 +390,7 @@
               <li>ZIP/LZH archives are extracted, every .d88 / .88d inside is registered in the library, and the first one is inserted.</li>
               <li>The host serving the file must support CORS. Dropbox share links are converted automatically. Google Drive needs a relay service (the build-time <code>VITE_DISK_PROXY</code>). OneDrive is not supported.</li>
               <li>On later visits, your saved changes are restored. "Restore from source" in the library fetches the original again.</li>
-              <li>"Copy share URL" in the "…" menu copies a shareable URL for the inserted disks that came from a URL.</li>
+              <li>"Copy share URL" under "…" → "ディスク" (Disk) copies a shareable URL for the inserted disks that came from a URL.</li>
             </ul>
           </div>
         </section>
@@ -479,13 +479,13 @@
               <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
               <tbody>
                 <tr><td>一時停止</td><td>動作を止める・再開する</td></tr>
-                <tr><td>ミュート</td><td>音を消す・戻す(音量は「…」メニュー)</td></tr>
+                <tr><td>ミュート</td><td>音を消す・戻す(音量は「…」→「音」)</td></tr>
                 <tr><td>全画面表示</td><td>画面を拡大する(もう一度押すと戻ります)</td></tr>
                 <tr><td>ソフトキーボード</td><td>画面上に PC-88 配列のキーボードを出す</td></tr>
                 <tr><td>バーチャルパッド</td><td>タッチ用の十字キーとボタンを出す</td></tr>
                 <tr><td>スクリーンショット</td><td>画面を PNG で保存する</td></tr>
                 <tr><td>ディスクライブラリ</td><td>保存済みのディスクを選んで挿入する</td></tr>
-                <tr><td>…(その他の操作)</td><td>共有URLをコピー、音量、表示比率、補間、ゲームパッド・キー割当、テンキー代替、利用者ROMの選択</td></tr>
+                <tr><td>…(その他の操作)</td><td>「表示」「入力」「音」「ディスク」「ROM」の各設定</td></tr>
                 <tr><td>リセット</td><td>マシンをリセットする</td></tr>
               </tbody>
             </table>
@@ -497,13 +497,13 @@
               <thead><tr><th>Button</th><th>Action</th></tr></thead>
               <tbody>
                 <tr><td>Pause</td><td>Stops and resumes the machine</td></tr>
-                <tr><td>Mute</td><td>Silences and restores sound (volume is in the "…" menu)</td></tr>
+                <tr><td>Mute</td><td>Silences and restores sound (volume is under "…" → "音" (Sound))</td></tr>
                 <tr><td>Fullscreen</td><td>Enlarges the screen (press again to go back)</td></tr>
                 <tr><td>Soft keyboard</td><td>Shows an on-screen keyboard in the PC-88 layout</td></tr>
                 <tr><td>Virtual pad</td><td>Shows touch-friendly directional keys and buttons</td></tr>
                 <tr><td>Screenshot</td><td>Saves the screen as a PNG</td></tr>
                 <tr><td>Disk Library</td><td>Pick a saved disk and insert it</td></tr>
-                <tr><td>… (More actions)</td><td>Copy share URL, volume, aspect ratio, interpolation, gamepad / key assignment, numpad substitute, choosing your own ROMs</td></tr>
+                <tr><td>… (More actions)</td><td>Settings under "表示" (Display), "入力" (Input), "音" (Sound), "ディスク" (Disk), and "ROM"</td></tr>
                 <tr><td>Reset</td><td>Resets the machine</td></tr>
               </tbody>
             </table>
@@ -521,7 +521,7 @@
               入力された文字に合わせて PC-88 のキーへ変換します。画面をクリックすると、キー入力が画面に戻ります。
             </p>
             <p>
-              テンキーのないパソコンでは、「…」メニューの「テンキー代替」をオンにしてください。
+              テンキーのないパソコンでは、「…」メニューの「入力」→「テンキー代替」をオンにしてください。
               メインの数字キー 0〜9 がテンキーの 0〜9 に、矢印キーの上・下・左・右がテンキーの 8・2・4・6 に
               なります。既定はオフで、設定はブラウザに保存されます。
             </p>
@@ -539,7 +539,7 @@
               to return keyboard input to it.
             </p>
             <p>
-              On computers without a numeric keypad, turn on "Numpad substitute" in the "…" menu. The main
+              On computers without a numeric keypad, turn on "Numpad substitute" under "…" → "入力" (Input). The main
               number keys 0–9 then act as keypad 0–9, and the arrow keys up / down / left / right act as
               keypad 8 / 2 / 4 / 6. It is off by default, and the setting is saved in your browser.
             </p>
@@ -560,7 +560,7 @@
               物理的なゲームパッドは、接続すると使えます。
             </p>
             <p>
-              「…」メニューの「ゲームパッド・キー割当」では、次の内容を設定できます。
+              「…」メニューの「入力」→「ゲームパッド・キー割当」では、次の内容を設定できます。
             </p>
             <ul>
               <li>接続中のゲームパッドの状態</li>
@@ -582,7 +582,7 @@
               screen. A physical gamepad works once it is connected.
             </p>
             <p>
-              "Gamepad / key assignment" in the "…" menu lets you configure:
+              "Gamepad / key assignment" under "…" → "入力" (Input) lets you configure:
             </p>
             <ul>
               <li>The state of connected gamepads</li>
@@ -604,7 +604,7 @@
           <div class="lang-ja">
             <h2>手持ちのROMで起動する（制限モード）</h2>
             <ol>
-              <li>「…」メニューの「利用者ROMを選択（複数選択可・任意）」で、お持ちのROMファイルを選びます。</li>
+              <li>「…」メニューの「ROM」→「利用者ROMを選択（複数選択可・任意）」で、お持ちのROMファイルを選びます。</li>
               <li>「選択したROMで起動 / 再起動」を押すと、そのROMで起動し直します。</li>
             </ol>
             <p>
@@ -616,7 +616,7 @@
           <div class="lang-en">
             <h2>Booting with your own ROMs (restricted mode)</h2>
             <ol>
-              <li>In the "…" menu, choose your ROM files with the "Select your own ROMs" file picker (multiple files allowed, optional).</li>
+              <li>Under "…" → "ROM", choose your ROM files with the "Select your own ROMs" file picker (multiple files allowed, optional).</li>
               <li>Press the "Boot / reboot with selected ROMs" button to restart with those ROMs.</li>
             </ol>
             <p>
@@ -682,7 +682,7 @@
           <div class="lang-ja">
             <h2>トラブルシューティング</h2>
             <ul>
-              <li><strong>音が出ない</strong> — ブラウザの制限により、起動ボタンをクリックして起動する必要があります。ミュートがオンになっていないか、「…」メニューの音量も確認してください。</li>
+              <li><strong>音が出ない</strong> — ブラウザの制限により、起動ボタンをクリックして起動する必要があります。ミュートがオンになっていないか、「…」メニューの「音」の音量も確認してください。</li>
               <li><strong>漢字の形が実機と違う</strong> — 同梱の漢字ROMは東雲フォント(パブリックドメイン)から作った自作のものなので、字形は実機と異なります。</li>
               <li><strong>公式環境で SAVE した BASIC プログラムが読めない</strong> — 中間言語形式のBASICプログラムは読めません。プログラムのやり取りは ASCII 形式(<code>SAVE "x",A</code>)で行ってください。</li>
               <li><strong>動かないソフトがある</strong> — 互換ROMは公式ROMと完全に同じではないため、動作しないソフトがあります。</li>
@@ -693,7 +693,7 @@
           <div class="lang-en">
             <h2>Troubleshooting</h2>
             <ul>
-              <li><strong>No sound</strong> — Because of browser restrictions, you must start the machine by clicking the boot button. Also check that Mute isn't on and look at the volume in the "…" menu.</li>
+              <li><strong>No sound</strong> — Because of browser restrictions, you must start the machine by clicking the boot button. Also check that Mute isn't on and look at the volume under "…" → "音" (Sound).</li>
               <li><strong>Kanji look different from real hardware</strong> — The bundled kanji ROM is self-made from the public-domain Shinonome font, so its glyphs differ from real hardware.</li>
               <li><strong>A BASIC program saved in an official environment can't be read</strong> — BASIC programs in the intermediate-code format can't be read. Exchange programs in ASCII format (<code>SAVE "x",A</code>).</li>
               <li><strong>Some software doesn't run</strong> — The compatible ROM is not completely identical to the official ROM, so some software doesn't work.</li>

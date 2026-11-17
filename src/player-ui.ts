@@ -1,3 +1,5 @@
+import { closedMenu, rootMenu, toggleMenu, selectGroup, isWideMenu, type OverflowGroup, type OverflowState } from './overflow-menu';
+
 /** 操作メニューと全画面表示。エミュレータの操作は既存のボタンへ委ねる。 */
 export function initPlayerUi(): void {
   const player = document.querySelector<HTMLElement>('#player')!;
@@ -12,14 +14,55 @@ export function initPlayerUi(): void {
   const root = player as HTMLElement & { webkitRequestFullscreen?: () => void };
   let nativeRequested = false;
 
+  const groups = menu.querySelectorAll<HTMLButtonElement>('[data-menu-group]');
+  const submenus = menu.parentElement!.querySelectorAll<HTMLElement>('[data-submenu]');
+  let menuState: OverflowState = closedMenu;
+
+  function renderMenu(): void {
+    const wide = isWideMenu(window.innerWidth);
+    menu.hidden = menuState.level === 'closed' || (menuState.level === 'group' && !wide);
+    more.setAttribute('aria-expanded', String(menuState.level !== 'closed'));
+    groups.forEach((button) => button.setAttribute('aria-expanded', String(menuState.level === 'group' && menuState.group === button.dataset.menuGroup)));
+    submenus.forEach((submenu) => { submenu.hidden = menuState.level !== 'group' || menuState.group !== submenu.dataset.submenu; });
+    const anchor = more.getBoundingClientRect();
+    const position = (element: HTMLElement, left: number, top: number): void => {
+      const rect = element.getBoundingClientRect();
+      element.style.left = `${Math.max(4, Math.min(left, window.innerWidth - rect.width - 4))}px`;
+      element.style.top = `${Math.max(4, Math.min(top, window.innerHeight - rect.height - 4))}px`;
+    };
+    if (!menu.hidden) {
+      position(menu, anchor.right - menu.offsetWidth, anchor.top - menu.offsetHeight - 6);
+    }
+    const active = Array.from(submenus).find((submenu) => !submenu.hidden);
+    if (active) {
+      if (wide) {
+        const parent = menu.getBoundingClientRect();
+        const left = parent.left >= active.offsetWidth + 4 ? parent.left - active.offsetWidth - 4 : parent.right + 4;
+        position(active, left, parent.bottom - active.offsetHeight);
+      } else {
+        position(active, anchor.right - active.offsetWidth, anchor.top - active.offsetHeight - 6);
+      }
+    }
+  }
   function closeMenu(): void {
-    menu.hidden = true;
-    more.setAttribute('aria-expanded', 'false');
+    menuState = closedMenu;
+    renderMenu();
   }
   more.addEventListener('click', () => {
-    menu.hidden = !menu.hidden;
-    more.setAttribute('aria-expanded', String(!menu.hidden));
+    menuState = toggleMenu(menuState);
+    renderMenu();
   });
+  groups.forEach((button) => button.addEventListener('click', () => {
+    menuState = selectGroup(menuState, button.dataset.menuGroup as OverflowGroup);
+    renderMenu();
+  }));
+  submenus.forEach((submenu) => submenu.querySelector<HTMLButtonElement>('[data-menu-back]')!.addEventListener('click', () => {
+    menuState = rootMenu;
+    renderMenu();
+    groups.forEach((button) => { if (button.dataset.menuGroup === submenu.dataset.submenu) button.focus(); });
+  }));
+  window.addEventListener('resize', renderMenu);
+  window.addEventListener('scroll', () => { if (menuState.level !== 'closed') renderMenu(); }, { passive: true });
   document.addEventListener('click', (event) => {
     if (!menu.parentElement!.contains(event.target as Node)) closeMenu();
   });
@@ -71,7 +114,7 @@ export function initPlayerUi(): void {
   document.addEventListener('webkitfullscreenchange', sync);
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
-    if (!menu.hidden) {
+    if (menuState.level !== 'closed') {
       closeMenu();
       more.focus();
       event.stopPropagation();

@@ -30,10 +30,14 @@ body { margin: 0; min-height: 100%; display: flex; flex-direction: column; }
 .toolbar .icon-btn.active { background: #2c5a86; border-color: #4a90d9; }
 .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .toolbar-menu-wrap { position: relative; }
-.toolbar-menu { position: absolute; z-index: 20; bottom: calc(100% + 6px); right: 0; width: min(300px, calc(100vw - 48px)); max-height: min(70vh, 500px); overflow: auto; padding: 12px; border: 1px solid #555; border-radius: 6px; background: #303030; box-shadow: 0 6px 20px #0009; font-size: 12px; }
-.toolbar-menu:not([hidden]) { display: grid; gap: 8px; }
-.toolbar-menu input, .toolbar-menu select { max-width: 100%; min-width: 0; }
-.toolbar-menu button { padding: 7px; }
+.toolbar-menu, .toolbar-submenu { position: fixed; z-index: 20; width: min(300px, calc(100vw - 16px)); max-height: min(70vh, 500px); overflow: auto; padding: 12px; border: 1px solid #555; border-radius: 6px; background: #303030; box-shadow: 0 6px 20px #0009; font-size: 12px; }
+.toolbar-submenu:not([hidden]), .toolbar-menu-categories { display: grid; gap: 8px; }
+.toolbar-menu input, .toolbar-menu select, .toolbar-submenu input, .toolbar-submenu select { max-width: 100%; min-width: 0; }
+.toolbar-menu button, .toolbar-submenu button { padding: 7px; }
+.toolbar-menu-categories button { display: flex; justify-content: space-between; text-align: left; }
+.toolbar-menu-categories button[aria-expanded="true"] { background: #2c5a86; border-color: #4a90d9; }
+.toolbar-submenu-heading { display: flex; align-items: center; gap: 12px; }
+@media (min-width: 640px) { .toolbar-submenu-heading { display: none; } }
 #mode-info { white-space: pre-wrap; overflow-wrap: anywhere; color: #ddd; }
 #mode-info .restricted { color: #ff8a80; font-weight: bold; }
 #mode-info .compat { color: #a8d99b; font-weight: bold; }

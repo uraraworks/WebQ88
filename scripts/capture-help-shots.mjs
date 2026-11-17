@@ -78,6 +78,7 @@ try {
       await shoot('#virtual-keyboard', 'keyboard');
       await page.click('#keyboard-toggle');
       await page.click('#toolbar-more');
+      await page.click('[data-menu-group="input"]');
       await page.click('#input-settings');
       // 入力設定は縦に長く、700px だと下端が切れるので撮影時だけ高さを広げる。
       await page.setViewport({ width: 900, height: 1100, deviceScaleFactor: 2 });
