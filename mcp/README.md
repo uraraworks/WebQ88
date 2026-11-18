@@ -110,3 +110,5 @@ node test-client.mjs --restricted  # 制限モード想定(利用者ROムとし�
 `load_state` は `ui:1`〜`ui:3` でUIのスロットも読めます。保存時と現在のROM構成またはディスクが違う場合はUIから確認して読み込んでください。利用者ROMのステートは互換ROMだけのセッションには読み込めません。
 
 WebNP2の `put_file` / `get_file` はDOSの転送フロッピーとCOPYに依存するため実装していません。
+
+ディスク内のファイルは `disk_list_files`、`disk_read_file`、`disk_write_file`、`disk_delete_file` で操作できます。対象は標準 2D D88 の N88-BASIC 形式です。`slot` は `fd1` / `fd2`、`path` は9バイト以内のファイル名です。一覧のサイズは判定できない場合 null です。`disk_read_file` は `encoding` に `text` または `base64`、書き込みは `content` または `base64` を指定します。テキストは ASCII と半角カナに対応し改行を CRLF にします。書き込みは ASCII 形式です。利用者 ROM の制限モードでは利用できません。ゲストがドライブを使用中は操作しないでください。変更時の再挿入後もゲストのキャッシュが残る場合があります。

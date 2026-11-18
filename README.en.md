@@ -204,3 +204,5 @@ build script rather than with a patch.
   programs in ASCII format (`SAVE "x",A`).
 - Save states / load states are not supported.
 - The player screen (buttons and menus) is Japanese only. The About and Help pages are available in both Japanese and English.
+
+The drive row's file button lists, extracts, writes ASCII files to, and deletes files from standard 2D N88-BASIC disks. Use it only while the guest is not accessing the disk; the guest may retain a cache after reinsertion. MCP disk file operations are unavailable in restricted mode.

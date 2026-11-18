@@ -409,6 +409,13 @@ server.tool(
   async ({ drive }) => callDispatch('get_disk_image', { drive })
 );
 
+const diskSlot = z.enum(['fd1', 'fd2']).describe('対象ドライブ');
+const diskPath = z.string().describe('9バイト以内のファイル名');
+server.tool('disk_list_files', 'N88-BASICディスクのファイルと空き容量を一覧する。制限モードでは拒否。', { slot: diskSlot, path: z.string().optional() }, async ({slot, path}) => callDispatch('disk_list_files', {slot, path}));
+server.tool('disk_read_file', 'N88-BASICディスクのファイルを読む。textはASCIIと半角カナ、base64は生データ。制限モードでは拒否。', {slot: diskSlot, path: diskPath, encoding: z.enum(['text','base64']).optional()}, async ({slot,path,encoding}) => callDispatch('disk_read_file',{slot,path,encoding}));
+server.tool('disk_write_file', 'ASCII形式で新規作成または上書きする。変更後は再挿入するがゲストのキャッシュが残る場合がある。ゲストがドライブを読み書きしていない時に実行する。制限モードでは拒否。', {slot: diskSlot, path: diskPath, content: z.string().optional(), base64: z.string().optional()}, async ({slot,path,content,base64}) => callDispatch('disk_write_file',{slot,path,content,base64}));
+server.tool('disk_delete_file', 'ファイルを削除する。変更後は再挿入するがゲストのキャッシュが残る場合がある。ゲストがドライブを読み書きしていない時に実行する。制限モードでは拒否。', {slot: diskSlot, path: diskPath}, async ({slot,path}) => callDispatch('disk_delete_file',{slot,path}));
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
 console.error('WebQ88 MCP server ready (stdio)');

@@ -146,3 +146,5 @@ body.vpad-shown #player { min-width: min(340px, 100%); }
 .perf-overlay[hidden] { display: none; }
 .input-profiles > div, .input-profiles form { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .input-profiles form[hidden] { display: none; }
+
+dialog.library-modal::backdrop { background: #000a; }

@@ -1,3 +1,4 @@
+import { N88FS } from './basic-disk-fs';
 // disks.ts
 //
 // フロッピードライブ2台のUIと永続化。メインスレッド側の「持ち主」。
@@ -146,6 +147,7 @@ export class DiskPanel {
     row.ejectBtn.addEventListener('click', () => void this.eject(d));
     row.blankBtn?.addEventListener('click', () => void this.createBlank(d));
     row.downloadBtn.addEventListener('click', () => void this.download(d));
+    q<HTMLButtonElement>('.drive-files').addEventListener('click', (event) => { event.stopPropagation(); void this.fileDialog(d); });
     root.addEventListener('dragover', (ev) => {
       if (ev.dataTransfer?.types.includes('Files')) {
         ev.preventDefault();
@@ -181,6 +183,8 @@ export class DiskPanel {
       row.imageSelect.value = String(slot.image);
       row.ejectBtn.disabled = slot.name === null;
       row.downloadBtn.disabled = slot.name === null;
+      const filesBtn = row.root.querySelector<HTMLButtonElement>('.drive-files');
+      if (filesBtn) filesBtn.disabled = slot.name === null;
       row.lamp.classList.toggle('on', (this.lampMask & (1 << d)) !== 0);
     }
   }
@@ -603,6 +607,56 @@ export class DiskPanel {
     const targets = [0, 1].filter(d => this.slots[d].dirty && this.slots[d].key !== null);
     const results = await Promise.all(targets.map(d => this.persist(d)));
     if (strict && results.some(ok => !ok)) throw new Error('ディスクの保存に失敗しました');
+  }
+
+  /** 現在のイメージを操作し、ライブラリの所有関係を保ったまま再挿入する。 */
+  async fileOperation(d: number, action: (fs: N88FS) => unknown, change: boolean): Promise<unknown> {
+    return this.withOp(async () => {
+      await this.persisting[d];
+      const slot = this.slots[d];
+      if (!slot.name) throw Error('ドライブは空です');
+      if (change && slot.key && this.slots[1-d].key === slot.key) throw Error('同じイメージを両ドライブで使用中は変更できません');
+      const dump = await this.diskRequest('dump', d);
+      if (!dump.ok || !dump.bytes) throw Error(dump.error ?? 'ディスクを取得できません');
+      const fs = new N88FS(new Uint8Array(dump.bytes), slot.image);
+      const result = action(fs);
+      if (change) {
+        const ejected = await this.diskRequest('eject', d);
+        if (!ejected.ok) throw Error(ejected.error ?? '排出できません');
+        const res = await this.diskRequest('insert', d, { name: slot.name, key: slot.key ?? undefined, image: slot.image, bytes: fs.bytes().slice().buffer as ArrayBuffer });
+        if (!res.ok) { this.slots[d] = emptySlot(); this.render(); throw Error(res.error ?? '再挿入できません'); }
+        this.adopt(d, slot.key, slot.name, res);
+        this.slots[d].dirty = true;
+        if (slot.key && !(await this.persist(d))) throw Error('変更は挿入されましたが保存に失敗しました');
+        this.render();
+      }
+      return result;
+    });
+  }
+
+  private async fileDialog(d: number): Promise<void> {
+    const dialog = document.createElement('dialog'); dialog.className = 'library-modal';
+    const title = document.createElement('h2'); title.textContent = `ドライブ${d+1}のファイル`;
+    const notice = document.createElement('p'); notice.textContent = '読み書き中は操作しないでください。再挿入後もゲストのキャッシュが残る場合があります。書き込みはASCII形式です。';
+    const status = document.createElement('p'); const list = document.createElement('div'); list.className = 'library-list';
+    const input = document.createElement('input'); input.type = 'file';
+    const close = document.createElement('button'); close.textContent = '閉じる'; close.onclick = () => dialog.close();
+    const refresh = async () => {
+      try {
+        const info = await this.fileOperation(d, fs => fs.list(), false) as ReturnType<N88FS['list']>;
+        status.textContent = `空き ${info.free} / ${info.total} バイト　書込禁止: ${info.writeProtected === null ? '不明' : info.writeProtected ? 'あり' : 'なし'}`;
+        list.replaceChildren();
+        for (const entry of info.entries) {
+          const row = document.createElement('div'); row.className = 'library-list-item'; const label = document.createElement('span'); label.className = 'library-item-name'; label.textContent = `${entry.name} (${entry.attribute}, ${entry.size ?? '不明'} バイト) `;
+          const download = document.createElement('button'); download.className = 'library-action-btn'; download.textContent = '取り出す'; download.onclick = async () => { try { const bytes = await this.fileOperation(d, fs => fs.read(entry.name), false) as Uint8Array; const url = URL.createObjectURL(new Blob([bytes.slice().buffer as ArrayBuffer])); const a = document.createElement('a'); a.href=url; a.download=entry.name; a.click(); URL.revokeObjectURL(url); } catch(e) { status.textContent=(e as Error).message; } };
+          const del = document.createElement('button'); del.className = 'library-action-btn danger'; del.textContent = '削除'; del.onclick = async () => { if (!confirm(`${entry.name} を削除しますか？`)) return; try { await this.fileOperation(d, fs => fs.delete(entry.name), true); await refresh(); } catch(e) { status.textContent=(e as Error).message; } };
+          row.append(label,download,del); list.append(row);
+        }
+      } catch(e) { status.textContent=(e as Error).message; }
+    };
+    input.onchange = async () => { const file=input.files?.[0]; if (!file) return; const name=prompt('ディスク上のファイル名（9文字以内）',file.name); input.value=''; if (!name) return; try { const bytes=new Uint8Array(await file.arrayBuffer()); await this.fileOperation(d, fs => fs.write(name, bytes), true); await refresh(); } catch(e) { status.textContent=(e as Error).message; } };
+    const footer = document.createElement('div'); footer.className = 'library-footer'; footer.append(close);
+    dialog.append(title,notice,status,list,input,footer); document.body.append(dialog); dialog.addEventListener('close', () => dialog.remove()); dialog.showModal(); await refresh();
   }
 
   // ---- 起動時の復元 ----

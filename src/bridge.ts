@@ -1,3 +1,4 @@
+import { encodePC, decodePC } from './basic-disk-fs';
 import { getState, listStates } from './state-store';
 import { listDisks, listFolders } from './disk-store';
 import type { CoreProxy } from './core-proxy';
@@ -117,6 +118,29 @@ export class Bridge {
 export function createBridgeHost(proxy: CoreProxy, panel: DiskPanel): BridgeHost {
   return { async exec(cmd, args) {
     try {
+      if (['disk_list_files', 'disk_read_file', 'disk_write_file', 'disk_delete_file'].includes(cmd)) {
+        if (args.slot !== 'fd1' && args.slot !== 'fd2') throw Error('スロットはfd1またはfd2です');
+        const d = args.slot === 'fd1' ? 0 : 1;
+        // Worker の掛け金を既存の取得 API で必ず検査する。
+        const gate = await proxy.execApi('get_disk_image', { drive: d + 1 });
+        if (gate.error) return gate;
+        if (cmd === 'disk_list_files') {
+          if (args.path !== undefined && args.path !== '') throw Error('ディレクトリは未対応です');
+          return { ok: true, ...(await panel.fileOperation(d, fs => fs.list(), false) as object) };
+        }
+        if (typeof args.path !== 'string' || !args.path) throw Error('ファイル名が必要です');
+        const path = args.path;
+        if (cmd === 'disk_read_file') {
+          if (args.encoding !== undefined && args.encoding !== 'text' && args.encoding !== 'base64') throw Error('encodingが不正です');
+          const bytes = await panel.fileOperation(d, fs => fs.read(path), false) as Uint8Array;
+          if (args.encoding === 'base64') return { ok: true, base64: btoa(Array.from(bytes, x => String.fromCharCode(x)).join('')), size: bytes.length };
+          return { ok: true, text: decodePC(bytes).replace(/\r\n|\r/g, '\n'), size: bytes.length };
+        }
+        if (cmd === 'disk_delete_file') { await panel.fileOperation(d, fs => fs.delete(path), true); return { ok: true }; }
+        if ((typeof args.content === 'string') === (typeof args.base64 === 'string')) throw Error('contentまたはbase64の一方を指定してください');
+        const bytes = typeof args.content === 'string' ? encodePC(args.content.replace(/\r\n|\r|\n/g, '\r\n')) : Uint8Array.from(atob(args.base64 as string), c => c.charCodeAt(0));
+        await panel.fileOperation(d, fs => fs.write(path, bytes), true); return { ok: true, size: bytes.length };
+      }
       if (cmd === 'list_states') {
         const result = await proxy.execApi(cmd, args);
         if (result.error) return result;
