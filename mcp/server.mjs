@@ -214,7 +214,7 @@ server.tool(
 
 server.tool(
   'type_text',
-  'ASCII英数字・記号・空白・改行(\\n)のみの文字列をキーボード入力として送る。対応外の文字が含まれる場合はどの位置かを示すエラーになる。',
+  'ASCII英数字・記号・空白・改行(\\n)を送る。互換モードでは入力後の画面本文も返す。制限モードでは本文を返さない。',
   {
     text: z.string().describe('入力する文字列(ASCII範囲のみ)'),
   },
@@ -223,7 +223,7 @@ server.tool(
 
 server.tool(
   'paste_text',
-  'Paste ASCII and half-width kana as keyboard input. Unsupported characters are skipped and returned. Newlines are sent as Return.',
+  'Paste ASCII and half-width kana. Unsupported characters are skipped. Returns the screen text unless restricted.',
   { text: z.string().describe('Text to paste.') },
   async ({ text }) => callDispatch('paste_text', { text })
 );
@@ -283,14 +283,14 @@ server.tool(
 
 server.tool(
   'find_text',
-  '画面の文字列を検索し、0始まりの行・桁と件数を返す。制限モードでは拒否される。',
+  '画面の文字列を検索し、0始まりの行・桁、一致行の本文と件数を返す。制限モードでは拒否される。',
   { text: z.string().describe('検索する文字列'), all: z.boolean().optional().describe('全件を返す（既定は先頭のみ）') },
   async ({ text, all }) => callDispatch('find_text', { text, all })
 );
 
 server.tool(
   'wait_screen',
-  '画面に文字列が現れるまで待ち、成否と経過ミリ秒を返す。制限モードでは拒否される。',
+  '画面に文字列が現れるまで待ち、成否、経過ミリ秒と最後の画面本文を返す。制限モードでは拒否される。',
   { contains: z.string().describe('待つ文字列'), timeout_ms: z.number().optional().describe('待機ミリ秒（既定10000、最大60000）') },
   async ({ contains, timeout_ms }) => callDispatch('wait_screen', { contains, timeout_ms })
 );

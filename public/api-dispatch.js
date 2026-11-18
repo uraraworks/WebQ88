@@ -336,7 +336,7 @@
           col++;
         }
         if (offset !== pos) continue;
-        matches.push({ row: r, col: col });
+        matches.push({ row: r, col: col, text: lines[r] });
         if (!all) return matches;
       }
     }
@@ -442,7 +442,10 @@
             }
             await pressAndRelease(ctx, stepInfo.code, stepInfo.shift);
           }
-          return { ok: true, typed: text.length };
+          var typedResult = { ok: true, typed: text.length };
+          if (ctx.getMode().restricted) typedResult.note = '画面本文は制限モードのため返しません';
+          else typedResult.lines = textSnapshotToString(ctx.textSnapshot(), ctx.textCols());
+          return typedResult;
         }
 
         case 'paste_text': {
@@ -464,7 +467,10 @@
           } finally {
             if (kanaHeld) ctx.release(311);
           }
-          return { ok: true, sent: sent, skipped: skipped };
+          var pasteResult = { ok: true, sent: sent, skipped: skipped };
+          if (ctx.getMode().restricted) pasteResult.note = '画面本文は制限モードのため返しません';
+          else pasteResult.lines = textSnapshotToString(ctx.textSnapshot(), ctx.textCols());
+          return pasteResult;
         }
 
         case 'screen_signature': {
@@ -498,7 +504,7 @@
             if (ctx.getMode().restricted) return { error: RESTRICTED_ERROR };
             var found = findScreenText(ctx, args.contains, false).length > 0;
             var elapsedMs = Date.now() - started;
-            if (found || elapsedMs >= timeoutMs) return { ok: true, found: found, elapsed_ms: elapsedMs };
+            if (found || elapsedMs >= timeoutMs) return { ok: true, found: found, elapsed_ms: elapsedMs, lines: textSnapshotToString(ctx.textSnapshot(), ctx.textCols()) };
             await ctx.driveFrames(2);
           }
         }

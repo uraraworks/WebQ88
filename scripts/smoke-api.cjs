@@ -257,6 +257,9 @@ async function main() {
   // --- type_text: 'PRINT 1+1' + Enter → 結果行が現れる ---
   const typeResult = await ApiDispatch.exec(compatCtx, 'type_text', { text: 'PRINT 1+1\n' });
   check('compat type_text: ok', !!typeResult.ok, JSON.stringify(typeResult));
+  check('compat type_text: 画面本文を返す', Array.isArray(typeResult.lines));
+  const pasteResult = await ApiDispatch.exec(compatCtx, 'paste_text', { text: '' });
+  check('compat paste_text: 画面本文を返す', !!pasteResult.ok && Array.isArray(pasteResult.lines));
   await compat.driveFrames(60); // BASICの処理・再描画待ち
 
   const sigAfter = await ApiDispatch.exec(compatCtx, 'screen_signature', {});
@@ -275,7 +278,7 @@ async function main() {
   {
     const testCtx = { ...compatCtx, textCols: () => 8, textSnapshot: () => Uint8Array.from([0, 0xa6, 65, 65, 65, 32, 32, 32]) };
     const find = await ApiDispatch.exec(testCtx, 'find_text', { text: 'AA', all: true });
-    check('find_text: 重なる一致と桁位置', JSON.stringify(find.matches) === JSON.stringify([{ row: 0, col: 2 }, { row: 0, col: 3 }]) && find.count === 2);
+    check('find_text: 重なる一致と行本文', find.count === 2 && find.matches[0].col === 2 && find.matches[1].col === 3 && find.matches.every((match) => match.text === '\\x00ｦAAA   '));
     const kana = await ApiDispatch.exec(testCtx, 'find_text', { text: 'ｦA' });
     check('find_text: 半角カナ', kana.count === 1 && kana.matches[0].col === 1);
     const text = await ApiDispatch.exec(testCtx, 'screen_text', {});
@@ -286,7 +289,7 @@ async function main() {
     const changingCtx = { ...testCtx, textSnapshot: () => Uint8Array.from(advanced ? [65, 32, 32, 32, 32, 32, 32, 32] : [32, 32, 32, 32, 32, 32, 32, 32]), driveFrames: async () => { advanced = true; } };
     const delayed = await ApiDispatch.exec(changingCtx, 'wait_screen', { contains: 'A', timeout_ms: 100 });
     check('wait_screen: 画面変化後に一致', delayed.found === true && advanced);
-    check('wait_screen: 一致とタイムアウト', found.found === true && absent.found === false && absent.elapsed_ms >= 10 && !('text' in found) && !('text' in absent));
+    check('wait_screen: 一致とタイムアウトで本文を返す', found.found === true && absent.found === false && absent.elapsed_ms >= 10 && JSON.stringify(found.lines) === JSON.stringify(text.lines) && JSON.stringify(absent.lines) === JSON.stringify(text.lines));
   }
 
   // --- wait_screen_change: 変化を検出できる ---
@@ -465,6 +468,11 @@ async function main() {
             : {};
     const r = await ApiDispatch.exec(restrictedCtx, cmd, args);
     check(`restricted ${cmd}: 理由付きエラー`, r.error === ApiDispatch.RESTRICTED_ERROR, JSON.stringify(r));
+  }
+
+  for (const cmd of ['type_text', 'paste_text']) {
+    const r = await ApiDispatch.exec(restrictedCtx, cmd, { text: 'X' });
+    check(`restricted ${cmd}: 入力し本文を返さない`, !!r.ok && (r.typed === 1 || r.sent === 1) && !('lines' in r) && typeof r.note === 'string');
   }
 
   const restrictedAllowed = ['status', 'type_text', 'screen_signature', 'save_state', 'load_state', 'list_disks'];

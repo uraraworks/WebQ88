@@ -51,10 +51,10 @@ PC88Behavior のクリーンルーム規律（PC88Behavior リポジトリの `C
 | API | 互換モード | 制限モード |
 |---|---|---|
 | `status`（起動状態・モード・読み込んだ ROM の名前） | ○ | ○ |
-| `reset` / `type_text` / `key` / `key_sequence` | ○ | ○ |
+| `reset` / `type_text` / `paste_text` / `key` / `key_sequence` | ○ | ○（文字入力後の画面本文は返さない） |
 | `insert_disk` / `eject_disk` / `list_disks`（名前・サイズ・書き込みの有無のみ） | ○ | ○ |
 | `get_disk_image`（ディスクの中身を返す） | ○ | × |
-| `find_text` / `wait_screen`（存在を反復照会すると本文を復元できるため拒否） | ○ | × |
+| `find_text` / `wait_screen`（互換モードでは一致行 / 最後の画面本文も返す） | ○ | × |
 | `screen_text`（テキスト画面の本文。`columns`/`rows` つき。40桁・20/25行に追従） | ○ | × |
 | `screenshot`（画像） | ○ | × |
 | `screen_signature`（行数・非空白文字数・SHA-256・桁数・行数） | ○ | ○ |

@@ -107,7 +107,7 @@ becomes unavailable (see [docs/API-DESIGN.md](docs/API-DESIGN.md) for the reason
 
 `mcp/` contains an MCP server that lets AI agents operate WebQ88. Open the page
 in a browser with `?bridge=1` and it connects to the MCP server on your machine,
-allowing key input, text input, screen state queries, inserting and ejecting disks, and more. `find_text` and `wait_screen` search or wait for text without returning screen contents; they are unavailable in restricted mode. For setup, see
+allowing key input, text input, screen state queries, inserting and ejecting disks, and more. With a user-supplied ROM, screen text, screenshots, and memory cannot be returned to AI to protect clean-room separation; key input and some disk operations remain available. For setup, see
 [mcp/README.md](mcp/README.md); for the list of commands and which are available,
 see [docs/AUTOMATION.md](docs/AUTOMATION.md).
 

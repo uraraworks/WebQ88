@@ -715,7 +715,7 @@
               <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
               を参照してください。
             </p>
-            <p><code>find_text</code> と <code>wait_screen</code> は画面本文を返さず文字列の検索・出現待ちを行います。制限モードでは使えません。</p>
+            <p>互換ROMでは <code>find_text</code> と <code>wait_screen</code> が画面本文も返します。利用者ROMを読み込んだときは、クリーンルームを守るため、画面の文字・画面写真・メモリをAIに返す機能は使えません。キー入力やディスク操作の一部は使えます。</p>
             <p><code>paste_text</code> は ASCII・半角カナを送信し、<code>send_keys</code> はキーの組み合わせを送ります。<code>list_states</code> はステートを一覧表示し、<code>list_disk_library</code> はライブラリを一覧表示、<code>export_disk</code> はドライブのイメージを取得、<code>persist_disks</code> はライブラリディスクの変更を即時保存します。</p>
             <p>
               <strong>制限モード</strong>(利用者ROMで起動しているとき)では、画面本文の取得、スクリーンショット、
@@ -740,7 +740,7 @@
               <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
               for the command list.
             </p>
-            <p><code>find_text</code> and <code>wait_screen</code> search or wait for text without returning screen contents. They are unavailable in restricted mode.</p>
+            <p>With the compatible ROM, <code>find_text</code> and <code>wait_screen</code> also return screen text. When a user-supplied ROM is loaded, features that return screen text, screenshots, or memory to AI are unavailable to protect clean-room separation. Key input and some disk operations remain available.</p>
             <p><code>paste_text</code> sends ASCII and half-width kana; <code>send_keys</code> sends key combinations. <code>list_states</code> lists states, <code>list_disk_library</code> lists the library, <code>export_disk</code> retrieves a drive image, and <code>persist_disks</code> immediately saves library disk changes.</p>
             <p>
               In <strong>restricted mode</strong> (when running with your own ROMs), some commands are

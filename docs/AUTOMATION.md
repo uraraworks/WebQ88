@@ -49,10 +49,10 @@ ws.send(JSON.stringify({ id: 1, cmd: 'status', args: {} }));
 | `reset` | — | ○ | ○ | 同一Workerで再起動(掛け金は保持) |
 | `key` | `{code, action:'down'\|'up'\|'tap'}` | ○ | ○ | `code`はRETROK値 |
 | `key_sequence` | `{steps:[{code,action,waitFrames?}]}` | ○ | ○ | 各ステップ後に`waitFrames`(既定4)分進む |
-| `type_text` | `{text}` | ○ | ○ | ASCII英数字・記号・空白・`\n`のみ |
+| `type_text` / `paste_text` | `{text}` | ○ | ○ | 入力後の画面本文 `lines` は互換モードのみ。制限モードでは省略理由を `note` で返す |
 | `screen_signature` | — | ○ | ○ | `{rows, nonBlankChars, sha256, columns, screenRows}`。本文は返さない。`columns`/`screenRows`は現在の桁数・行数 |
-| `find_text` | `{text, all?}` | ○ | × | 行内の一致位置 `matches`（0始まりの `row`, `col`）と `count`。`all` は既定 false |
-| `wait_screen` | `{contains, timeout_ms?}` | ○ | × | 出現の有無 `found` と経過 `elapsed_ms`。既定10000ms、最大60000ms |
+| `find_text` | `{text, all?}` | ○ | × | 一致位置と行本文 `matches`（0始まりの `row`, `col`, `text`）と `count`。`all` は既定 false |
+| `wait_screen` | `{contains, timeout_ms?}` | ○ | × | 出現の有無 `found`、経過 `elapsed_ms`、最後の画面本文 `lines`。既定10000ms、最大60000ms |
 | `screen_text` | — | ○ | × | `{lines, columns, rows}`。行ごとの文字列(半角カナ以外の非ASCIIは`\xNN`)。40桁・20行/25行モードに追従(40桁は間の空白バイトを除いた40文字) |
 | `screenshot` | — | ○ | × | `{format:'png', width, height, base64}` |
 | `wait_screen_change` | `{timeoutFrames}` | ○ | ○ | 署名変化を検出したら返る |

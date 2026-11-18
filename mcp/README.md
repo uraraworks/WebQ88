@@ -48,7 +48,7 @@ npm run dev -- --port 5188 --strictPort
 ブリッジのポートを変えたい場合は、サーバー側は環境変数 `WEBQ88_BRIDGE_PORT`、
 ページ側は `?bridge=<ポート番号>` で指定します(既定 3188。WebX68k の 3099 とは別ポート)。
 
-`find_text` は `text` と任意の `all` を受け、0始まりの `matches`（`row`, `col`）と `count` を返します。`wait_screen` は `contains` と任意の `timeout_ms`（既定10000、最大60000）を受け、`found` と `elapsed_ms` を返します。どちらも行内で大文字小文字を区別し、半角カナに対応します。
+`find_text` は0始まりの `matches`（`row`, `col`, 一致行の `text`）と `count` を返します。`wait_screen` は `found`、`elapsed_ms` と最後の画面本文 `lines` を返します（既定10000ms、最大60000ms）。どちらも互換ROMでのみ使え、行内で大文字小文字を区別し、半角カナに対応します。
 
 ## 提供するツール
 
@@ -60,13 +60,13 @@ npm run dev -- --port 5188 --strictPort
 | `reset` | 同一Workerでコアを再起動(掛け金は保持) | ○ |
 | `key` | キー1つを押す/離す/タップ | ○ |
 | `key_sequence` | キー操作の並びを順番に実行 | ○ |
-| `type_text` | ASCII文字列をキー入力として送る(改行=Enter) | ○ |
-| `paste_text` | ASCII・半角カナを送信し、対応外の文字を一覧で返す | ○ |
+| `type_text` | ASCII文字列をキー入力として送る(改行=Enter)。互換モードでは入力後の画面本文も返す | ○（本文なし） |
+| `paste_text` | ASCII・半角カナを送信し、対応外の文字と、互換モードでは入力後の画面本文を返す | ○（本文なし） |
 | `send_keys` | `SHIFT+F1` や `CTRL+C` などのキーの組み合わせを送る | ○ |
 | `mouse_move` | マウスを相対移動（端子の機器がマウスのときだけ） | ○ |
 | `mouse_button` | マウスの左右ボタンを押す・離す・クリック（同上） | ○ |
 | `screen_signature` | 画面の署名(行数・非空白文字数・sha256)。本文は返さない | ○ |
-| `find_text` / `wait_screen` | 文字列の位置・件数 / 出現と経過時間。本文は返さない。存在の反復照会で本文を復元できるため拒否 | ×(エラー) |
+| `find_text` / `wait_screen` | 位置・件数と一致行 / 出現と経過時間と最後の画面本文を返す | ×(エラー) |
 | `screen_text` | テキスト画面の本文を行配列で取得 | ×(エラー) |
 | `screenshot` | 画面をPNG画像で取得 | ×(エラー) |
 | `wait_screen_change` | 画面の署名が変化するまで待つ | ○ |
