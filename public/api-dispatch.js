@@ -66,17 +66,27 @@
   var SHIFT_SETTLE_FRAMES = 2;
 
   async function pressAndRelease(ctx, code, shift) {
-    if (shift) {
-      ctx.press(RETROK_LSHIFT);
-      await ctx.driveFrames(SHIFT_SETTLE_FRAMES);
-    }
-    ctx.press(code);
-    await ctx.driveFrames(HOLD_FRAMES);
-    ctx.release(code);
-    await ctx.driveFrames(GAP_FRAMES);
-    if (shift) {
-      ctx.release(RETROK_LSHIFT);
-      await ctx.driveFrames(SHIFT_SETTLE_FRAMES);
+    var keyHeld = false, shiftHeld = false;
+    try {
+      if (shift) {
+        ctx.press(RETROK_LSHIFT);
+        shiftHeld = true;
+        await ctx.driveFrames(SHIFT_SETTLE_FRAMES);
+      }
+      ctx.press(code);
+      keyHeld = true;
+      await ctx.driveFrames(HOLD_FRAMES);
+      ctx.release(code);
+      keyHeld = false;
+      await ctx.driveFrames(GAP_FRAMES);
+      if (shift) {
+        ctx.release(RETROK_LSHIFT);
+        shiftHeld = false;
+        await ctx.driveFrames(SHIFT_SETTLE_FRAMES);
+      }
+    } finally {
+      if (keyHeld) ctx.release(code);
+      if (shiftHeld) ctx.release(RETROK_LSHIFT);
     }
   }
 
@@ -391,6 +401,28 @@
             await pressAndRelease(ctx, stepInfo.code, stepInfo.shift);
           }
           return { ok: true, typed: text.length };
+        }
+
+        case 'paste_text': {
+          if (typeof args.text !== 'string') return { error: 'invalid args: text must be a string' };
+          var skipped = [], sent = 0, kanaHeld = false;
+          try {
+            for (var ch of args.text) {
+              var kana = CharMap.kanaToKeySteps(ch);
+              var pasteStep = kana || charToKeySteps(ch.codePointAt(0));
+              if (!pasteStep) { skipped.push(ch); continue; }
+              if (!!kana !== kanaHeld) {
+                if (kana) ctx.press(311); else ctx.release(311);
+                kanaHeld = !!kana;
+                await ctx.driveFrames(SHIFT_SETTLE_FRAMES);
+              }
+              await pressAndRelease(ctx, pasteStep.code, pasteStep.shift);
+              sent++;
+            }
+          } finally {
+            if (kanaHeld) ctx.release(311);
+          }
+          return { ok: true, sent: sent, skipped: skipped };
         }
 
         case 'screen_signature': {

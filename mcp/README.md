@@ -50,7 +50,7 @@ npm run dev -- --port 5188 --strictPort
 
 ## 提供するツール
 
-`docs/AUTOMATION.md` のコマンド一覧と1対1で対応します。
+自動操作APIを使うツールです。
 
 | ツール | 内容 | 制限モードでの扱い |
 | --- | --- | --- |
@@ -59,6 +59,8 @@ npm run dev -- --port 5188 --strictPort
 | `key` | キー1つを押す/離す/タップ | ○ |
 | `key_sequence` | キー操作の並びを順番に実行 | ○ |
 | `type_text` | ASCII文字列をキー入力として送る(改行=Enter) | ○ |
+| `paste_text` | ASCII・半角カナを送信し、対応外の文字を一覧で返す | ○ |
+| `send_keys` | `SHIFT+F1` や `CTRL+C` などのキーの組み合わせを送る | ○ |
 | `screen_signature` | 画面の署名(行数・非空白文字数・sha256)。本文は返さない | ○ |
 | `screen_text` | テキスト画面の本文を行配列で取得 | ×(エラー) |
 | `screenshot` | 画面をPNG画像で取得 | ×(エラー) |

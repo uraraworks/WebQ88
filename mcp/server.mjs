@@ -101,6 +101,7 @@ async function waitForClient(timeoutMs = CLIENT_WAIT_MS) {
 }
 
 async function sendCommand(cmd, args = {}) {
+  const timeoutMs = cmd === 'paste_text' ? Math.max(REQUEST_TIMEOUT_MS, 5000 + Array.from(args.text || '').length * 1000) : REQUEST_TIMEOUT_MS;
   if (!(await waitForClient())) {
     throw new Error('WebQ88 のブラウザタブが接続されていません');
   }
@@ -112,8 +113,8 @@ async function sendCommand(cmd, args = {}) {
     const id = nextRequestId++;
     const timer = setTimeout(() => {
       pending.delete(id);
-      reject(new Error(`コマンド ${cmd} がタイムアウトしました (${REQUEST_TIMEOUT_MS}ms)`));
-    }, REQUEST_TIMEOUT_MS);
+      reject(new Error(`コマンド ${cmd} がタイムアウトしました (${timeoutMs}ms)`));
+    }, timeoutMs);
     pending.set(id, { resolve, reject, timer });
     activeClient.send(JSON.stringify({ id, cmd, args }));
   });
@@ -218,6 +219,38 @@ server.tool(
     text: z.string().describe('入力する文字列(ASCII範囲のみ)'),
   },
   async ({ text }) => callDispatch('type_text', { text })
+);
+
+server.tool(
+  'paste_text',
+  'Paste ASCII and half-width kana as keyboard input. Unsupported characters are skipped and returned. Newlines are sent as Return.',
+  { text: z.string().describe('Text to paste.') },
+  async ({ text }) => callDispatch('paste_text', { text })
+);
+
+server.tool(
+  'send_keys',
+  'Send a single key combination, such as "SHIFT+F1", "CTRL+C", or "RETURN".',
+  { keys: z.string().describe('A single key combination.') },
+  async ({ keys }) => {
+    const names = keys.toUpperCase().split('+').map((name) => name.trim());
+    const modifiers = { SHIFT: 304, CTRL: 305, CONTROL: 305, ALT: 308, GRPH: 308 };
+    const special = { RETURN: 13, ENTER: 13, ESC: 27, ESCAPE: 27, TAB: 9, SPACE: 32, BACKSPACE: 8, BS: 8, DELETE: 127, INSERT: 277, HOME: 278, UP: 273, DOWN: 274, LEFT: 276, RIGHT: 275, STOP: 318, COPY: 316 };
+    const main = names.pop();
+    const mods = names.map((name) => modifiers[name]);
+    let code = special[main];
+    if (code === undefined && /^[A-Z0-9]$/.test(main)) code = main.toLowerCase().charCodeAt(0);
+    if (code === undefined && /^F[1-5]$/.test(main)) code = 281 + Number(main.slice(1));
+    if (code === undefined || mods.some((value) => value === undefined) || new Set(mods).size !== mods.length) {
+      return { isError: true, content: [{ type: 'text', text: 'Invalid key combination: ' + keys }] };
+    }
+    const steps = [
+      ...mods.map((value) => ({ code: value, action: 'down', waitFrames: 2 })),
+      { code, action: 'tap', waitFrames: 4 },
+      ...mods.reverse().map((value) => ({ code: value, action: 'up', waitFrames: 2 })),
+    ];
+    return callDispatch('key_sequence', { steps });
+  }
 );
 
 server.tool(

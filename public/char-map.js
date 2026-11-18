@@ -65,11 +65,25 @@
     return null;
   }
 
+  // JISかな配列の文字と物理キー。小書き文字と句読点はSHIFTを使う。
+  var kanaKeys = {};
+  function addKana(chars, keys, shift) {
+    for (var i = 0; i < chars.length; i++) kanaKeys[chars[i]] = { code: keys.charCodeAt(i), shift: shift };
+  }
+  addKana('ﾇﾌｱｳｴｵﾔﾕﾖﾜﾎﾍｰ', '1234567890-^\\', false);
+  addKana('ﾀﾃｲｽｶﾝﾅﾆﾗｾﾞﾟ', 'qwertyuiop@[', false);
+  addKana('ﾁﾄｼﾊｷｸﾏﾉﾘﾚｹﾑ', 'asdfghjkl;:]', false);
+  addKana('ﾂｻｿﾋｺﾐﾓﾈﾙﾒﾛ', 'zxcvbnm,./_', false);
+  addKana('ｧｩｪｫｬｭｮｦ', '34567890', true);
+  addKana('ｨｯ｡｢｣､･', 'ez.[ ],/'.replace(' ', ''), true);
+  function kanaToKeySteps(ch) { return kanaKeys[ch] || null; }
+
   var api = {
     RETROK_LSHIFT: RETROK_LSHIFT,
     RETROK_RETURN: RETROK_RETURN,
     SHIFTED_CHARS: SHIFTED_CHARS,
     charToKeySteps: charToKeySteps,
+    kanaToKeySteps: kanaToKeySteps,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

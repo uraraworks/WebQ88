@@ -38,6 +38,13 @@
             </div>
             <div id="menu-input" class="toolbar-submenu" data-submenu="input" hidden>
               <div class="toolbar-submenu-heading"><button type="button" data-menu-back>← 戻る</button><strong>入力</strong></div>
+              <button id="paste-open" type="button">テキストを貼り付け</button>
+              <div id="paste-panel" hidden>
+                <label for="paste-text">送信するテキスト</label>
+                <textarea id="paste-text" rows="4"></textarea>
+                <div><button id="paste-send" type="button">送信</button> <button id="paste-cancel" type="button">キャンセル</button></div>
+                <div id="paste-status" role="status"></div>
+              </div>
               <button id="input-settings" type="button">ゲームパッド・キー割当</button>
               <label><input type="checkbox" id="numpad-alt" /> テンキー代替</label>
             </div>

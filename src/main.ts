@@ -255,6 +255,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   hostMapping = initInputControls(keyboard.createKeySource);
 
   initVirtualKeyboard(keyboard.setVirtualKey, display.update);
+  initPasteUi((text) => proxy.execApi('paste_text', { text }));
 
   canvas.addEventListener('click', () => canvas.focus());
 
@@ -293,3 +294,46 @@ if (new URLSearchParams(window.location.search).has('bridge') || (new URLSearchP
   document.querySelector<HTMLButtonElement>('#startup-button')!.addEventListener('click', () => start(), { once: true });
 }
 document.querySelector<HTMLElement>('#build-time')!.textContent = `Build: ${__BUILD_TIME__}`;
+
+function initPasteUi(paste: (text: string) => Promise<Record<string, unknown>>): void {
+  const panel = document.querySelector<HTMLElement>('#paste-panel')!;
+  const input = document.querySelector<HTMLTextAreaElement>('#paste-text')!;
+  const send = document.querySelector<HTMLButtonElement>('#paste-send')!;
+  const cancel = document.querySelector<HTMLButtonElement>('#paste-cancel')!;
+  const status = document.querySelector<HTMLElement>('#paste-status')!;
+  let sending = false, cancelled = false;
+  document.querySelector<HTMLButtonElement>('#paste-open')!.addEventListener('click', () => {
+    panel.hidden = false; input.focus();
+  });
+  cancel.addEventListener('click', () => {
+    if (sending) { cancelled = true; cancel.disabled = true; }
+    else panel.hidden = true;
+  });
+  send.addEventListener('click', () => {
+    if (sending) return;
+    void (async () => {
+      sending = true; cancelled = false; send.disabled = true; input.disabled = true;
+      cancel.textContent = '中止';
+      const chars = Array.from(input.value.replace(/\r\n?/g, '\n'));
+      const skipped: string[] = [];
+      let sent = 0;
+      status.textContent = `送信済み ${sent} / ${chars.length}`;
+      try {
+        for (const ch of chars) {
+          if (cancelled) break;
+          const result = await paste(ch);
+          if (result.error) throw new Error(String(result.error));
+          if (Array.isArray(result.skipped)) skipped.push(...result.skipped as string[]);
+          sent += Number(result.sent) || 0;
+          status.textContent = `送信済み ${sent} / ${chars.length}`;
+        }
+        status.textContent += cancelled ? '（中止）' : '（完了）';
+        if (skipped.length) status.textContent += `\n送れなかった文字: ${skipped.join('、')}`;
+      } catch (error) {
+        status.textContent += `\n送信に失敗しました: ${String(error)}`;
+      } finally {
+        sending = false; send.disabled = false; input.disabled = false; cancel.disabled = false; cancel.textContent = 'キャンセル';
+      }
+    })();
+  });
+}
