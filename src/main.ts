@@ -17,7 +17,7 @@ import { attachKeyboard } from './keyboard';
 import { initVirtualKeyboard } from './virtual-keyboard';
 import { initInputControls } from './input-controls';
 import { convertRgb565ToImageData } from './rgb565';
-import { Bridge, resolveBridgeUrl } from './bridge';
+import { Bridge, resolveBridgeUrl, createBridgeHost } from './bridge';
 import { registerUrl } from './disk-source';
 import { initStateUi } from './state-ui';
 
@@ -285,10 +285,11 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
 
   canvas.addEventListener('click', () => canvas.focus());
 
-  // 自動操作API(docs/API-DESIGN.md)の入口。可否判定・コマンド実装は一切ここに
-  // 持たず、Worker側(public/api-dispatch.js)へ転送するだけにする
-  // (第5節: メインスレッド側はコマンド一覧の複製を持たない)。
-  const bridge = new Bridge({ exec: (cmd, args) => proxy.execApi(cmd, args) });
+  // 自動操作API(docs/API-DESIGN.md)の入口。原則は Worker側(public/api-dispatch.js)へ
+  // 転送するだけ(第5節)。例外として、メインスレッドにしか無い IndexedDB を扱う
+  // list_states(UIスロット分の合流)・load_state("ui:N")・list_disk_library・persist_disks
+  // だけは createBridgeHost(src/bridge.ts)が受け持つ。バイト列は外へ返さない。
+  const bridge = new Bridge(createBridgeHost(proxy, diskPanel));
   const bridgeUrl = resolveBridgeUrl(window.location.search);
   if (bridgeUrl) {
     bridge.connect(bridgeUrl);

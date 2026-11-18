@@ -68,10 +68,14 @@ npm run dev -- --port 5188 --strictPort
 | `wait_screen_signature` | 画面の署名が指定値に一致するまで待つ | ○ |
 | `read_memory` / `write_memory` | ゲストのメモリ領域の読み書き | ×(エラー) |
 | `save_state` / `load_state` | 実行状態の保存・復元(中身は返さずサイズのみ) | ○ |
+| `list_states` | WorkerとUIのステートの日時・サイズ・ROM構成を一覧 | ○ |
 | `get_state_blob` | 保存済みステートの中身(base64) | ×(エラー) |
 | `insert_disk` | D88イメージを挿入(UIの保存対象外) | ○ |
 | `eject_disk` | ディスクを排出(空でも成功、hadDiskで区別) | ○ |
 | `list_disks` | ドライブの状態一覧(中身は返さない) | ○ |
+| `list_disk_library` | ブラウザのディスクライブラリを一覧 | ○ |
+| `persist_disks` | ライブラリディスクの変更を即時保存(API挿入分は対象外) | ○ |
+| `export_disk` | `fd1` / `fd2` のイメージをbase64で取得 | ×(エラー) |
 | `get_disk_image` | 現在のイメージ全体(base64) | ×(エラー) |
 
 「×(エラー)」は、`isError: true` とともに `public/api-dispatch.js` が返した
@@ -102,3 +106,7 @@ node test-client.mjs --restricted  # 制限モード想定(利用者ROムとし�
 `docs/AUTOMATION.md` のコマンド一覧と `list_tools` の一致、および主要ツールの
 呼び出し結果を検査します。ブラウザタブは事前に手動(またはBrowser pane等)で
 開いておく必要があります(このスクリプト自体はブラウザを起動しません)。
+
+`load_state` は `ui:1`〜`ui:3` でUIのスロットも読めます。保存時と現在のROM構成またはディスクが違う場合はUIから確認して読み込んでください。利用者ROMのステートは互換ROMだけのセッションには読み込めません。
+
+WebNP2の `put_file` / `get_file` はDOSの転送フロッピーとCOPYに依存するため実装していません。

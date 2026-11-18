@@ -87,6 +87,7 @@ var audioPacing = false;
 
 // --- 自動操作API(docs/API-DESIGN.md)関連の状態 ---
 var pollCount = 0; // retro_input_poll が呼ばれた回数の累計(driveFramesの待ち合わせに使う)
+var stateMetadata = Object.create(null);
 var stateSlots = Object.create(null); // save_state/load_state のスロット(Worker内メモリのみ。永続化しない)
 
 // --- 出どころ制限(docs/API-DESIGN.md 第3節)の状態 ---
@@ -562,11 +563,13 @@ function buildApiCtx() {
         var ok = M._retro_serialize(ptr, size);
         if (!ok) throw new Error('retro_serialize failed');
         stateSlots[slot] = M.HEAPU8.slice(ptr, ptr + size);
+        stateMetadata[slot] = { slot: slot, savedAt: Date.now(), size: size, roms: stateRomInfo.map(function (rom) { return { role: rom.role, name: rom.name, origin: rom.origin }; }) };
         return { size: size };
       } finally {
         M._free(ptr);
       }
     },
+    listStates: function () { return Object.keys(stateMetadata).map(function (slot) { return stateMetadata[slot]; }); },
     loadState: function (slot) {
       if (!moduleInstance) throw new Error('not booted');
       var saved = stateSlots[slot];

@@ -584,7 +584,7 @@ export class DiskPanel {
    * 変更のあるドライブを今すぐ保存する(隠れる・離脱・ROM再起動/リセットの前の保険)。
    * 直前に poll して、まだ周期で検出していない書き込みも拾う。
    */
-  async flushAll(): Promise<void> {
+  async flushAll(strict = false): Promise<void> {
     if (!this.coreReady) return;
     if (this.opDepth === 0) {
       const res = await this.diskRequest('poll');
@@ -600,7 +600,9 @@ export class DiskPanel {
         }
       }
     }
-    await Promise.all([0, 1].map((d) => (this.slots[d].dirty && this.slots[d].key !== null ? this.persist(d) : Promise.resolve(false))));
+    const targets = [0, 1].filter(d => this.slots[d].dirty && this.slots[d].key !== null);
+    const results = await Promise.all(targets.map(d => this.persist(d)));
+    if (strict && results.some(ok => !ok)) throw new Error('ディスクの保存に失敗しました');
   }
 
   // ---- 起動時の復元 ----

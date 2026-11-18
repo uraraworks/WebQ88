@@ -1,3 +1,8 @@
+import { getState, listStates } from './state-store';
+import { listDisks } from './disk-store';
+import type { CoreProxy } from './core-proxy';
+import type { DiskPanel } from './disks';
+
 // src/bridge.ts
 //
 // WebSocket ブリッジ: 外部ツール(次ステップのMCPサーバー等)から WebQ88 を
@@ -106,4 +111,42 @@ export class Bridge {
   async exec(cmd: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
     return this.host.exec(cmd, args);
   }
+}
+
+/** IndexedDB とUI側の操作をWorkerのAPIに合流させる。 */
+export function createBridgeHost(proxy: CoreProxy, panel: DiskPanel): BridgeHost {
+  return { async exec(cmd, args) {
+    try {
+      if (cmd === 'list_states') {
+        const result = await proxy.execApi(cmd, args);
+        if (result.error) return result;
+        const states = (await listStates()).filter(s => /^webq88-slot-[1-3]$/.test(s.key)).map(s => ({
+          slot: `ui:${s.key.slice('webq88-slot-'.length)}`, savedAt: s.savedAt, size: s.bytes.byteLength,
+          roms: s.info.roms.map(({ role, name, origin }) => ({ role, name, origin })),
+        }));
+        return { ok: true, states: [...(result.states as unknown[]), ...states] };
+      }
+      if (cmd === 'load_state' && typeof args.slot === 'string' && args.slot.startsWith('ui:')) {
+        if (!/^ui:[1-3]$/.test(args.slot)) throw new Error('不正なUIスロットです');
+        const saved = await getState(Number(args.slot.slice(3)));
+        if (!saved) throw new Error('保存データがありません');
+        const current = await proxy.stateRequest('info');
+        if (!current.ok || !current.info) throw new Error('現在の構成を取得できませんでした');
+        if (saved.info.roms.some(rom => rom.origin === 'user') && !current.info.roms.some(rom => rom.origin === 'user'))
+          throw new Error('利用者ROMで保存したステートは、利用者ROMで起動したときだけ読み込めます');
+        if (JSON.stringify(saved.info) !== JSON.stringify(current.info)) throw new Error('保存時と現在のROM構成またはディスクが異なります。UIから確認して読み込んでください');
+        await panel.flushAll();
+        const result = await proxy.stateRequest('load', saved.bytes);
+        if (!result.ok) throw new Error(result.error ?? 'ステートを復元できませんでした');
+        return { ok: true, slot: args.slot };
+      }
+      if (cmd === 'list_disk_library') {
+        const disks = (await listDisks()).map(({ sourceKey, name, bytes, savedAt, displayName, url, archiveEntry, sourceOrder, lastImages }) =>
+          ({ sourceKey, name, size: bytes.byteLength, savedAt, displayName, url, archiveEntry, sourceOrder, lastImages }));
+        return { ok: true, disks };
+      }
+      if (cmd === 'persist_disks') { await panel.flushAll(true); return { ok: true }; }
+      return await proxy.execApi(cmd, args);
+    } catch (err) { return { error: (err as Error).message }; }
+  } };
 }

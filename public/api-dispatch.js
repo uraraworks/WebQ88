@@ -518,9 +518,13 @@
 
         case 'save_state': {
           var saveSlot = args.slot !== undefined ? String(args.slot) : 'default';
+          if (/^ui:/.test(saveSlot)) return { error: 'ui: is reserved for UI slots' };
           var result = ctx.saveState(saveSlot);
           return { ok: true, slot: saveSlot, size: result.size };
         }
+
+        case 'list_states':
+          return { ok: true, states: ctx.listStates() };
 
         case 'load_state': {
           var loadSlot = args.slot !== undefined ? String(args.slot) : 'default';

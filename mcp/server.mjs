@@ -333,11 +333,18 @@ server.tool(
 
 server.tool(
   'load_state',
-  '保存済みのステートを復元する。保存済みでなければエラーになる。',
+  '保存済みのステートを復元する。UIのスロットは ui:1〜ui:3 で指定する。構成が異なるUIスロットはUIでの確認が必要。',
   {
     slot: z.string().optional().describe('復元する保存枠の名前(既定 "default")'),
   },
   async ({ slot }) => callDispatch('load_state', { slot })
+);
+
+server.tool(
+  'list_states',
+  'Worker内とUIの保存済みステートの名前、日時、サイズ、ROM構成を一覧する。',
+  {},
+  async () => callDispatch('list_states')
 );
 
 server.tool(
@@ -372,6 +379,27 @@ server.tool(
   'ドライブの状態を一覧する。ディスクの中身は返さない。',
   {},
   async () => callDispatch('list_disks')
+);
+
+server.tool(
+  'list_disk_library',
+  'ブラウザに保存されたディスクの名前、サイズ、保存日時などを一覧する。',
+  {},
+  async () => callDispatch('list_disk_library')
+);
+
+server.tool(
+  'persist_disks',
+  '挿入中のライブラリディスクの変更をブラウザへ直ちに保存する。',
+  {},
+  async () => callDispatch('persist_disks')
+);
+
+server.tool(
+  'export_disk',
+  '指定スロットのディスクイメージ全体をbase64で取得する。制限モードでは拒否される。',
+  { slot: z.enum(['fd1', 'fd2']).describe('対象スロット') },
+  async ({ slot }) => callDispatch('get_disk_image', { drive: slot === 'fd1' ? 1 : 2 })
 );
 
 server.tool(

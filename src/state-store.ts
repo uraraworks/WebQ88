@@ -41,3 +41,13 @@ export async function putState(slot: number, state: Omit<StoredState, 'key'>): P
     tx.onabort = () => reject(tx.error ?? new Error('保存が中断されました'));
   });
 }
+
+/** 保存済みUIスロットのメタデータを取得する。 */
+export async function listStates(): Promise<StoredState[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('states', 'readonly').objectStore('states').getAll();
+    req.onsuccess = () => resolve(req.result as StoredState[]);
+    req.onerror = () => reject(req.error ?? new Error('一覧を取得できませんでした'));
+  });
+}
