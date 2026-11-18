@@ -73,6 +73,7 @@ var lampAcc = 0; // 直近のframe送信以降に点いたアクセスランプ(
 // 安定して出ない構成があったため)、実測で効くと確認済みの2を採用する。
 // 0 を渡すと保留を無効化し、対策前の即時反映(Setと同じ)に戻る(陰性対照用)。
 var keyHoldTracker = new KeyHoldTracker(2);
+var executedFrames = 0;
 var lastVideoFrame = null; // {width,height,pitch,buffer:Uint8Array}
 var lastFrameForApi = null; // 画面配信用とは別に保持する最新フレーム(screenshot用。tickでnull化しない)
 var fps = FALLBACK_FPS;
@@ -223,6 +224,7 @@ function startLoop() {
     var ran = 0;
     while (accumulatedMs >= frameDurationMs && ran < MAX_CATCHUP_FRAMES) {
       moduleInstance._retro_run();
+      executedFrames++;
       lampAcc |= disks.lampMask();
       accumulatedMs -= frameDurationMs;
       ran++;
@@ -245,7 +247,7 @@ function startLoop() {
       lastVideoFrame = null;
       var bufferCopy = f.buffer.slice().buffer;
       postMessage(
-        { type: 'frame', width: f.width, height: f.height, pitch: f.pitch, buffer: bufferCopy, lamp: lampAcc },
+        { type: 'frame', width: f.width, height: f.height, pitch: f.pitch, buffer: bufferCopy, lamp: lampAcc, executedFrames: executedFrames },
         [bufferCopy],
       );
       lampAcc = 0;

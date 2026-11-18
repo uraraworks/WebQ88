@@ -39,6 +39,7 @@ the bottom of the screen.
 | `bridge=1` | Connect to the WebSocket bridge for AI agents (see "MCP support") |
 | `aspect=4:3` / `aspect=native` | Set the display aspect ratio |
 | `filter=sharp` / `filter=nearest` | Set the display filter |
+| `perf=1` | Show the performance overlay for this session |
 | `volume=0`–`100` | Set the volume |
 | `mute=0` / `mute=1` | Unmute / mute |
 | `driveSound=0` / `driveSound=1` | Disable / enable drive sounds |

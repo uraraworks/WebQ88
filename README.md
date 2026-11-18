@@ -37,6 +37,7 @@ WebQ88 の特徴を紹介する紹介ページは
 | `bridge=1` | AI エージェント用の WebSocket ブリッジにつなぐ（→「MCP対応」） |
 | `aspect=4:3` / `aspect=native` | 表示比率を指定 |
 | `filter=sharp` / `filter=nearest` | 画面の補間方法を指定 |
+| `perf=1` | 性能表示を今回だけ有効にする |
 | `volume=0`〜`100` | 音量を指定 |
 | `mute=0` / `mute=1` | ミュートを解除 / 有効化 |
 | `driveSound=0` / `driveSound=1` | ドライブ動作音を無効化 / 有効化 |

@@ -70,6 +70,25 @@ const statusEl = document.querySelector<HTMLDivElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#screen')!;
 const ctx = canvas.getContext('2d')!;
 const display = initDisplay(canvas);
+const perfToggle = document.querySelector<HTMLInputElement>('#perf-toggle')!;
+try { perfToggle.checked = localStorage.getItem('webq88-perf') === 'true'; } catch { /* 既定値を使う */ }
+if (urlParams.get('perf') === '1') perfToggle.checked = true;
+const perfOverlay = document.createElement('div'); perfOverlay.className = 'perf-overlay';
+document.querySelector<HTMLElement>('#screen-stage')!.append(perfOverlay);
+const updatePerfVisibility = () => { perfOverlay.hidden = !perfToggle.checked; };
+perfToggle.addEventListener('change', () => { updatePerfVisibility(); try { localStorage.setItem('webq88-perf', String(perfToggle.checked)); } catch { /* 保存不可 */ } });
+updatePerfVisibility();
+let perfFrames = 0, perfCoreFrames = 0, perfLastCoreFrames = 0, perfHz = 0, perfQueue: number | null = null;
+let perfLastTime = performance.now(), perfLastFrameTime = 0;
+setInterval(() => {
+  const now = performance.now(), elapsed = (now - perfLastTime) / 1000;
+  const emuFps = Math.max(0, perfCoreFrames - perfLastCoreFrames) / elapsed;
+  const lines = [`描画 ${Math.round(perfFrames / elapsed)} FPS`];
+  if (perfHz > 0) lines.push(`実行 ${emuFps.toFixed(1)} / ${perfHz.toFixed(1)} FPS (${(emuFps / perfHz * 100).toFixed(1)}%)`);
+  if (perfQueue !== null && now - perfLastFrameTime < 1000) lines.push(`音声キュー ${(perfQueue * 1000).toFixed(0)} ms`);
+  perfOverlay.textContent = lines.join('\n');
+  perfFrames = 0; perfLastCoreFrames = perfCoreFrames; perfLastTime = now;
+}, 1000);
 const pauseButton = document.querySelector<HTMLButtonElement>('#pause')!;
 const pauseOverlay = document.querySelector<HTMLElement>('#pause-overlay')!;
 const screenshotButton = document.querySelector<HTMLButtonElement>('#screenshot')!;
@@ -146,6 +165,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
 
   const proxy = new CoreProxy({
     onReady: ({ width, height, fps, sampleRate, mode }) => {
+      perfHz = fps;
       audio.setRate(sampleRate);
       canvas.width = width;
       canvas.height = height;
@@ -184,7 +204,8 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
       }
     },
     onAudio: buffer => audio.push(buffer),
-    onFrame: ({ width, height, pitch, buffer, lamp }) => {
+    onFrame: ({ width, height, pitch, buffer, lamp, executedFrames }) => {
+      perfFrames++; perfCoreFrames = executedFrames; perfLastFrameTime = performance.now();
       diskPanel?.setLamp(lamp);
       audio.setDriveLamp(lamp);
       if (!imageData || width !== imageData.width || height !== imageData.height) {
@@ -206,7 +227,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   });
 
   const audioPacing = !new URLSearchParams(location.search).has('bridge');
-  audio.onQueue = seconds => proxy.setAudioQueue(seconds, audioPacing);
+  audio.onQueue = seconds => { perfQueue = seconds; proxy.setAudioQueue(seconds, audioPacing); };
   let paused = false;
   pauseButton.addEventListener('click', () => {
     paused = !paused;

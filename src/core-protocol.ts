@@ -91,6 +91,7 @@ export type WorkerToMainMessage =
       buffer: ArrayBuffer;
       /** 前回のframe以降に点いたアクセスランプ(bit0=ドライブ1, bit1=ドライブ2) */
       lamp?: number;
+      executedFrames: number;
     }
   | { type: 'error'; message: string }
   | { type: 'mode'; mode: RomMode }

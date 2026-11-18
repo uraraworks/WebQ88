@@ -11,7 +11,7 @@ import type { VerifiedRom } from './compat-rom';
 export interface CoreProxyHandlers {
   onReady?: (info: { width: number; height: number; fps: number; sampleRate: number; mode: RomMode }) => void;
   onAudio?: (buffer: ArrayBuffer) => void;
-  onFrame?: (frame: { width: number; height: number; pitch: number; buffer: ArrayBuffer; lamp: number }) => void;
+  onFrame?: (frame: { width: number; height: number; pitch: number; buffer: ArrayBuffer; lamp: number; executedFrames: number }) => void;
   onError?: (message: string) => void;
   /** {type:'mode'} への応答(デバッグ用)。 */
   onMode?: (mode: RomMode) => void;
@@ -50,6 +50,7 @@ export class CoreProxy {
             pitch: msg.pitch,
             buffer: msg.buffer,
             lamp: msg.lamp ?? 0,
+            executedFrames: msg.executedFrames,
           });
           break;
         case 'error':

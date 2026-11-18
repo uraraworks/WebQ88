@@ -141,3 +141,8 @@ body.vpad-shown #player { min-width: min(340px, 100%); }
 #paste-panel:not([hidden]) { display: grid; gap: 6px; }
 #paste-text { width: 100%; box-sizing: border-box; resize: vertical; }
 #paste-status { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.perf-overlay { position: absolute; top: 4px; left: 4px; z-index: 12; padding: 4px 6px; color: #fff; background: #000b; font: 12px/1.4 monospace; white-space: pre; pointer-events: none; }
+.perf-overlay[hidden] { display: none; }
+.input-profiles > div, .input-profiles form { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.input-profiles form[hidden] { display: none; }
