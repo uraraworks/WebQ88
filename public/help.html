@@ -7,6 +7,7 @@
     <style>
       :root {
         color-scheme: light;
+        --page-bg: #101010;
         --bg: #fafafa;
         --bg-panel: #ffffff;
         --border: #d5d5d5;
@@ -18,13 +19,15 @@
         --header-bg: #0c0c0c;
         --header-text: #f2f2f2;
         --header-tagline-text: #a8a8a8;
-        --page-footer-bg: #ececec;
-        --page-footer-text: #6b6b6b;
-        --page-footer-border: rgba(0, 0, 0, 0.12);
+        --page-footer-bg: #1a1a1a;
+        --page-footer-text: #8c8c8c;
+        --page-footer-border: rgba(255, 255, 255, 0.1);
         --footer-btn-bg: #4a4a4a;
         --footer-btn-border: #202020;
         --footer-text: #e6e6e6;
         --code-bg: #f1f1f1;
+        --note-bg: #fff7e6;
+        --note-border: #e6c46a;
       }
 
       * {
@@ -33,12 +36,13 @@
 
       html {
         height: 100%;
+        background: var(--page-bg);
       }
 
       body {
         margin: 0;
         padding: 0;
-        background: var(--bg);
+        background: var(--page-bg);
         color: var(--text);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
         min-height: 100%;
@@ -63,6 +67,12 @@
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+
+      .help-header-title img {
+        width: 28px;
+        height: 28px;
+        display: block;
       }
 
       .help-header-title h1 {
@@ -116,6 +126,11 @@
         border-bottom: 1px solid var(--border);
       }
 
+      .help-card h3 {
+        font-size: 15px;
+        margin: 24px 0 10px;
+      }
+
       .help-card p {
         line-height: 1.8;
         font-size: 14px;
@@ -142,16 +157,58 @@
         border-radius: 3px;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 13px;
-        overflow-wrap: anywhere;
+        overflow-wrap: anywhere; /* 長いURL例でスマホ幅に横スクロールが出ないように */
       }
 
       .help-card a {
         color: var(--accent-dim);
       }
 
+      table.btn-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin: 12px 0;
+      }
+
+      table.btn-table th,
+      table.btn-table td {
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.6;
+      }
+
+      table.btn-table th {
+        background: var(--code-bg);
+      }
+
+      .btn-icon-cell {
+        text-align: center;
+        width: 44px;
+      }
+
+      .fake-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 5px;
+        background: var(--footer-btn-bg);
+        border: 1px solid var(--footer-btn-border);
+        color: var(--footer-text);
+      }
+
+      .fake-icon-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
       .note-box {
-        background: #fff7e6;
-        border: 1px solid #e6c46a;
+        background: var(--note-bg);
+        border: 1px solid var(--note-border);
         border-radius: 6px;
         padding: 10px 14px;
         font-size: 13px;
@@ -178,7 +235,7 @@
         display: none;
       }
 
-      /* body[data-lang] で日英を切り替える。 */
+      /* このページに直接コンテキストを持たせるため、body[data-lang] で切り替える。 */
       body[data-lang='en'] .lang-ja {
         display: none;
       }
@@ -187,25 +244,12 @@
         display: block;
       }
 
-      table.info-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-        margin: 12px 0;
+      body[data-lang='en'] table .lang-en {
+        display: table-row;
       }
-
-      table.info-table th,
-      table.info-table td {
-        border: 1px solid var(--border);
-        padding: 8px 10px;
-        text-align: left;
-        vertical-align: top;
-        line-height: 1.6;
-      }
-
-      table.info-table th {
-        background: var(--code-bg);
-      }
+    table.info-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+      table.info-table th, table.info-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; line-height: 1.6; }
+      table.info-table th { background: var(--code-bg); }
     </style>
   </head>
   <body data-lang="ja">
@@ -219,7 +263,6 @@
 
     <main>
       <div class="help-content">
-        <!-- 1. はじめに -->
         <section class="help-card">
           <div class="lang-ja">
             <h2>はじめに</h2>
@@ -251,7 +294,6 @@
           </div>
         </section>
 
-        <!-- 2. 起動する -->
         <section class="help-card">
           <div class="lang-ja">
             <h2>起動する</h2>
@@ -288,7 +330,143 @@
           </div>
         </section>
 
-        <!-- 3. 画面表示 -->
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ディスクイメージを読み込む</h2>
+            <p>画面にドロップすると FDD1 に挿入します。Shift キーを押しながらドロップすると FDD2 に挿入します。</p>
+            <p>複数枚入りのファイルは、起動後にドライブ行で枚数を選べます。</p>
+            <p>画面の下に、FDD1 と FDD2 の2つのドライブ行があります。</p>
+            <ul>
+              <li><strong>＋</strong> — D88 / 88D / ZIP / LZH ファイルを選んで挿入します。</li>
+              <li><strong>ドラッグ＆ドロップ</strong> — ドライブ行へファイルをドロップしても挿入できます。</li>
+              <li><strong>⏏</strong> — ディスクを排出します。</li>
+              <li><strong>↓</strong> — 現在のディスクをダウンロードします。</li>
+              <li><strong>ブランクFD</strong>(FDD2 のみ) — 空の N88-BASIC 2D データディスクを作成して挿入します。起動用ではありません。</li>
+            </ul>
+            <p>
+              ドライブ行のランプは、実際にディスクへアクセスしたときだけ点灯します。ZIP/LZH を選んだ場合は
+              展開して、中の .d88 / .88d をすべてライブラリに登録し、先頭の1枚を挿入します。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Loading disk images</h2>
+            <p>Drop a file onto the screen to insert it into FDD1; hold Shift while dropping to use FDD2.</p>
+            <p>For a file containing multiple disk images, choose an image in the drive row after startup. The API insert_disk command accepts an optional zero-based image number.</p>
+            <p>Below the screen there are two drive rows, FDD1 and FDD2.</p>
+            <ul>
+              <li><strong>＋</strong> — choose a D88 / 88D / ZIP / LZH file to insert.</li>
+              <li><strong>Drag and drop</strong> — you can also drop a file onto a drive row.</li>
+              <li><strong>⏏</strong> — ejects the disk.</li>
+              <li><strong>↓</strong> — downloads the current disk.</li>
+              <li><strong>Blank FD</strong> (FDD2 only) — creates and inserts an empty N88-BASIC 2D data disk. It is not a boot disk.</li>
+            </ul>
+            <p>
+              The lamp on each drive row lights up only while the disk is actually being accessed. When you
+              choose a ZIP or LZH, it is extracted, every .d88 / .88d inside is registered in the library,
+              and the first one is inserted.
+            </p>
+          </div>
+        </section>
+
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>URLでディスクを指定して起動</h2>
+            <p>URLパラメータでディスクを指定して開くと、挿入済みの状態で起動できます。</p>
+            <table class="info-table">
+              <thead><tr><th>パラメータ</th><th>内容</th></tr></thead>
+              <tbody>
+                <tr><td><code>fd1=URL</code> / <code>fd2=URL</code></td><td>ドライブ1・ドライブ2に入れるディスクイメージのURL(パーセントエンコードしてください)</td></tr>
+                <tr><td><code>lib=URL</code></td><td>挿入せず、ディスクライブラリに登録します。複数回指定できます</td></tr>
+                <tr><td><code>run=1</code></td><td>起動ボタンを押さずに自動で起動します</td></tr>
+                <tr><td><code>bridge=1</code></td><td>AIエージェント用の WebSocket ブリッジにつなぎます(→「AIから操作する」)</td></tr>
+                <tr><td><code>aspect=4:3</code> / <code>native</code></td><td>表示比率</td></tr>
+                <tr><td><code>filter=sharp</code> / <code>nearest</code></td><td>画面の補間方法</td></tr>
+                <tr><td><code>volume=0</code>〜<code>100</code></td><td>音量</td></tr>
+                <tr><td><code>mute=0</code> / <code>1</code></td><td>ミュート解除 / 有効化</td></tr>
+                <tr><td><code>driveSound=0</code> / <code>1</code></td><td>ドライブ動作音の無効化 / 有効化</td></tr>
+                <tr><td><code>pause=1</code></td><td>一時停止状態で起動</td></tr>
+              </tbody>
+            </table>
+            <p>表示・音声・一時停止の指定は今回のみ有効で、保存済み設定を変更しません。不正値は無視します。</p>
+            <p>例: <code>./?fd1=https%3A%2F%2Fexample.com%2Fdisk.zip&amp;run=1</code></p>
+            <ul>
+              <li>ZIP/LZH は展開し、中の .d88 / .88d をすべてライブラリに登録して先頭を挿入します。</li>
+              <li>配布元のサーバーは CORS に対応している必要があります。Dropbox の共有リンクは自動で変換します。Google Drive は中継サービス(ビルド時の <code>VITE_DISK_PROXY</code>)が必要です。OneDrive には対応していません。</li>
+              <li>2回目以降は、保存済みの変更を復元します。ライブラリの「配布元に戻す」で取り直せます。</li>
+              <li>「…」メニューの「ディスク」→「共有URLをコピー」で、挿入中のURL由来ディスクの共有URLをコピーできます。</li>
+            </ul>
+          </div>
+          <div class="lang-en">
+            <h2>Boot with disks specified in the URL</h2>
+            <p>Open the player with URL parameters to start with the disks already inserted.</p>
+            <table class="info-table">
+              <thead><tr><th>Parameter</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>fd1=URL</code> / <code>fd2=URL</code></td><td>URL of the disk image to put in drive 1 / drive 2 (percent-encode it)</td></tr>
+                <tr><td><code>lib=URL</code></td><td>Registers the disk in the Disk Library without inserting it. Can be given multiple times</td></tr>
+                <tr><td><code>run=1</code></td><td>Starts automatically without pressing the boot button</td></tr>
+                <tr><td><code>bridge=1</code></td><td>Connects to the WebSocket bridge for AI agents (see "Controlling WebQ88 from AI agents")</td></tr>
+                <tr><td><code>aspect=4:3</code> / <code>native</code></td><td>Display aspect ratio</td></tr>
+                <tr><td><code>filter=sharp</code> / <code>nearest</code></td><td>Display filter</td></tr>
+                <tr><td><code>volume=0</code>–<code>100</code></td><td>Volume</td></tr>
+                <tr><td><code>mute=0</code> / <code>1</code></td><td>Unmute / mute</td></tr>
+                <tr><td><code>driveSound=0</code> / <code>1</code></td><td>Disable / enable drive sounds</td></tr>
+                <tr><td><code>pause=1</code></td><td>Start paused</td></tr>
+              </tbody>
+            </table>
+            <p>Display, audio and pause parameters apply only to this visit and do not change saved settings. Invalid values are ignored.</p>
+            <p>Example: <code>./?fd1=https%3A%2F%2Fexample.com%2Fdisk.zip&amp;run=1</code></p>
+            <ul>
+              <li>ZIP/LZH archives are extracted, every .d88 / .88d inside is registered in the library, and the first one is inserted.</li>
+              <li>The host serving the file must support CORS. Dropbox share links are converted automatically. Google Drive needs a relay service (the build-time <code>VITE_DISK_PROXY</code>). OneDrive is not supported.</li>
+              <li>On later visits, your saved changes are restored. "Restore from source" in the library fetches the original again.</li>
+              <li>"Copy share URL" under "…" → "ディスク" (Disk) copies a shareable URL for the inserted disks that came from a URL.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ツールバーと「…」メニュー</h2>
+            <p>「…」→「音」でドライブの動作音を切り替えられます。</p>
+            <img src="./help/overview.png" alt="互換ROM起動後の画面とツールバー" />
+            <table class="info-table">
+              <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
+              <tbody>
+                <tr><td>一時停止</td><td>動作を止める・再開する</td></tr>
+                <tr><td>ミュート</td><td>音を消す・戻す(音量は「…」→「音」)</td></tr>
+                <tr><td>全画面表示</td><td>画面を拡大する(もう一度押すと戻ります)</td></tr>
+                <tr><td>ソフトキーボード</td><td>画面上に PC-88 配列のキーボードを出す</td></tr>
+                <tr><td>バーチャルパッド</td><td>タッチ用の十字キーとボタンを出す</td></tr>
+                <tr><td>スクリーンショット</td><td>画面を PNG で保存する</td></tr>
+                <tr><td>ディスクライブラリ</td><td>保存済みのディスクを選んで挿入する</td></tr>
+                <tr><td>…(その他の操作)</td><td>「表示」「入力」「音」「ディスク」「ステート」「ROM」の各設定</td></tr>
+                <tr><td>リセット</td><td>マシンをリセットする</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="lang-en">
+            <h2>Toolbar and More menu</h2>
+            <p>Use More (…) → Sound to toggle drive sounds.</p>
+            <img src="./help/overview-en.png" alt="Compatible ROM screen and toolbar after startup" />
+            <table class="info-table">
+              <thead><tr><th>Button</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr><td>Pause</td><td>Stops and resumes the machine</td></tr>
+                <tr><td>Mute</td><td>Silences and restores sound (volume is under "…" → "音" (Sound))</td></tr>
+                <tr><td>Fullscreen</td><td>Enlarges the screen (press again to go back)</td></tr>
+                <tr><td>Soft keyboard</td><td>Shows an on-screen keyboard in the PC-88 layout</td></tr>
+                <tr><td>Virtual pad</td><td>Shows touch-friendly directional keys and buttons</td></tr>
+                <tr><td>Screenshot</td><td>Saves the screen as a PNG</td></tr>
+                <tr><td>Disk Library</td><td>Pick a saved disk and insert it</td></tr>
+                <tr><td>… (More actions)</td><td>Settings under "表示" (Display), "入力" (Input), "音" (Sound), "ディスク" (Disk), "State", and "ROM"</td></tr>
+                <tr><td>Reset</td><td>Resets the machine</td></tr>
+              </tbody>
+            </table>
+            <p>Note: the button labels in the player itself are in Japanese.</p>
+          </div>
+        </section>
+
         <section class="help-card">
           <div class="lang-ja">
             <h2>画面表示（4:3 / ドット等倍 / 補間）</h2>
@@ -316,204 +494,6 @@
           </div>
         </section>
 
-        <!-- 4. ディスクイメージを読み込む -->
-        <section class="help-card">
-          <div class="lang-ja">
-            <h2>ディスクイメージを読み込む</h2>
-            <p>複数枚入りのファイルは、起動後にドライブ行で枚数を選べます。</p>
-            <p>画面の下に、FDD1 と FDD2 の2つのドライブ行があります。</p>
-            <ul>
-              <li><strong>＋</strong> — D88 / 88D / ZIP / LZH ファイルを選んで挿入します。</li>
-              <li><strong>ドラッグ＆ドロップ</strong> — ドライブ行へファイルをドロップしても挿入できます。</li>
-              <li><strong>⏏</strong> — ディスクを排出します。</li>
-              <li><strong>↓</strong> — 現在のディスクをダウンロードします。</li>
-              <li><strong>ブランクFD</strong>(FDD2 のみ) — 空の N88-BASIC 2D データディスクを作成して挿入します。起動用ではありません。</li>
-            </ul>
-            <p>
-              ドライブ行のランプは、実際にディスクへアクセスしたときだけ点灯します。ZIP/LZH を選んだ場合は
-              展開して、中の .d88 / .88d をすべてライブラリに登録し、先頭の1枚を挿入します。
-            </p>
-          </div>
-          <div class="lang-en">
-            <h2>Loading disk images</h2>
-            <p>For a file containing multiple disk images, choose an image in the drive row after startup. The API insert_disk command accepts an optional zero-based image number.</p>
-            <p>Below the screen there are two drive rows, FDD1 and FDD2.</p>
-            <ul>
-              <li><strong>＋</strong> — choose a D88 / 88D / ZIP / LZH file to insert.</li>
-              <li><strong>Drag and drop</strong> — you can also drop a file onto a drive row.</li>
-              <li><strong>⏏</strong> — ejects the disk.</li>
-              <li><strong>↓</strong> — downloads the current disk.</li>
-              <li><strong>Blank FD</strong> (FDD2 only) — creates and inserts an empty N88-BASIC 2D data disk. It is not a boot disk.</li>
-            </ul>
-            <p>
-              The lamp on each drive row lights up only while the disk is actually being accessed. When you
-              choose a ZIP or LZH, it is extracted, every .d88 / .88d inside is registered in the library,
-              and the first one is inserted.
-            </p>
-          </div>
-        </section>
-
-        <!-- 5. URLでディスクを指定 -->
-        <section class="help-card">
-          <div class="lang-ja">
-            <h2>URLでディスクを指定して起動</h2>
-            <p>URLパラメータでディスクを指定して開くと、挿入済みの状態で起動できます。</p>
-            <table class="info-table">
-              <thead><tr><th>パラメータ</th><th>内容</th></tr></thead>
-              <tbody>
-                <tr><td><code>fd1=URL</code> / <code>fd2=URL</code></td><td>ドライブ1・ドライブ2に入れるディスクイメージのURL(パーセントエンコードしてください)</td></tr>
-                <tr><td><code>lib=URL</code></td><td>挿入せず、ディスクライブラリに登録します。複数回指定できます</td></tr>
-                <tr><td><code>run=1</code></td><td>起動ボタンを押さずに自動で起動します</td></tr>
-                <tr><td><code>bridge=1</code></td><td>AIエージェント用の WebSocket ブリッジにつなぎます(→「AIから操作する」)</td></tr>
-              </tbody>
-            </table>
-            <p>例: <code>./?fd1=https%3A%2F%2Fexample.com%2Fdisk.zip&amp;run=1</code></p>
-            <ul>
-              <li>ZIP/LZH は展開し、中の .d88 / .88d をすべてライブラリに登録して先頭を挿入します。</li>
-              <li>配布元のサーバーは CORS に対応している必要があります。Dropbox の共有リンクは自動で変換します。Google Drive は中継サービス(ビルド時の <code>VITE_DISK_PROXY</code>)が必要です。OneDrive には対応していません。</li>
-              <li>2回目以降は、保存済みの変更を復元します。ライブラリの「配布元に戻す」で取り直せます。</li>
-              <li>「…」メニューの「ディスク」→「共有URLをコピー」で、挿入中のURL由来ディスクの共有URLをコピーできます。</li>
-            </ul>
-          </div>
-          <div class="lang-en">
-            <h2>Boot with disks specified in the URL</h2>
-            <p>Open the player with URL parameters to start with the disks already inserted.</p>
-            <table class="info-table">
-              <thead><tr><th>Parameter</th><th>Meaning</th></tr></thead>
-              <tbody>
-                <tr><td><code>fd1=URL</code> / <code>fd2=URL</code></td><td>URL of the disk image to put in drive 1 / drive 2 (percent-encode it)</td></tr>
-                <tr><td><code>lib=URL</code></td><td>Registers the disk in the Disk Library without inserting it. Can be given multiple times</td></tr>
-                <tr><td><code>run=1</code></td><td>Starts automatically without pressing the boot button</td></tr>
-                <tr><td><code>bridge=1</code></td><td>Connects to the WebSocket bridge for AI agents (see "Controlling WebQ88 from AI agents")</td></tr>
-              </tbody>
-            </table>
-            <p>Example: <code>./?fd1=https%3A%2F%2Fexample.com%2Fdisk.zip&amp;run=1</code></p>
-            <ul>
-              <li>ZIP/LZH archives are extracted, every .d88 / .88d inside is registered in the library, and the first one is inserted.</li>
-              <li>The host serving the file must support CORS. Dropbox share links are converted automatically. Google Drive needs a relay service (the build-time <code>VITE_DISK_PROXY</code>). OneDrive is not supported.</li>
-              <li>On later visits, your saved changes are restored. "Restore from source" in the library fetches the original again.</li>
-              <li>"Copy share URL" under "…" → "ディスク" (Disk) copies a shareable URL for the inserted disks that came from a URL.</li>
-            </ul>
-          </div>
-        </section>
-
-        <!-- 6. ディスクライブラリ -->
-        <section class="help-card">
-          <div class="lang-ja">
-            <h2>ディスクライブラリ</h2>
-            <img src="./help/library.png" alt="サンプルディスクを表示したディスクライブラリ" />
-            <p>
-              ツールバーの「ディスクライブラリ」ボタンで、これまでに読み込んだディスクの一覧が開きます。
-              新しく保存した順に並び、各ディスクに対して次の操作ができます。
-            </p>
-            <ul>
-              <li><strong>FDD1へ挿入 / FDD2へ挿入</strong></li>
-              <li><strong>名前変更</strong> — 表示名を変更します。</li>
-              <li><strong>ダウンロード</strong> — 書き込み内容を含む現在のイメージを保存します。</li>
-              <li><strong>配布元に戻す</strong>(URLから読み込んだディスクのみ) — 保存済みの変更を破棄して、配布元から再取得します。</li>
-              <li><strong>削除</strong></li>
-            </ul>
-          </div>
-          <div class="lang-en">
-            <h2>Disk Library</h2>
-            <img src="./help/library-en.png" alt="Disk Library with a sample disk" />
-            <p>
-              The toolbar's Disk Library button opens a list of the disks you have loaded so far, newest
-              first. For each disk you can:
-            </p>
-            <ul>
-              <li><strong>Insert into FDD1 / FDD2</strong></li>
-              <li><strong>Rename</strong> — change the display name.</li>
-              <li><strong>Download</strong> — save the current image, including what was written to it.</li>
-              <li><strong>Restore from source</strong> (only for disks loaded from a URL) — discard saved changes and fetch the original again.</li>
-              <li><strong>Delete</strong></li>
-            </ul>
-          </div>
-        </section>
-
-        <!-- 7. ディスクの保存と消える条件 -->
-        <section class="help-card">
-          <div class="lang-ja">
-            <h2>ディスクの保存と、データが消える条件</h2>
-            <p>
-              ゲストが書き込んだ内容は、数秒おきにこのブラウザ(IndexedDB)へ自動保存され、次に開いたときに
-              ドライブへ自動で挿入し直されます。保存先はこのブラウザの中だけで、サーバーへは送信されません。
-            </p>
-            <div class="note-box">
-              ブラウザの保存は消えることがあります。次のような場合に注意してください。
-              <ul>
-                <li>サイトデータ(Cookie など)を削除したとき</li>
-                <li>シークレットウィンドウで開いたとき</li>
-                <li>端末の容量が不足したとき</li>
-                <li>Safari で7日間使わなかったとき</li>
-                <li>別のブラウザ・別の端末で開いたとき(保存は共有されません)</li>
-              </ul>
-              大事なディスクは、ドライブ行やライブラリの「ダウンロード」で手元にも保存してください。
-            </div>
-          </div>
-          <div class="lang-en">
-            <h2>How disks are saved, and when the data disappears</h2>
-            <p>
-              Whatever the guest writes is automatically saved into this browser (IndexedDB) every few
-              seconds, and re-inserted into the drives the next time you open the page. The data stays
-              inside this browser and is never sent to a server.
-            </p>
-            <div class="note-box">
-              Browser storage can be lost. Watch out in these cases:
-              <ul>
-                <li>You delete site data (cookies and so on)</li>
-                <li>You use a private/incognito window</li>
-                <li>The device runs low on storage</li>
-                <li>You don't use Safari for 7 days</li>
-                <li>You open the page in a different browser or on a different device (saved data isn't shared)</li>
-              </ul>
-              For any disk you care about, keep a copy with "Download" on the drive row or in the library.
-            </div>
-          </div>
-        </section>
-
-        <!-- 8. ツールバーのボタン一覧 -->
-        <section class="help-card">
-          <div class="lang-ja">
-            <h2>ツールバーのボタン一覧</h2>
-            <img src="./help/overview.png" alt="互換ROM起動後の画面とツールバー" />
-            <table class="info-table">
-              <thead><tr><th>ボタン</th><th>動作</th></tr></thead>
-              <tbody>
-                <tr><td>一時停止</td><td>動作を止める・再開する</td></tr>
-                <tr><td>ミュート</td><td>音を消す・戻す(音量は「…」→「音」)</td></tr>
-                <tr><td>全画面表示</td><td>画面を拡大する(もう一度押すと戻ります)</td></tr>
-                <tr><td>ソフトキーボード</td><td>画面上に PC-88 配列のキーボードを出す</td></tr>
-                <tr><td>バーチャルパッド</td><td>タッチ用の十字キーとボタンを出す</td></tr>
-                <tr><td>スクリーンショット</td><td>画面を PNG で保存する</td></tr>
-                <tr><td>ディスクライブラリ</td><td>保存済みのディスクを選んで挿入する</td></tr>
-                <tr><td>…(その他の操作)</td><td>「表示」「入力」「音」「ディスク」「ROM」の各設定</td></tr>
-                <tr><td>リセット</td><td>マシンをリセットする</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="lang-en">
-            <h2>Toolbar buttons</h2>
-            <img src="./help/overview-en.png" alt="Compatible ROM screen and toolbar after startup" />
-            <table class="info-table">
-              <thead><tr><th>Button</th><th>Action</th></tr></thead>
-              <tbody>
-                <tr><td>Pause</td><td>Stops and resumes the machine</td></tr>
-                <tr><td>Mute</td><td>Silences and restores sound (volume is under "…" → "音" (Sound))</td></tr>
-                <tr><td>Fullscreen</td><td>Enlarges the screen (press again to go back)</td></tr>
-                <tr><td>Soft keyboard</td><td>Shows an on-screen keyboard in the PC-88 layout</td></tr>
-                <tr><td>Virtual pad</td><td>Shows touch-friendly directional keys and buttons</td></tr>
-                <tr><td>Screenshot</td><td>Saves the screen as a PNG</td></tr>
-                <tr><td>Disk Library</td><td>Pick a saved disk and insert it</td></tr>
-                <tr><td>… (More actions)</td><td>Settings under "表示" (Display), "入力" (Input), "音" (Sound), "ディスク" (Disk), and "ROM"</td></tr>
-                <tr><td>Reset</td><td>Resets the machine</td></tr>
-              </tbody>
-            </table>
-            <p>Note: the button labels in the player itself are in Japanese.</p>
-          </div>
-        </section>
-
-        <!-- 9. キーボード -->
         <section class="help-card">
           <div class="lang-ja">
             <h2>キーボード</h2>
@@ -552,7 +532,6 @@
           </div>
         </section>
 
-        <!-- 10. ゲームパッド・キー割当・バーチャルパッド -->
         <section class="help-card">
           <div class="lang-ja">
             <h2>ゲームパッド・キー割当とバーチャルパッド</h2>
@@ -601,7 +580,90 @@
           </div>
         </section>
 
-        <!-- 11. 手持ちのROM -->
+        <section class="help-card">
+          <div class="lang-ja"><h2>テキストを貼り付ける</h2><p>「…」→「入力」→「テキストを貼り付け」を開き、文字を入力して「送信」を押します。ASCII と半角カナを送れます。対応していない文字は表示されます。</p><img src="./help/paste.png" alt="テキスト貼り付け画面" /></div>
+          <div class="lang-en"><h2>Pasting text</h2><p>Open More (…) → Input → Paste text, enter text and press Send. ASCII and half-width kana are supported; unsupported characters are reported.</p><img src="./help/paste-en.png" alt="Text paste panel" /></div>
+        </section>
+        <section class="help-card">
+          <div class="lang-ja"><h2>ステート保存と復元</h2><p>「…」→「ステート」で3つのスロットに実行状態を保存・読込できます。保存時と現在の ROM 構成やディスクが違う場合は確認が表示されます。利用者 ROM のステートは利用者 ROM で起動したときだけ読み込めます。</p><img src="./help/state.png" alt="ステートの保存と読込" /></div>
+          <div class="lang-en"><h2>Saving and loading states</h2><p>Use More (…) → State to save or load the running state in three slots. A confirmation appears if the ROM configuration or disks differ from those at save time. States saved with user ROMs can only be loaded when running with user ROMs.</p><img src="./help/state-en.png" alt="State save and load slots" /></div>
+        </section>
+
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ディスクライブラリ</h2>
+            <p>ディスクはフォルダで整理できます。</p>
+            <img src="./help/library.png" alt="サンプルディスクを表示したディスクライブラリ" />
+            <p>
+              ツールバーの「ディスクライブラリ」ボタンで、これまでに読み込んだディスクの一覧が開きます。
+              新しく保存した順に並び、各ディスクに対して次の操作ができます。
+            </p>
+            <ul>
+              <li><strong>FDD1へ挿入 / FDD2へ挿入</strong></li>
+              <li><strong>名前変更</strong> — 表示名を変更します。</li>
+              <li><strong>ダウンロード</strong> — 書き込み内容を含む現在のイメージを保存します。</li>
+              <li><strong>配布元に戻す</strong>(URLから読み込んだディスクのみ) — 保存済みの変更を破棄して、配布元から再取得します。</li>
+              <li><strong>削除</strong></li>
+            </ul>
+          </div>
+          <div class="lang-en">
+            <h2>Disk Library</h2>
+            <p>Disks can be organized in folders.</p>
+            <img src="./help/library-en.png" alt="Disk Library with a sample disk" />
+            <p>
+              The toolbar's Disk Library button opens a list of the disks you have loaded so far, newest
+              first. For each disk you can:
+            </p>
+            <ul>
+              <li><strong>Insert into FDD1 / FDD2</strong></li>
+              <li><strong>Rename</strong> — change the display name.</li>
+              <li><strong>Download</strong> — save the current image, including what was written to it.</li>
+              <li><strong>Restore from source</strong> (only for disks loaded from a URL) — discard saved changes and fetch the original again.</li>
+              <li><strong>Delete</strong></li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="help-card">
+          <div class="lang-ja">
+            <h2>ディスクの保存と、データが消える条件</h2>
+            <p>
+              ゲストが書き込んだ内容は、数秒おきにこのブラウザ(IndexedDB)へ自動保存され、次に開いたときに
+              ドライブへ自動で挿入し直されます。保存先はこのブラウザの中だけで、サーバーへは送信されません。
+            </p>
+            <div class="note-box">
+              ブラウザの保存は消えることがあります。次のような場合に注意してください。
+              <ul>
+                <li>サイトデータ(Cookie など)を削除したとき</li>
+                <li>シークレットウィンドウで開いたとき</li>
+                <li>端末の容量が不足したとき</li>
+                <li>Safari で7日間使わなかったとき</li>
+                <li>別のブラウザ・別の端末で開いたとき(保存は共有されません)</li>
+              </ul>
+              大事なディスクは、ドライブ行やライブラリの「ダウンロード」で手元にも保存してください。
+            </div>
+          </div>
+          <div class="lang-en">
+            <h2>How disks are saved, and when the data disappears</h2>
+            <p>
+              Whatever the guest writes is automatically saved into this browser (IndexedDB) every few
+              seconds, and re-inserted into the drives the next time you open the page. The data stays
+              inside this browser and is never sent to a server.
+            </p>
+            <div class="note-box">
+              Browser storage can be lost. Watch out in these cases:
+              <ul>
+                <li>You delete site data (cookies and so on)</li>
+                <li>You use a private/incognito window</li>
+                <li>The device runs low on storage</li>
+                <li>You don't use Safari for 7 days</li>
+                <li>You open the page in a different browser or on a different device (saved data isn't shared)</li>
+              </ul>
+              For any disk you care about, keep a copy with "Download" on the drive row or in the library.
+            </div>
+          </div>
+        </section>
+
         <section class="help-card">
           <div class="lang-ja">
             <h2>手持ちのROMで起動する（制限モード）</h2>
@@ -630,7 +692,6 @@
           </div>
         </section>
 
-        <!-- 12. AI操作 -->
         <section class="help-card">
           <div class="lang-ja">
             <h2>AIから操作する（MCP連携）</h2>
@@ -649,9 +710,10 @@
               <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
               を参照してください。
             </p>
+            <p><code>paste_text</code> は ASCII・半角カナを送信し、<code>send_keys</code> はキーの組み合わせを送ります。<code>list_states</code> はステートを一覧表示し、<code>list_disk_library</code> はライブラリを一覧表示、<code>export_disk</code> はドライブのイメージを取得、<code>persist_disks</code> はライブラリディスクの変更を即時保存します。</p>
             <p>
               <strong>制限モード</strong>(利用者ROMで起動しているとき)では、画面本文の取得、スクリーンショット、
-              メモリの読み書き、ドライブのディスクイメージの取り出し(<code>get_disk_image</code>)など、一部のコマンドが拒否されます。
+              メモリの読み書き、ドライブのディスクイメージの取り出し(<code>get_disk_image</code> / <code>export_disk</code>)など、一部のコマンドが拒否されます。
             </p>
           </div>
           <div class="lang-en">
@@ -672,14 +734,14 @@
               <a href="https://github.com/uraraworks/WebQ88/blob/main/docs/AUTOMATION.md" target="_blank" rel="noopener">docs/AUTOMATION.md</a>
               for the command list.
             </p>
+            <p><code>paste_text</code> sends ASCII and half-width kana; <code>send_keys</code> sends key combinations. <code>list_states</code> lists states, <code>list_disk_library</code> lists the library, <code>export_disk</code> retrieves a drive image, and <code>persist_disks</code> immediately saves library disk changes.</p>
             <p>
               In <strong>restricted mode</strong> (when running with your own ROMs), some commands are
-              rejected, such as reading screen text, taking screenshots, reading or writing memory, and fetching a drive's disk image (<code>get_disk_image</code>).
+              rejected, such as reading screen text, taking screenshots, reading or writing memory, and fetching a drive's disk image (<code>get_disk_image</code> / <code>export_disk</code>).
             </p>
           </div>
         </section>
 
-        <!-- 13. トラブルシューティング -->
         <section class="help-card">
           <div class="lang-ja">
             <h2>トラブルシューティング</h2>
@@ -689,7 +751,6 @@
               <li><strong>公式環境で SAVE した BASIC プログラムが読めない</strong> — 中間言語形式のBASICプログラムは読めません。プログラムのやり取りは ASCII 形式(<code>SAVE "x",A</code>)で行ってください。</li>
               <li><strong>動かないソフトがある</strong> — 互換ROMは公式ROMと完全に同じではないため、動作しないソフトがあります。</li>
               <li><strong>ディスクが消えた</strong> — ブラウザの保存は、サイトデータの削除などで消えます。大事なディスクはダウンロードして保管してください(→「ディスクの保存と、データが消える条件」)。</li>
-              <li><strong>ステートセーブ / ロードは使えますか</strong> — 現在は未対応です。</li>
             </ul>
           </div>
           <div class="lang-en">
@@ -700,7 +761,6 @@
               <li><strong>A BASIC program saved in an official environment can't be read</strong> — BASIC programs in the intermediate-code format can't be read. Exchange programs in ASCII format (<code>SAVE "x",A</code>).</li>
               <li><strong>Some software doesn't run</strong> — The compatible ROM is not completely identical to the official ROM, so some software doesn't work.</li>
               <li><strong>My disk disappeared</strong> — Browser storage is lost when site data is deleted, among other cases. Download disks you care about and keep copies (see "How disks are saved, and when the data disappears").</li>
-              <li><strong>Can I save and load states?</strong> — Not currently supported.</li>
             </ul>
           </div>
         </section>

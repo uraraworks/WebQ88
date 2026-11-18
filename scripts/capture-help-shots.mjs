@@ -78,7 +78,14 @@ try {
       await shoot('#virtual-keyboard', 'keyboard');
       await page.click('#keyboard-toggle');
       await page.click('#toolbar-more');
+      await page.click('[data-menu-group="state"]');
+      await shoot('#menu-state', 'state');
       await page.click('[data-menu-group="input"]');
+      await page.click('#paste-open');
+      // パネルが開くと高さが増えて下端が画面外へ出るので、メニューを再配置させてから撮る。
+      await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+      await shoot('#menu-input', 'paste');
+      await page.click('#paste-cancel');
       await page.click('#input-settings');
       // 入力設定は縦に長く、700px だと下端が切れるので撮影時だけ高さを広げる。
       await page.setViewport({ width: 900, height: 1100, deviceScaleFactor: 2 });

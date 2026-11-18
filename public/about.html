@@ -7,6 +7,7 @@
     <style>
       :root {
         color-scheme: light;
+        --page-bg: #101010;
         --bg: #fafafa;
         --bg-panel: #ffffff;
         --border: #d5d5d5;
@@ -18,13 +19,15 @@
         --header-bg: #0c0c0c;
         --header-text: #f2f2f2;
         --header-tagline-text: #a8a8a8;
-        --page-footer-bg: #ececec;
-        --page-footer-text: #6b6b6b;
-        --page-footer-border: rgba(0, 0, 0, 0.12);
+        --page-footer-bg: #1a1a1a;
+        --page-footer-text: #8c8c8c;
+        --page-footer-border: rgba(255, 255, 255, 0.1);
         --footer-btn-bg: #4a4a4a;
         --footer-btn-border: #202020;
         --footer-text: #e6e6e6;
         --code-bg: #f1f1f1;
+        --note-bg: #fff7e6;
+        --note-border: #e6c46a;
       }
 
       * {
@@ -33,12 +36,13 @@
 
       html {
         height: 100%;
+        background: var(--page-bg);
       }
 
       body {
         margin: 0;
         padding: 0;
-        background: var(--bg);
+        background: var(--page-bg);
         color: var(--text);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
         min-height: 100%;
@@ -63,6 +67,12 @@
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+
+      .help-header-title img {
+        width: 28px;
+        height: 28px;
+        display: block;
       }
 
       .help-header-title h1 {
@@ -128,13 +138,20 @@
         padding-left: 22px;
       }
 
+      .help-card img {
+        max-width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: block;
+        margin: 12px 0;
+      }
+
       .help-card code {
         background: var(--code-bg);
         padding: 1px 5px;
         border-radius: 3px;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 13px;
-        overflow-wrap: anywhere;
       }
 
       .help-card a {
@@ -142,8 +159,8 @@
       }
 
       .note-box {
-        background: #fff7e6;
-        border: 1px solid #e6c46a;
+        background: var(--note-bg);
+        border: 1px solid var(--note-border);
         border-radius: 6px;
         padding: 10px 14px;
         font-size: 13px;
@@ -170,7 +187,7 @@
         display: none;
       }
 
-      /* body[data-lang] で日英を切り替える。 */
+      /* このページに直接コンテキストを持たせるため、body[data-lang] で切り替える。 */
       body[data-lang='en'] .lang-ja {
         display: none;
       }
@@ -179,27 +196,7 @@
         display: block;
       }
 
-      table.info-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-        margin: 12px 0;
-      }
-
-      table.info-table th,
-      table.info-table td {
-        border: 1px solid var(--border);
-        padding: 8px 10px;
-        text-align: left;
-        vertical-align: top;
-        line-height: 1.6;
-      }
-
-      table.info-table th {
-        background: var(--code-bg);
-      }
-
-      /* ヒーローセクション: キャッチコピー+CTAボタン。 */
+      /* ヒーローセクション: キャッチコピー+CTAボタン2つ+大きめスクリーンショット。 */
       .hero-card {
         text-align: center;
       }
@@ -223,7 +220,7 @@
         flex-wrap: wrap;
         gap: 12px;
         justify-content: center;
-        margin-bottom: 4px;
+        margin-bottom: 20px;
       }
 
       .hero-btn {
@@ -247,6 +244,15 @@
         background: var(--accent-dim);
       }
 
+      .help-card a.hero-btn-secondary {
+        background: var(--footer-btn-bg);
+        color: var(--footer-text);
+      }
+
+      .hero-btn-secondary:hover {
+        background: #5c5c5c;
+      }
+
       /* 特徴セクション: 見出し+本文のカードを縦に並べる。 */
       .feature-card h2 {
         font-size: 16px;
@@ -264,6 +270,26 @@
         margin-left: 8px;
         vertical-align: middle;
       }
+
+      table.mcp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin: 12px 0;
+      }
+
+      table.mcp-table th,
+      table.mcp-table td {
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.6;
+      }
+
+      table.mcp-table th {
+        background: var(--code-bg);
+      }
     </style>
   </head>
   <body data-lang="ja">
@@ -277,7 +303,6 @@
 
     <main>
       <div class="help-content">
-        <!-- ヒーロー -->
         <section class="help-card hero-card">
           <div class="lang-ja">
             <h2>URLを開くだけで動く、ブラウザの中のPC-8801。</h2>
@@ -290,6 +315,7 @@
             <div class="hero-buttons">
               <a class="hero-btn hero-btn-primary" href="./">今すぐ試す</a>
             </div>
+            <img src="./help/overview.png" alt="WebQ88 のプレイヤー画面" />
           </div>
           <div class="lang-en">
             <h2>A PC-8801 in your browser. Just open the URL.</h2>
@@ -302,10 +328,10 @@
             <div class="hero-buttons">
               <a class="hero-btn hero-btn-primary" href="./">Try it now</a>
             </div>
+            <img src="./help/overview-en.png" alt="WebQ88 player overview" />
           </div>
         </section>
 
-        <!-- 特徴1: インストール不要 -->
         <section class="help-card feature-card">
           <div class="lang-ja">
             <h2>インストール不要・ブラウザ完結</h2>
@@ -324,118 +350,6 @@
           </div>
         </section>
 
-        <!-- 特徴2: 互換ROM -->
-        <section class="help-card feature-card">
-          <div class="lang-ja">
-            <h2>互換ROM同梱で、公式ROM無しに起動</h2>
-            <p>
-              同梱の互換ROM
-              <a href="https://github.com/uraraworks/PC88Behavior" target="_blank" rel="noopener">PC88Behavior</a>
-              は、外部から観測できる振る舞いだけを手がかりに書いたクリーンルーム実装で、公式ROMの
-              バイト列を含みません。そのため、公式ROMを用意しなくても URL を開いてボタンを1つ押すだけで
-              起動できます。漢字ROMも、フリーの東雲フォントから作った自作のものを同梱しています。
-            </p>
-          </div>
-          <div class="lang-en">
-            <h2>Boots without an official ROM, thanks to a bundled compatible ROM</h2>
-            <p>
-              The bundled compatible ROM,
-              <a href="https://github.com/uraraworks/PC88Behavior" target="_blank" rel="noopener">PC88Behavior</a>,
-              is a clean-room implementation written using only externally observable behavior as a
-              guide, and it contains no bytes from the official ROM. That's why you can start the
-              machine just by opening the URL and pressing one button, with no official ROM on hand.
-              A self-made kanji ROM, generated from the free Shinonome font, is bundled as well.
-            </p>
-          </div>
-        </section>
-
-        <!-- 特徴3: URLでディスク指定 -->
-        <section class="help-card feature-card">
-          <div class="lang-ja">
-            <h2>URLでディスクを指定して起動</h2>
-            <p>
-              <code>?fd1=URL&amp;fd2=URL&amp;run=1</code> のようにURLパラメータでディスクイメージを
-              指定すると、ボタンを押さずにそのまま起動できます。ZIP/LZH は自動で展開され、中の
-              D88 イメージがライブラリに登録されます。ディスクを入れた状態の共有URLをコピーして、
-              そのまま人に渡すこともできます。
-            </p>
-          </div>
-          <div class="lang-en">
-            <h2>Boot with disks specified in the URL</h2>
-            <p>
-              Pass disk image URLs as parameters, as in <code>?fd1=URL&amp;fd2=URL&amp;run=1</code>, and
-              the machine starts right away without any button press. ZIP and LZH archives are extracted
-              automatically and the D88 images inside are registered in the library. You can also copy a
-              shareable URL for the disks currently inserted and hand it to someone else.
-            </p>
-          </div>
-        </section>
-
-        <!-- 特徴4: ディスクの自動保存とライブラリ -->
-        <section class="help-card feature-card">
-          <div class="lang-ja">
-            <h2>ディスクの自動保存とライブラリ</h2>
-            <p>
-              ゲストが書き込んだ内容は数秒おきにブラウザ(IndexedDB)へ自動保存され、次に開いたときに
-              自動で挿入し直されます。読み込んだディスクは「ディスクライブラリ」から選んで挿入、
-              名前変更、ダウンロード、削除ができます。読み込んだディスクや保存内容はサーバーへ送信されません。
-              ブラウザの保存はサイトデータの削除などで消えるため、大事なディスクはダウンロードして
-              保管してください。
-            </p>
-          </div>
-          <div class="lang-en">
-            <h2>Automatic disk saving and a disk library</h2>
-            <p>
-              Whatever the guest writes is automatically saved into your browser (IndexedDB) every few
-              seconds and re-inserted the next time you open the page. Disks you've loaded appear in the
-              Disk Library, where you can insert, rename, download, or delete them. Loaded disks and saved
-              data are never sent to a server. Browser storage is cleared when site data is deleted, so
-              download any disk you care about to keep a copy.
-            </p>
-          </div>
-        </section>
-
-        <!-- 特徴5: サウンド -->
-        <section class="help-card feature-card">
-          <div class="lang-ja">
-            <h2>BGM・効果音に対応</h2>
-            <p>
-              BGM や効果音を再生できます。ツールバーのミュートボタンで音を消し、「…」メニューで
-              音量を調整できます(設定はブラウザに保存されます)。
-            </p>
-          </div>
-          <div class="lang-en">
-            <h2>BGM and sound effects</h2>
-            <p>
-              Background music and sound effects are played. Use the toolbar's Mute button to silence
-              them and the volume slider in the "…" menu to adjust the level (the settings are saved in
-              your browser).
-            </p>
-          </div>
-        </section>
-
-        <!-- 特徴6: 表示 -->
-        <section class="help-card feature-card">
-          <div class="lang-ja">
-            <h2>4:3表示と補間</h2>
-            <p>
-              既定では実機のモニタのように4:3で表示します。「…」メニューの「表示比率」でドット等倍表示に、
-              「補間」でシャープ・バイリニアとニアレストを切り替えられます(設定は保存されます)。
-              スクリーンショットは PNG で保存でき、全画面表示にも対応しています。
-            </p>
-          </div>
-          <div class="lang-en">
-            <h2>4:3 display and interpolation</h2>
-            <p>
-              By default the screen is shown at 4:3, like a real monitor. The "Aspect ratio" setting in
-              the "…" menu switches to 1:1 pixel display, and "Interpolation" switches between
-              sharp bilinear and nearest-neighbor (both are saved). You can save screenshots as PNG, and
-              fullscreen display is supported too.
-            </p>
-          </div>
-        </section>
-
-        <!-- 特徴7: 入力 -->
         <section class="help-card feature-card">
           <div class="lang-ja">
             <h2>キーボードにもゲームパッドにも、スマホにも</h2>
@@ -460,7 +374,36 @@
           </div>
         </section>
 
-        <!-- 特徴8: AI操作(MCP) -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>ディスクの自動保存とライブラリ</h2>
+            <img src="./help/library.png" alt="ディスクライブラリ" />
+            <p>
+              ゲストが書き込んだ内容は数秒おきにブラウザ(IndexedDB)へ自動保存され、次に開いたときに
+              自動で挿入し直されます。読み込んだディスクは「ディスクライブラリ」から選んで挿入、
+              名前変更、ダウンロード、削除ができます。読み込んだディスクや保存内容はサーバーへ送信されません。
+              ブラウザの保存はサイトデータの削除などで消えるため、大事なディスクはダウンロードして
+              保管してください。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Automatic disk saving and a disk library</h2>
+            <img src="./help/library-en.png" alt="Disk Library" />
+            <p>
+              Whatever the guest writes is automatically saved into your browser (IndexedDB) every few
+              seconds and re-inserted the next time you open the page. Disks you've loaded appear in the
+              Disk Library, where you can insert, rename, download, or delete them. Loaded disks and saved
+              data are never sent to a server. Browser storage is cleared when site data is deleted, so
+              download any disk you care about to keep a copy.
+            </p>
+          </div>
+        </section>
+
+        <section class="help-card feature-card">
+          <div class="lang-ja"><h2>ホストからテキスト送信</h2><p>「…」→「入力」から ASCII や半角カナを貼り付けて送信できます。</p><img src="./help/paste.png" alt="テキスト貼り付け画面" /></div>
+          <div class="lang-en"><h2>Type on the host, send it to the guest</h2><p>Paste and send ASCII or half-width kana from More (…) → Input.</p><img src="./help/paste-en.png" alt="Text paste panel" /></div>
+        </section>
+
         <section class="help-card feature-card">
           <div class="lang-ja">
             <h2>AIがPC-8801を直接操作できる<span class="feature-badge">MCP対応</span></h2>
@@ -487,7 +430,89 @@
           </div>
         </section>
 
-        <!-- 特徴9: 手持ちのROM -->
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>互換ROM同梱で、公式ROM無しに起動</h2>
+            <p>
+              同梱の互換ROM
+              <a href="https://github.com/uraraworks/PC88Behavior" target="_blank" rel="noopener">PC88Behavior</a>
+              は、外部から観測できる振る舞いだけを手がかりに書いたクリーンルーム実装で、公式ROMの
+              バイト列を含みません。そのため、公式ROMを用意しなくても URL を開いてボタンを1つ押すだけで
+              起動できます。漢字ROMも、フリーの東雲フォントから作った自作のものを同梱しています。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Boots without an official ROM, thanks to a bundled compatible ROM</h2>
+            <p>
+              The bundled compatible ROM,
+              <a href="https://github.com/uraraworks/PC88Behavior" target="_blank" rel="noopener">PC88Behavior</a>,
+              is a clean-room implementation written using only externally observable behavior as a
+              guide, and it contains no bytes from the official ROM. That's why you can start the
+              machine just by opening the URL and pressing one button, with no official ROM on hand.
+              A self-made kanji ROM, generated from the free Shinonome font, is bundled as well.
+            </p>
+          </div>
+        </section>
+
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>URLでディスクを指定して起動</h2>
+            <p>
+              <code>?fd1=URL&amp;fd2=URL&amp;run=1</code> のようにURLパラメータでディスクイメージを
+              指定すると、ボタンを押さずにそのまま起動できます。ZIP/LZH は自動で展開され、中の
+              D88 イメージがライブラリに登録されます。ディスクを入れた状態の共有URLをコピーして、
+              そのまま人に渡すこともできます。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>Boot with disks specified in the URL</h2>
+            <p>
+              Pass disk image URLs as parameters, as in <code>?fd1=URL&amp;fd2=URL&amp;run=1</code>, and
+              the machine starts right away without any button press. ZIP and LZH archives are extracted
+              automatically and the D88 images inside are registered in the library. You can also copy a
+              shareable URL for the disks currently inserted and hand it to someone else.
+            </p>
+          </div>
+        </section>
+
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>BGM・効果音に対応</h2>
+            <p>
+              BGM や効果音を再生できます。ツールバーのミュートボタンで音を消し、「…」メニューで
+              音量を調整できます(設定はブラウザに保存されます)。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>BGM and sound effects</h2>
+            <p>
+              Background music and sound effects are played. Use the toolbar's Mute button to silence
+              them and the volume slider in the "…" menu to adjust the level (the settings are saved in
+              your browser).
+            </p>
+          </div>
+        </section>
+
+        <section class="help-card feature-card">
+          <div class="lang-ja">
+            <h2>4:3表示と補間</h2>
+            <p>
+              既定では実機のモニタのように4:3で表示します。「…」メニューの「表示比率」でドット等倍表示に、
+              「補間」でシャープ・バイリニアとニアレストを切り替えられます(設定は保存されます)。
+              スクリーンショットは PNG で保存でき、全画面表示にも対応しています。
+            </p>
+          </div>
+          <div class="lang-en">
+            <h2>4:3 display and interpolation</h2>
+            <p>
+              By default the screen is shown at 4:3, like a real monitor. The "Aspect ratio" setting in
+              the "…" menu switches to 1:1 pixel display, and "Interpolation" switches between
+              sharp bilinear and nearest-neighbor (both are saved). You can save screenshots as PNG, and
+              fullscreen display is supported too.
+            </p>
+          </div>
+        </section>
+
         <section class="help-card feature-card">
           <div class="lang-ja">
             <h2>手持ちの ROM も使える(制限モード)</h2>
@@ -511,7 +536,6 @@
           </div>
         </section>
 
-        <!-- 特徴10: プライバシーとライセンス -->
         <section class="help-card feature-card">
           <div class="lang-ja">
             <h2>プライバシーとライセンス</h2>
