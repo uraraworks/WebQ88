@@ -13,6 +13,13 @@ export function initDisplay(source: HTMLCanvasElement): { update: () => void; pr
     filter.value = localStorage.getItem('webq88-filter') === 'nearest' ? 'nearest' : 'sharp';
   } catch { /* 保存できない環境では既定値を使う */ }
 
+  // URLの指定は保存せず、表示する回だけ優先する。
+  const params = new URLSearchParams(location.search);
+  const aspectParam = params.get('aspect');
+  if (aspectParam === '4:3' || aspectParam === 'native') aspect.value = aspectParam;
+  const filterParam = params.get('filter');
+  if (filterParam === 'sharp' || filterParam === 'nearest') filter.value = filterParam;
+
   function present(): void {
     if (sharp.hidden || !source.width || !source.height) return;
     ctx.imageSmoothingEnabled = false;

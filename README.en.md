@@ -37,6 +37,14 @@ the bottom of the screen.
 | `lib=URL` | Register it in the Disk Library without inserting it. Can be given multiple times |
 | `run=1` | Boot automatically without pressing the start button |
 | `bridge=1` | Connect to the WebSocket bridge for AI agents (see "MCP support") |
+| `aspect=4:3` / `aspect=native` | Set the display aspect ratio |
+| `filter=sharp` / `filter=nearest` | Set the display filter |
+| `volume=0`–`100` | Set the volume |
+| `mute=0` / `mute=1` | Unmute / mute |
+| `driveSound=0` / `driveSound=1` | Disable / enable drive sounds |
+| `pause=1` | Start paused |
+
+These display, audio and pause parameters apply only to the current visit and do not change saved settings. Invalid values are ignored.
 
 - ZIP/LZH archives are extracted; every .d88/.88d inside is registered in the library and the first one is inserted.
 - The host must support CORS. Dropbox share links are converted automatically.

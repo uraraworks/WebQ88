@@ -22,6 +22,7 @@ import { registerUrl } from './disk-source';
 import { initStateUi } from './state-ui';
 
 initPlayerUi();
+const urlParams = new URLSearchParams(location.search);
 const audio = new AudioEngine();
 const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
 const volumeInput = document.querySelector<HTMLInputElement>('#volume')!;
@@ -33,6 +34,13 @@ try {
   const stored = localStorage.getItem('webq88-volume');
   if (stored !== null && Number.isFinite(Number(stored))) volumeInput.value = String(Math.max(0, Math.min(100, Number(stored))));
 } catch { /* 保存を使えない環境でも再生する */ }
+// URLの設定は今回の起動だけに適用する。
+const muteParam = urlParams.get('mute');
+if (muteParam === '0' || muteParam === '1') muted = muteParam === '1';
+const driveSoundParam = urlParams.get('driveSound');
+if (driveSoundParam === '0' || driveSoundParam === '1') driveSoundInput.checked = driveSoundParam === '1';
+const volumeParam = urlParams.get('volume');
+if (volumeParam !== null && /^(?:100|[0-9]{1,2})$/.test(volumeParam)) volumeInput.value = volumeParam;
 function updateAudioSettings(): void {
   audio.setSettings(muted, Number(volumeInput.value) / 100);
   muteButton.title = muted ? 'ミュート解除' : 'ミュート';
@@ -40,10 +48,9 @@ function updateAudioSettings(): void {
   muteButton.setAttribute('aria-pressed', String(muted));
   muteButton.classList.toggle('active', muted);
   muteButton.querySelector('path')!.setAttribute('d', muted ? 'M4 9h4l5-4v14l-5-4H4z M16 9l5 6 M21 9l-5 6' : 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M19 6a8 8 0 0 1 0 12');
-  try { localStorage.setItem('webq88-muted', String(muted)); localStorage.setItem('webq88-volume', volumeInput.value); } catch { /* 保存不可 */ }
 }
-muteButton.addEventListener('click', () => { muted = !muted; updateAudioSettings(); });
-volumeInput.addEventListener('input', updateAudioSettings);
+muteButton.addEventListener('click', () => { muted = !muted; updateAudioSettings(); try { localStorage.setItem('webq88-muted', String(muted)); } catch { /* 保存不可 */ } });
+volumeInput.addEventListener('input', () => { updateAudioSettings(); try { localStorage.setItem('webq88-volume', volumeInput.value); } catch { /* 保存不可 */ } });
 audio.setDriveSound(driveSoundInput.checked);
 driveSoundInput.addEventListener('change', () => {
   audio.setDriveSound(driveSoundInput.checked);
@@ -150,6 +157,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
       renderMode(mode);
       if (firstReady) {
         firstReady = false;
+        if (urlParams.get('pause') === '1') pauseButton.click();
         // 前回のドライブ割り当てを自動で挿入する。ドライブ1に入れたときは、
         // 起動用ディスクとして読まれるようもう一度リセットする。
         void (async () => {
