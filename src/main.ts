@@ -307,7 +307,49 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   const keyboard = attachKeyboard(window, (retroKey, pressed) => {
     proxy.sendKey(retroKey, pressed);
   }, () => numpadAlt.checked, () => hostMapping());
-  hostMapping = initInputControls(keyboard.createKeySource);
+  const portDevice = document.querySelector<HTMLSelectElement>('#port-device')!;
+  const mouseHint = document.querySelector<HTMLElement>('#mouse-hint')!;
+  const mouseRelease = document.querySelector<HTMLButtonElement>('#mouse-release')!;
+  try { if (localStorage.getItem('webq88-port-device') === 'mouse') portDevice.value = 'mouse'; } catch { /* 既定値を使う */ }
+  hostMapping = initInputControls(keyboard.createKeySource, () => portDevice.value !== 'mouse');
+  let mouseDx = 0, mouseDy = 0;
+  const releaseButtons = () => { proxy.mouseButton(false, false); proxy.mouseButton(true, false); mouseDx = mouseDy = 0; };
+  const updateDevice = () => {
+    releaseButtons();
+    if (portDevice.value !== 'mouse' && document.pointerLockElement === canvas) document.exitPointerLock();
+    proxy.setPortDevice(portDevice.value === 'mouse');
+    try { localStorage.setItem('webq88-port-device', portDevice.value); } catch { /* 保存不可 */ }
+  };
+  portDevice.addEventListener('change', updateDevice);
+  updateDevice();
+  canvas.addEventListener('click', () => {
+    if (portDevice.value === 'mouse' && document.pointerLockElement !== canvas) void canvas.requestPointerLock();
+  });
+  canvas.addEventListener('contextmenu', event => { if (portDevice.value === 'mouse') event.preventDefault(); });
+  document.addEventListener('pointerlockchange', () => {
+    const locked = document.pointerLockElement === canvas;
+    mouseHint.hidden = mouseRelease.hidden = !locked;
+    if (!locked) releaseButtons();
+  });
+  mouseRelease.addEventListener('click', () => document.exitPointerLock());
+  window.addEventListener('keydown', event => {
+    if (document.pointerLockElement === canvas && event.ctrlKey && event.altKey && event.code === 'KeyM') {
+      event.preventDefault(); event.stopImmediatePropagation(); document.exitPointerLock();
+    }
+  }, true);
+  document.addEventListener('mousemove', event => {
+    if (document.pointerLockElement === canvas) { mouseDx += event.movementX; mouseDy += event.movementY; }
+  });
+  for (const type of ['mousedown', 'mouseup'] as const) document.addEventListener(type, event => {
+    if (document.pointerLockElement !== canvas || (event.button !== 0 && event.button !== 2)) return;
+    event.preventDefault(); proxy.mouseButton(event.button === 2, type === 'mousedown');
+  });
+  window.addEventListener('blur', releaseButtons);
+  const flushMouse = () => {
+    if (mouseDx || mouseDy) { proxy.moveMouse(Math.trunc(mouseDx), Math.trunc(mouseDy)); mouseDx = mouseDy = 0; }
+    requestAnimationFrame(flushMouse);
+  };
+  requestAnimationFrame(flushMouse);
 
   initVirtualKeyboard(keyboard.setVirtualKey, display.update);
   initPasteUi((text) => proxy.execApi('paste_text', { text }));

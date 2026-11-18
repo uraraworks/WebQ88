@@ -9,7 +9,7 @@
     <header class="app-header"><div class="app-title-row"><span class="app-icon" aria-hidden="true">88</span><h1>WebQ88</h1></div><p class="app-tagline">The online PC-8801 emulator powered by QUASI88</p></header>
     <div id="app">
       <div id="player">
-        <div id="screen-stage"><canvas id="screen" tabindex="0"></canvas><canvas id="screen-sharp" aria-hidden="true" hidden></canvas><div id="pause-overlay" hidden>一時停止中</div><div id="startup-overlay" class="overlay"><button id="startup-button" type="button">互換ROMで起動</button><p>音声再生を有効にするため、ボタンをクリックして起動してください。</p></div></div>
+        <div id="screen-stage"><canvas id="screen" tabindex="0"></canvas><canvas id="screen-sharp" aria-hidden="true" hidden></canvas><div id="mouse-hint" hidden>解除：Ctrl＋Alt＋M</div><div id="pause-overlay" hidden>一時停止中</div><div id="startup-overlay" class="overlay"><button id="startup-button" type="button">互換ROMで起動</button><p>音声再生を有効にするため、ボタンをクリックして起動してください。</p></div></div>
         <div id="virtual-keyboard" class="kbd-panel" hidden aria-label="ソフトキーボード"></div>
         <div class="console-footer"><div class="toolbar" aria-label="操作バー"><div class="toolbar-center">
           <button id="pause" class="icon-btn" type="button" title="一時停止" aria-label="一時停止" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14 M16 5v14" /></svg></button>
@@ -46,6 +46,8 @@
                 <div><button id="paste-send" type="button">送信</button> <button id="paste-cancel" type="button">キャンセル</button></div>
                 <div id="paste-status" role="status"></div>
               </div>
+              <label for="port-device">端子につなぐ機器</label><select id="port-device"><option value="joystick">ジョイスティック</option><option value="mouse">マウス</option></select>
+              <span>マウス選択中はゲームパッドの入力が効きません。</span>
               <button id="input-settings" type="button">ゲームパッド・キー割当</button>
               <label><input type="checkbox" id="numpad-alt" /> テンキー代替</label>
             </div>
@@ -76,6 +78,7 @@
             </div>
           </div>
           </div>
+          <button id="mouse-release" class="icon-btn" type="button" title="マウスのロックを解除" aria-label="マウスのロックを解除" hidden>↗</button>
           <button id="core-reset" class="icon-btn toolbar-end" type="button" title="リセット" aria-label="リセット"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8 M3 3v5h5" /></svg></button>
         </div>
       <div id="library-backdrop" class="library-backdrop" hidden><section class="library-modal" role="dialog" aria-modal="true" aria-labelledby="library-title"><h2 id="library-title">ディスクライブラリ</h2><p>保存済みのディスクを選んでドライブに挿入できます。</p><div id="library-list" class="library-list"></div><div class="library-footer"><button id="library-close" type="button">閉じる</button></div></section></div>

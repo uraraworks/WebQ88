@@ -380,6 +380,25 @@
           return { ok: true };
         }
 
+        case 'mouse_move': {
+          // 入力系なので制限モードでも使える(画面・メモリを返さない)。
+          var dx = Number(args.dx), dy = Number(args.dy);
+          if (!Number.isInteger(dx) || !Number.isInteger(dy) || Math.abs(dx) > 10000 || Math.abs(dy) > 10000) return { error: 'invalid args: dx,dy must be integers within ±10000' };
+          if (!ctx.portIsMouse()) return { error: 'port device is not mouse (「…」→「入力」→「端子につなぐ機器」でマウスを選ぶ)' };
+          ctx.mouseMove(dx, dy);
+          return { ok: true };
+        }
+
+        case 'mouse_button': {
+          var btn = String(args.button || ''), act = String(args.action || '');
+          if (btn !== 'left' && btn !== 'right') return { error: "invalid args: button must be 'left'|'right'" };
+          if (act !== 'down' && act !== 'up' && act !== 'click') return { error: "invalid args: action must be 'down'|'up'|'click'" };
+          if (!ctx.portIsMouse()) return { error: 'port device is not mouse (「…」→「入力」→「端子につなぐ機器」でマウスを選ぶ)' };
+          if (act === 'click') { ctx.mouseButton(btn === 'right', true); await ctx.driveFrames(HOLD_FRAMES); ctx.mouseButton(btn === 'right', false); await ctx.driveFrames(GAP_FRAMES); }
+          else ctx.mouseButton(btn === 'right', act === 'down');
+          return { ok: true };
+        }
+
         case 'key_sequence': {
           var steps = Array.isArray(args.steps) ? args.steps : null;
           if (!steps) return { error: 'invalid args: steps must be an array' };

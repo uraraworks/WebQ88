@@ -251,3 +251,40 @@ int webq88_disk_image_selected(int drv)
 {
     return (drv >= 0 && drv < 2 && disk_image_exist(drv)) ? disk_image_selected(drv) : -1;
 }
+
+/* 端子の切り替えと相対移動を上流の入力処理へ渡す。 */
+#include "keyboard.h"
+extern void quasi88_mouse(int code, int on);
+extern void quasi88_mouse_move(int x, int y, int abs_coord);
+extern void webq88_event_mouse_pos(int x, int y);
+static int webq88_mouse_x, webq88_mouse_y;
+
+void webq88_port_device(int mouse)
+{
+    quasi88_mouse(KEY88_MOUSE_L, 0);
+    quasi88_mouse(KEY88_MOUSE_R, 0);
+    mouse_mode = mouse ? MOUSE_MOUSE : MOUSE_JOYSTICK;
+    keyboard_switch();
+}
+
+void webq88_mouse_move(int dx, int dy)
+{
+    /* 座標の桁あふれを避け、切り替え時に基準を合わせ直す。 */
+    if (webq88_mouse_x > 1000000 || webq88_mouse_x < -1000000 ||
+        webq88_mouse_y > 1000000 || webq88_mouse_y < -1000000) {
+        webq88_mouse_x = webq88_mouse_y = 0;
+        webq88_event_mouse_pos(0, 0);
+        keyboard_switch();
+    }
+    if (dx > 10000) dx = 10000; if (dx < -10000) dx = -10000;
+    if (dy > 10000) dy = 10000; if (dy < -10000) dy = -10000;
+    webq88_mouse_x += dx;
+    webq88_mouse_y += dy;
+    webq88_event_mouse_pos(webq88_mouse_x, webq88_mouse_y);
+    quasi88_mouse_move(webq88_mouse_x, webq88_mouse_y, 1);
+}
+
+void webq88_mouse_button(int right, int down)
+{
+    quasi88_mouse(right ? KEY88_MOUSE_R : KEY88_MOUSE_L, down);
+}

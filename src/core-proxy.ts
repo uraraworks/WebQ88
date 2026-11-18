@@ -197,6 +197,10 @@ export class CoreProxy {
     return promise;
   }
 
+  setPortDevice(mouse: boolean): void { this.worker.postMessage({ type: 'portDevice', mouse }); }
+  moveMouse(dx: number, dy: number): void { this.worker.postMessage({ type: 'mouseMove', dx, dy }); }
+  mouseButton(right: boolean, down: boolean): void { this.worker.postMessage({ type: 'mouseButton', right, down }); }
+
   sendKey(code: number, pressed: boolean): void {
     const payload: MainToWorkerMessage = { type: 'key', code, pressed };
     this.worker.postMessage(payload);

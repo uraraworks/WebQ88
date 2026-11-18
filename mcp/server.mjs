@@ -254,6 +254,20 @@ server.tool(
 );
 
 server.tool(
+  'mouse_move',
+  'マウスを相対移動する(端子の機器がマウスのときだけ。制限モードでも使える)。',
+  { dx: z.number().int().describe('横の移動量(右が正)'), dy: z.number().int().describe('縦の移動量(下が正)') },
+  async ({ dx, dy }) => callDispatch('mouse_move', { dx, dy })
+);
+
+server.tool(
+  'mouse_button',
+  'マウスのボタンを押す・離す・クリックする(端子の機器がマウスのときだけ。制限モードでも使える)。',
+  { button: z.enum(['left', 'right']).describe('ボタン'), action: z.enum(['down', 'up', 'click']).describe('操作') },
+  async ({ button, action }) => callDispatch('mouse_button', { button, action })
+);
+
+server.tool(
   'screen_signature',
   '画面の署名({rows, nonBlankChars, sha256})を取得する。本文は返さないため制限モードでも常に使える。',
   {},

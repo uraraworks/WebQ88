@@ -1,0 +1,41 @@
+--- a/src/MINI/event.c
++++ b/src/MINI/event.c
+@@ -52,10 +52,18 @@
+  *
+  ************************************************************************/
+ 
++static int webq88_mouse_x, webq88_mouse_y;
++
++void webq88_event_mouse_pos(int x, int y)
++{
++    webq88_mouse_x = x;
++    webq88_mouse_y = y;
++}
++
+ void	event_get_mouse_pos(int *x, int *y)
+ {
+-    *x = 0;
+-    *y = 0;
++    *x = webq88_mouse_x;
++    *y = webq88_mouse_y;
+ }
+ 
+ 
+--- a/src/LIBRETRO/libretro.c
++++ b/src/LIBRETRO/libretro.c
+@@ -299,7 +299,6 @@
+       handle_key(KEY88_F6 + i, RETROK_F6 + i);
+ 
+    /* Joypads */
+-   mouse_mode = 3;
+    handle_key(KEY88_PAD1_UP,    RETRO_DEVICE_ID_JOYPAD_UP);
+    handle_key(KEY88_PAD1_DOWN,  RETRO_DEVICE_ID_JOYPAD_DOWN);
+    handle_key(KEY88_PAD1_LEFT,  RETRO_DEVICE_ID_JOYPAD_LEFT);
+@@ -693,6 +692,7 @@
+ bool retro_load_game(const struct retro_game_info *info)
+ {
+    init_variables();
++   mouse_mode = MOUSE_JOYSTICK;
+    quasi88_start();
+    quasi88_disk_eject_all();
+ 

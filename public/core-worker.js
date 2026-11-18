@@ -64,6 +64,8 @@ var RETRO_DEVICE_KEYBOARD = 3;
 var MAX_CATCHUP_FRAMES = 4; // タブ非表示から復帰した際に一気に追いつきすぎない上限
 var FALLBACK_FPS = 60;
 
+var portMouse = false;
+var mouseButtons = [[], []];
 var moduleInstance = null;
 var disks = null; // WebQ88DiskHost.create(M)(public/disk-host.js)。コア起動後に作る
 var lampAcc = 0; // 直近のframe送信以降に点いたアクセスランプ(bit0=ドライブ1, bit1=ドライブ2)
@@ -223,6 +225,8 @@ function startLoop() {
     }
     var ran = 0;
     while (accumulatedMs >= frameDurationMs && ran < MAX_CATCHUP_FRAMES) {
+      // 短いクリックも最低1フレームは押下を維持する。
+      for (var b = 0; b < 2; b++) if (mouseButtons[b].length) moduleInstance._webq88_mouse_button(b, mouseButtons[b].shift() ? 1 : 0);
       moduleInstance._retro_run();
       executedFrames++;
       lampAcc |= disks.lampMask();
@@ -316,6 +320,7 @@ function finishBoot(M, plan, isReboot) {
     }
   }
 
+  M._webq88_port_device(portMouse ? 1 : 0);
   var avInfo = readAvInfo(M);
   fps = avInfo.fps;
   postMessage({ type: 'ready', width: avInfo.width, height: avInfo.height, fps: fps, sampleRate: avInfo.sampleRate, mode: romMode });
@@ -502,6 +507,14 @@ function buildApiCtx() {
       keyHoldTracker.release(id);
     },
     driveFrames: driveFrames,
+    // マウス(端子の機器がマウスのときだけ効く)。UI と同じ経路でコアへ渡す。
+    portIsMouse: function () { return portMouse; },
+    mouseMove: function (dx, dy) {
+      if (moduleInstance && portMouse) moduleInstance._webq88_mouse_move(dx | 0, dy | 0);
+    },
+    mouseButton: function (right, down) {
+      if (moduleInstance && portMouse) mouseButtons[right ? 1 : 0].push(!!down);
+    },
     textCols: function () {
       if (!moduleInstance) return 0;
       return moduleInstance._webq88_text_cols();
@@ -582,6 +595,7 @@ function buildApiCtx() {
         M.HEAPU8.set(saved, ptr);
         var ok = M._retro_unserialize(ptr, saved.length);
         if (!ok) throw new Error('retro_unserialize failed');
+        M._webq88_port_device(portMouse ? 1 : 0);
       } finally {
         M._free(ptr);
       }
@@ -689,6 +703,7 @@ function handleState(msg) {
       try {
         M.HEAPU8.set(bytes, loadPtr);
         if (!M._retro_unserialize(loadPtr, bytes.length)) throw new Error('復元できません');
+        M._webq88_port_device(portMouse ? 1 : 0);
       } finally { M._free(loadPtr); }
     }
     postMessage(response, response.bytes ? [response.bytes] : []);
@@ -703,6 +718,17 @@ self.onmessage = function (ev) {
   switch (msg.type) {
     case 'init':
       handleInit(msg.bundled, msg.user);
+      break;
+    case 'portDevice':
+      mouseButtons = [[], []];
+      portMouse = !!msg.mouse;
+      if (moduleInstance) moduleInstance._webq88_port_device(portMouse ? 1 : 0);
+      break;
+    case 'mouseMove':
+      if (moduleInstance && portMouse) moduleInstance._webq88_mouse_move(msg.dx | 0, msg.dy | 0);
+      break;
+    case 'mouseButton':
+      if (moduleInstance && portMouse) mouseButtons[msg.right ? 1 : 0].push(!!msg.down);
       break;
     case 'key':
       if (msg.pressed) {

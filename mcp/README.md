@@ -63,6 +63,8 @@ npm run dev -- --port 5188 --strictPort
 | `type_text` | ASCII文字列をキー入力として送る(改行=Enter) | ○ |
 | `paste_text` | ASCII・半角カナを送信し、対応外の文字を一覧で返す | ○ |
 | `send_keys` | `SHIFT+F1` や `CTRL+C` などのキーの組み合わせを送る | ○ |
+| `mouse_move` | マウスを相対移動（端子の機器がマウスのときだけ） | ○ |
+| `mouse_button` | マウスの左右ボタンを押す・離す・クリック（同上） | ○ |
 | `screen_signature` | 画面の署名(行数・非空白文字数・sha256)。本文は返さない | ○ |
 | `find_text` / `wait_screen` | 文字列の位置・件数 / 出現と経過時間。本文は返さない。存在の反復照会で本文を復元できるため拒否 | ×(エラー) |
 | `screen_text` | テキスト画面の本文を行配列で取得 | ×(エラー) |

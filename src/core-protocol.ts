@@ -50,6 +50,9 @@ export type MainToWorkerMessage =
       bundled: RomFile[];
       user: RomFile[];
     }
+  | { type: 'portDevice'; mouse: boolean }
+  | { type: 'mouseMove'; dx: number; dy: number }
+  | { type: 'mouseButton'; right: boolean; down: boolean }
   | { type: 'key'; code: number /* RETROK */; pressed: boolean }
   | { type: 'reset' }
   | { type: 'pause' | 'resume' }

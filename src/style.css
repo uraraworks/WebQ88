@@ -148,3 +148,6 @@ body.vpad-shown #player { min-width: min(340px, 100%); }
 .input-profiles form[hidden] { display: none; }
 
 dialog.library-modal::backdrop { background: #000a; }
+
+#mouse-hint { position: absolute; right: 8px; top: 8px; color: white; background: #000a; padding: 4px 8px; font-size: 12px; pointer-events: none; }
+#mouse-hint[hidden], #mouse-release[hidden] { display: none; }

@@ -204,7 +204,7 @@ function loadProfiles(): ProfileStore {
   try { old = JSON.parse(localStorage.getItem('webq88-input-settings') || 'null'); } catch { /* 既定値を使う */ }
   return { version: 1, activeId: 'standard', profiles: [{ id: 'standard', name: '標準', settings: cleanSettings(old) }] };
 }
-export function initInputControls(createSource: () => (code: number, pressed: boolean) => void): () => Bindings {
+export function initInputControls(createSource: () => (code: number, pressed: boolean) => void, gamepadEnabled: () => boolean = () => true): () => Bindings {
   const store = loadProfiles();
   const settings = structuredClone(store.profiles.find(p => p.id === store.activeId)!.settings);
   const save = () => { store.profiles.find(p => p.id === store.activeId)!.settings = structuredClone(settings); try { localStorage.setItem('webq88-input-profiles', JSON.stringify(store)); } catch { /* 保存不可 */ } };
@@ -335,7 +335,7 @@ export function initInputControls(createSource: () => (code: number, pressed: bo
     const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter((p): p is Gamepad => !!p && p.connected) : [];
     const text = pads.length ? `ゲームパッド: ${pads.map(p => p.id).join(', ')}` : 'ゲームパッド: 未接続'; if (text !== lastStatus) { status.textContent = text; lastStatus = text; }
     const next = new Set<string>();
-    if (!document.hidden && document.hasFocus()) for (const pad of pads) {
+    if (gamepadEnabled() && !document.hidden && document.hasFocus()) for (const pad of pads) {
       pad.buttons.forEach((b, i) => { if (b.pressed && buttons[i]) next.add(buttons[i]); });
       pad.axes.slice(0, 4).forEach((v, i) => { if (v < -settings.deadzone) next.add(`axis${i}-`); if (v > settings.deadzone) next.add(`axis${i}+`); });
     }
