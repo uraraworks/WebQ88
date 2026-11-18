@@ -1,5 +1,5 @@
 import { baseNameOf, extractArchive, resolveArchiveFileName } from './api/archive';
-import { getDisk, listDisks, putDisk, type StoredDisk } from './disk-store';
+import { createFolder, getDisk, listDisks, putDisk, type StoredDisk } from './disk-store';
 
 export async function fetchSource(url: string, progress: (message: string) => void): Promise<Uint8Array> {
   const parsed = new URL(url, location.href);
@@ -34,10 +34,12 @@ export async function registerSource(name: string, bytes: Uint8Array, source: st
   const entries = archive ? (await extractArchive(archive, bytes)).filter(e => /\.(d88|88d)$/i.test(e.name)) : [{ name, data: bytes }];
   if (!entries.length) throw new Error('アーカイブに .d88 / .88d がありません');
   const result: StoredDisk[] = [];
+  let folderId: string | undefined;
   for (const entry of entries) {
     const key = archive ? `${source}:entry:${entry.name}` : source;
     const old = await getDisk(key);
-    const disk: StoredDisk = old ?? { sourceKey: key, name: baseNameOf(entry.name), bytes: entry.data, savedAt: Date.now(), url, archiveEntry: archive ? entry.name : undefined };
+    if (!old && archive && entries.length > 1 && !folderId) folderId = (await createFolder(baseNameOf(name).replace(/\.(zip|lzh)$/i, '') || name)).id;
+    const disk: StoredDisk = old ?? { sourceKey: key, name: baseNameOf(entry.name), bytes: entry.data, savedAt: Date.now(), url, archiveEntry: archive ? entry.name : undefined, folderId };
     if (!old) await putDisk(disk);
     result.push(disk);
   }

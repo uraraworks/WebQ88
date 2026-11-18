@@ -1,4 +1,4 @@
-import { getDisk, listDisks, renameDisk, type StoredDisk } from './disk-store';
+import { createFolder, deleteFolder, getDisk, listDisks, listFolders, moveDisk, renameDisk, renameFolder, type DiskFolder, type StoredDisk } from './disk-store';
 import type { DiskPanel } from './disks';
 
 export function initLibrary(panel: DiskPanel): void {
@@ -6,6 +6,8 @@ export function initLibrary(panel: DiskPanel): void {
   const backdrop = document.querySelector<HTMLElement>('#library-backdrop')!;
   const list = document.querySelector<HTMLElement>('#library-list')!;
   const close = document.querySelector<HTMLButtonElement>('#library-close')!;
+  const expanded = new Set<string>();
+  let folders: DiskFolder[] = [];
   const dismiss = (): void => { backdrop.hidden = true; open.focus(); };
   const action = (label: string, run: () => Promise<void>, danger = false): HTMLButtonElement => {
     const button = document.createElement('button');
@@ -19,10 +21,28 @@ export function initLibrary(panel: DiskPanel): void {
     return button;
   };
   const refresh = async (): Promise<void> => {
-    const disks = (await listDisks()).sort ( (a, b) => b.savedAt - a.savedAt );
+    const collator = new Intl.Collator('ja', { numeric: true });
+    const disks = (await listDisks()).sort((a, b) => collator.compare(a.displayName || a.name, b.displayName || b.name));
+    folders = (await listFolders()).sort((a, b) => collator.compare(a.name, b.name));
     list.replaceChildren();
-    if (!disks.length) { list.textContent = '保存されたディスクはありません。'; return; }
-    for (const disk of disks) list.appendChild(row(disk));
+    if (!disks.length && !folders.length) { list.textContent = '保存されたディスクはありません。'; return; }
+    for (const folder of folders) {
+      const children = disks.filter(disk => disk.folderId === folder.id);
+      const group = document.createElement('div');
+      const header = document.createElement('div'); header.className = 'library-folder';
+      const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'library-folder-toggle';
+      toggle.textContent = `${expanded.has(folder.id) ? '▼' : '▶'} 📁 ${folder.name}（${children.length}枚）`;
+      toggle.setAttribute('aria-expanded', String(expanded.has(folder.id)));
+      toggle.addEventListener('click', () => { if (expanded.has(folder.id)) expanded.delete(folder.id); else expanded.add(folder.id); void refresh(); });
+      const actions = document.createElement('div'); actions.className = 'library-item-actions';
+      actions.append(action('名前変更', async () => { const name = window.prompt('フォルダ名を入力してください', folder.name); if (name !== null) { await renameFolder(folder.id, name); await refresh(); } }));
+      actions.append(action('削除', async () => { if (window.confirm(`「${folder.name}」を削除しますか？ 中のディスクはフォルダ無しに戻ります。`)) { await deleteFolder(folder.id); expanded.delete(folder.id); await refresh(); } }, true));
+      header.append(toggle, actions); group.append(header);
+      if (expanded.has(folder.id)) for (const disk of children) { const child = row(disk); child.classList.add('library-folder-child'); group.append(child); }
+      list.append(group);
+    }
+    const ids = new Set(folders.map(folder => folder.id));
+    for (const disk of disks) if (!disk.folderId || !ids.has(disk.folderId)) list.appendChild(row(disk));
   };
   const row = (disk: StoredDisk): HTMLElement => {
     const item = document.createElement('div'); item.className = 'library-list-item';
@@ -36,6 +56,13 @@ export function initLibrary(panel: DiskPanel): void {
       const value = window.prompt(`表示名を入力してください（元のファイル名: ${disk.name}）`, disk.displayName || disk.name);
       if (value !== null) { await renameDisk(disk.sourceKey, value); await refresh(); }
     }));
+    const destination = document.createElement('select'); destination.className = 'library-folder-select'; destination.setAttribute('aria-label', '移動先フォルダ');
+    for (const folder of [{ id: '', name: 'フォルダ無し' }, ...folders]) {
+      const option = document.createElement('option'); option.value = folder.id; option.textContent = folder.name; destination.append(option);
+    }
+    destination.value = disk.folderId || '';
+    destination.addEventListener('change', () => { destination.disabled = true; void moveDisk(disk.sourceKey, destination.value || undefined).then(refresh).catch((err: Error) => { window.alert(`移動に失敗しました: ${err.message}`); destination.disabled = false; }); });
+    actions.append(destination);
     actions.append(action('ダウンロード', async () => {
       await panel.flushAll();
       const latest = await getDisk(disk.sourceKey);
@@ -54,6 +81,8 @@ export function initLibrary(panel: DiskPanel): void {
     }, true));
     item.append(badge, name, meta, actions); return item;
   };
+  const create = action('フォルダ作成', async () => { const name = window.prompt('フォルダ名を入力してください'); if (name !== null) { const folder = await createFolder(name); expanded.add(folder.id); await refresh(); } });
+  list.before(create);
   document.querySelector<HTMLButtonElement>('#share-disks')!.addEventListener('click', () => { void panel.shareUrl().catch((err: Error) => window.alert(err.message)); });
   open.addEventListener('click', () => { backdrop.hidden = false; close.focus(); void refresh().catch(() => { list.textContent = 'ライブラリを読み込めませんでした。'; }); });
   close.addEventListener('click', dismiss);

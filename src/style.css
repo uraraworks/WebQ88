@@ -80,6 +80,10 @@ body.pseudo-fullscreen .console-footer { flex: none; }
 .library-modal p { color: #aaa; font-size: 12px; }
 .library-list { display: flex; flex-direction: column; gap: 6px; border-block: 1px solid #555; padding: 8px 0; max-height: 320px; overflow-y: auto; font-size: 12px; }
 .library-list-item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
+.library-folder { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.library-folder-toggle { flex: 1; text-align: left; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.library-folder-child { padding-left: 24px; }
+.library-folder-select { max-width: 150px; border: 1px solid #4a90d9; border-radius: 4px; background: #303030; color: #e6e6e6; font-size: 11px; }
 .library-item-badge { flex: none; padding: 2px 8px; border: 1px solid #4a90d9; border-radius: 999px; color: #80b9f4; font-size: 10px; font-weight: bold; }
 .library-item-name { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; }
 .library-item-meta { color: #aaa; font-size: 11px; }

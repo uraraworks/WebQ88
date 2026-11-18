@@ -1,5 +1,5 @@
 import { getState, listStates } from './state-store';
-import { listDisks } from './disk-store';
+import { listDisks, listFolders } from './disk-store';
 import type { CoreProxy } from './core-proxy';
 import type { DiskPanel } from './disks';
 
@@ -141,8 +141,9 @@ export function createBridgeHost(proxy: CoreProxy, panel: DiskPanel): BridgeHost
         return { ok: true, slot: args.slot };
       }
       if (cmd === 'list_disk_library') {
-        const disks = (await listDisks()).map(({ sourceKey, name, bytes, savedAt, displayName, url, archiveEntry, sourceOrder, lastImages }) =>
-          ({ sourceKey, name, size: bytes.byteLength, savedAt, displayName, url, archiveEntry, sourceOrder, lastImages }));
+        const folders = new Map((await listFolders()).map(folder => [folder.id, folder.name]));
+        const disks = (await listDisks()).map(({ sourceKey, name, bytes, savedAt, displayName, url, archiveEntry, sourceOrder, lastImages, folderId }) =>
+          ({ sourceKey, name, size: bytes.byteLength, savedAt, displayName, url, archiveEntry, sourceOrder, lastImages, folderName: folderId ? folders.get(folderId) ?? null : null }));
         return { ok: true, disks };
       }
       if (cmd === 'persist_disks') { await panel.flushAll(true); return { ok: true }; }

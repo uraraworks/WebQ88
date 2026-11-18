@@ -26,7 +26,10 @@ export interface StoredDisk {
   archiveEntry?: string;
   sourceOrder?: number;
   lastImages?: [number, number];
+  folderId?: string;
 }
+
+export interface DiskFolder { id: string; name: string }
 
 export interface DriveAssignment {
   /** 添字0=ドライブ1, 1=ドライブ2。空なら null。 */
@@ -39,6 +42,7 @@ const DB_VERSION = 1;
 const STORE_DISKS = 'disks';
 const STORE_META = 'meta';
 const META_DRIVES_ID = 'drives';
+const META_FOLDERS_ID = 'folders';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -108,7 +112,7 @@ export async function putDiskPreservingMeta(disk: StoredDisk): Promise<void> {
   const store = tx.objectStore(STORE_DISKS);
   const done = txDone(tx);
   const existing = (await reqToPromise(store.get(disk.sourceKey))) as StoredDisk | undefined;
-  store.put({ ...existing, ...disk, displayName: existing?.displayName ?? disk.displayName });
+  store.put({ ...existing, ...disk, displayName: existing?.displayName ?? disk.displayName, folderId: existing ? existing.folderId : disk.folderId });
   await done;
 }
 
@@ -142,6 +146,60 @@ export function newBlankSourceKey(): string {
 export async function listDisks(): Promise<StoredDisk[]> {
   const db = await openDb();
   return reqToPromise(db.transaction(STORE_DISKS, 'readonly').objectStore(STORE_DISKS).getAll());
+}
+
+export async function listFolders(): Promise<DiskFolder[]> {
+  const db = await openDb();
+  const record = await reqToPromise(db.transaction(STORE_META, 'readonly').objectStore(STORE_META).get(META_FOLDERS_ID)) as { folders: DiskFolder[] } | undefined;
+  return record?.folders ?? [];
+}
+
+export async function createFolder(name: string): Promise<DiskFolder> {
+  const folder = { id: `webq88-folder-${crypto.randomUUID()}`, name: name.trim() };
+  if (!folder.name) throw new Error('フォルダ名を入力してください');
+  const db = await openDb();
+  const tx = db.transaction(STORE_META, 'readwrite');
+  const done = txDone(tx);
+  const store = tx.objectStore(STORE_META);
+  const record = await reqToPromise(store.get(META_FOLDERS_ID)) as { folders: DiskFolder[] } | undefined;
+  store.put({ id: META_FOLDERS_ID, folders: [...(record?.folders ?? []), folder] });
+  await done;
+  return folder;
+}
+
+export async function renameFolder(id: string, name: string): Promise<void> {
+  name = name.trim();
+  if (!name) throw new Error('フォルダ名を入力してください');
+  const db = await openDb();
+  const tx = db.transaction(STORE_META, 'readwrite');
+  const done = txDone(tx);
+  const store = tx.objectStore(STORE_META);
+  const record = await reqToPromise(store.get(META_FOLDERS_ID)) as { folders: DiskFolder[] } | undefined;
+  store.put({ id: META_FOLDERS_ID, folders: (record?.folders ?? []).map(f => f.id === id ? { ...f, name } : f) });
+  await done;
+}
+
+export async function deleteFolder(id: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction([STORE_META, STORE_DISKS], 'readwrite');
+  const done = txDone(tx);
+  const meta = tx.objectStore(STORE_META);
+  const disks = tx.objectStore(STORE_DISKS);
+  const [record, all] = await Promise.all([reqToPromise(meta.get(META_FOLDERS_ID)) as Promise<{ folders: DiskFolder[] } | undefined>, reqToPromise(disks.getAll()) as Promise<StoredDisk[]>]);
+  meta.put({ id: META_FOLDERS_ID, folders: (record?.folders ?? []).filter(f => f.id !== id) });
+  for (const disk of all) if (disk.folderId === id) { delete disk.folderId; disks.put(disk); }
+  await done;
+}
+
+export async function moveDisk(key: string, folderId?: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction([STORE_META, STORE_DISKS], 'readwrite');
+  const done = txDone(tx);
+  const store = tx.objectStore(STORE_DISKS);
+  const [disk, record] = await Promise.all([reqToPromise(store.get(key)) as Promise<StoredDisk | undefined>, reqToPromise(tx.objectStore(STORE_META).get(META_FOLDERS_ID)) as Promise<{ folders: DiskFolder[] } | undefined>]);
+  if (folderId && !record?.folders.some(f => f.id === folderId)) { await done; throw new Error('フォルダが見つかりません'); }
+  if (disk) store.put({ ...disk, folderId });
+  await done;
 }
 
 export async function renameDisk(key: string, displayName: string): Promise<void> {
