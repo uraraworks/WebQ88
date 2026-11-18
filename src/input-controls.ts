@@ -1,4 +1,3 @@
-import { codeToRetroKey } from './keyboard';
 
 export type VpadWidget =
   | { kind: 'dpad'; ids: { up: string; down: string; left: string; right: string }; xPct: number; yPct: number; sizePct: number }
@@ -173,20 +172,20 @@ export function stickKnobOffset(rect: VpadRect, x: number, y: number): { x: numb
 
 
 type Bindings = Record<string, number>;
-type Settings = { version: 1; gamepad: Bindings; virtual: Bindings; host: Bindings; deadzone: number; visible: boolean };
+type Settings = { version: 1; gamepad: Bindings; virtual: Bindings; host: Bindings; deadzone: number; visible: boolean; hostEnabled: boolean };
 const tenkey: Bindings = { up: 264, down: 258, left: 260, right: 262, a: 32, b: 13, x: 27, y: 122, start: 13, select: 27, 'axis0-': 260, 'axis0+': 262, 'axis1-': 264, 'axis1+': 258 };
 const cursor: Bindings = { ...tenkey, up: 273, down: 274, left: 276, right: 275, a: 122, b: 120, 'axis0-': 276, 'axis0+': 275, 'axis1-': 273, 'axis1+': 274 };
 const parts: Record<string, string> = { up: '上', down: '下', left: '左', right: '右', 'btn-a': 'A', 'btn-b': 'B', 'btn-c': 'C', 'btn-d': 'D', 'btn-e': 'E', 'btn-f': 'F', 'btn-opt1': '1', 'btn-opt2': '2' };
 const migrateVirtual = (bindings: Bindings): Bindings => { const result = {...bindings}; for (const [oldId, id] of Object.entries({a: 'btn-a', b: 'btn-b', x: 'btn-c', y: 'btn-d', start: 'btn-opt1', select: 'btn-opt2'})) { if (result[id] === undefined && result[oldId] !== undefined) result[id] = result[oldId]; delete result[oldId]; } return result; };
 const buttons = ['a', 'b', 'x', 'y', 'l', 'r', 'l2', 'r2', 'select', 'start', 'l3', 'r3', 'up', 'down', 'left', 'right'];
 const keys: Array<[string, number]> = [['割当なし', -1], ['SPACE', 32], ['RETURN', 13], ['ESC', 27], ['TAB', 9], ['SHIFT', 304], ['CTRL', 306], ['BS/DEL', 8], ['INS', 277], ['HOME/CLR', 278], ['HELP', 279], ['ROLL UP', 280], ['ROLL DOWN', 281], ['CAPS', 301], ['カナ', 311], ['GRPH', 308], ['STOP', 318], ['COPY', 316], ...[...'@[-^\\;:],./_'].map((c): [string, number] => [c, c.charCodeAt(0)]), ...[['テンキー /', 267], ['テンキー *', 268], ['テンキー -', 269], ['テンキー +', 270], ['テンキー ,', 271], ['テンキー .', 266], ['テンキー =', 272]] as Array<[string, number]>, ['↑', 273], ['↓', 274], ['←', 276], ['→', 275], ...Array.from({length: 10}, (_, i): [string, number] => [`テンキー ${i}`, 256 + i]), ...Array.from({length: 26}, (_, i): [string, number] => [String.fromCharCode(65 + i), 97 + i]), ...Array.from({length: 10}, (_, i): [string, number] => [String(i), 48 + i]), ...Array.from({length: 10}, (_, i): [string, number] => [`F${i + 1}`, 282 + i])];
-const initial = (): Settings => ({ version: 1, gamepad: {...tenkey}, virtual: migrateVirtual(Object.fromEntries(Object.entries(tenkey).filter(([id]) => !['x', 'y'].includes(id)))), host: {}, deadzone: .3, visible: false });
+const initial = (): Settings => ({ version: 1, gamepad: {...tenkey}, virtual: migrateVirtual(Object.fromEntries(Object.entries(tenkey).filter(([id]) => !['x', 'y'].includes(id)))), host: {}, deadzone: .3, visible: false, hostEnabled: true });
 function cleanSettings(s: Settings | null): Settings {
   const def = initial();
   try {
     if (!s || s.version !== 1) return def;
     const clean = (v: unknown): Bindings => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([k, n]) => k.length < 80 && Number.isInteger(n) && keys.some(([, c]) => c === n && c >= 0))) as Bindings;
-    return { version: 1, gamepad: clean(s.gamepad), virtual: migrateVirtual(clean(s.virtual)), host: clean(s.host), deadzone: Number.isFinite(s.deadzone) ? Math.max(.05, Math.min(.95, s.deadzone)) : .3, visible: !!s.visible };
+    return { version: 1, gamepad: clean(s.gamepad), virtual: migrateVirtual(clean(s.virtual)), host: clean(s.host), deadzone: Number.isFinite(s.deadzone) ? Math.max(.05, Math.min(.95, s.deadzone)) : .3, visible: !!s.visible, hostEnabled: s.hostEnabled !== false };
   } catch { return def; }
 }
 type Profile = { id: string; name: string; settings: Settings };
@@ -207,7 +206,7 @@ function loadProfiles(): ProfileStore {
 export function initInputControls(createSource: () => (code: number, pressed: boolean) => void, gamepadEnabled: () => boolean = () => true): () => Bindings {
   const store = loadProfiles();
   const settings = structuredClone(store.profiles.find(p => p.id === store.activeId)!.settings);
-  const save = () => { store.profiles.find(p => p.id === store.activeId)!.settings = structuredClone(settings); try { localStorage.setItem('webq88-input-profiles', JSON.stringify(store)); } catch { /* 保存不可 */ } };
+  const save = () => { document.querySelector<HTMLButtonElement>('#input-settings')?.classList.toggle('host-mapping-enabled', settings.hostEnabled && Object.keys(settings.host).length > 0); store.profiles.find(p => p.id === store.activeId)!.settings = structuredClone(settings); try { localStorage.setItem('webq88-input-profiles', JSON.stringify(store)); } catch { /* 保存不可 */ } };
   save();
   const send = createSource();
   let active = new Map<string, number>();
@@ -299,7 +298,7 @@ export function initInputControls(createSource: () => (code: number, pressed: bo
   nameInput.oninput = () => nameInput.setCustomValidity('');
   const askName = (label: string, value: string, accept: (name: string) => void) => { nameText.textContent = label; nameInput.value = value; nameInput.setCustomValidity(''); acceptName = accept; nameForm.hidden = false; nameInput.focus(); nameInput.select(); };
   const renderProfiles = () => { profileSelect.replaceChildren(...store.profiles.map(p => new Option(p.name, p.id))); profileSelect.value = store.activeId; };
-  const applyProfile = (id: string) => { store.activeId = id; Object.assign(settings, structuredClone(store.profiles.find(p => p.id === id)!.settings)); pointers.clear(); gamepadSources.clear(); updateAppearance(); knob.style.transform = 'translate(0px, 0px)'; knob.classList.remove('active'); refresh(); renderVisible(); zone.value = String(settings.deadzone); zoneValue.textContent = zone.value; layout(); render(); renderProfiles(); save(); };
+  const applyProfile = (id: string) => { selected = null; detecting = null; store.activeId = id; Object.assign(settings, structuredClone(store.profiles.find(p => p.id === id)!.settings)); pointers.clear(); gamepadSources.clear(); updateAppearance(); knob.style.transform = 'translate(0px, 0px)'; knob.classList.remove('active'); refresh(); renderVisible(); zone.value = String(settings.deadzone); zoneValue.textContent = zone.value; layout(); render(); renderProfiles(); save(); };
   profileSelect.onchange = () => { nameForm.hidden = true; applyProfile(profileSelect.value); };
   const button = (label: string, action: () => void) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = action; profileActions.append(b); };
   const addProfile = (name: string, value: Settings) => { const id = `profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; store.profiles.push({ id, name, settings: structuredClone(value) }); applyProfile(id); };
@@ -308,27 +307,71 @@ export function initInputControls(createSource: () => (code: number, pressed: bo
   button('名前変更', () => askName('新しい名前 ', store.profiles.find(p => p.id === store.activeId)!.name, name => { store.profiles.find(p => p.id === store.activeId)!.name = name; save(); renderProfiles(); }));
   button('削除', () => { if (store.profiles.length === 1) { alert('最後のプロファイルは削除できません。'); return; } const profile = store.profiles.find(p => p.id === store.activeId)!; if (!confirm(`「${profile.name}」を削除しますか？`)) return; store.profiles = store.profiles.filter(p => p.id !== profile.id); applyProfile(store.profiles[0].id); });
   renderProfiles();
-  const status = document.createElement('p'); status.textContent = 'ゲームパッド: 未接続'; dialog.append(status);
-  const zoneLabel = document.createElement('label'); zoneLabel.textContent = 'スティックのデッドゾーン '; const zone = document.createElement('input'); zone.type = 'range'; zone.min = '0.05'; zone.max = '0.95'; zone.step = '0.05'; zone.value = String(settings.deadzone); const zoneValue = document.createElement('span'); zoneValue.textContent = zone.value; zone.addEventListener('input', () => { settings.deadzone = Number(zone.value); zoneValue.textContent = zone.value; save(); }); zoneLabel.append(zone, zoneValue); dialog.append(zoneLabel);
-  const selectKey = (value: number | undefined, changed: (n: number) => void) => {
-    const select = document.createElement('select'); for (const [label, code] of keys) { const o = document.createElement('option'); o.value = String(code); o.textContent = label; select.append(o); } select.value = String(value ?? -1); select.addEventListener('change', () => changed(Number(select.value))); return select;
-  };
+  const status = document.createElement('p'); status.textContent = 'ゲームパッド: 未接続';
+  const live = document.createElement('p'); live.textContent = '操作中: なし';
+  const zoneLabel = document.createElement('label'); zoneLabel.textContent = 'スティックのデッドゾーン '; const zone = document.createElement('input'); zone.type = 'range'; zone.min = '0.05'; zone.max = '0.95'; zone.step = '0.05'; zone.value = String(settings.deadzone); const zoneValue = document.createElement('span'); zoneValue.textContent = zone.value; zone.addEventListener('input', () => { settings.deadzone = Number(zone.value); zoneValue.textContent = zone.value; save(); }); zoneLabel.append(zone, zoneValue);
+  type Tab = 'gamepad' | 'host' | 'virtual';
+  let tab: Tab = 'gamepad';
+  let selected: string | null = null;
+  let detecting: 'gamepad' | 'host' | null = null;
+  let baseline = new Set<string>();
+  const tabs = document.createElement('div'); tabs.className = 'input-tabs'; dialog.append(tabs);
   const sections = document.createElement('div'); dialog.append(sections);
+  const sourceName = (id: string) => parts[id] ?? (id.startsWith('axis') ? `軸 ${Number(id.slice(4, -1)) + 1} ${id.slice(-1)}` : id.toUpperCase());
   const render = () => {
-    sections.replaceChildren();
-    for (const kind of ['gamepad','virtual'] as const) {
-      const section = document.createElement('section'); const h = document.createElement('h3'); h.textContent = kind === 'gamepad' ? 'ゲームパッド割当' : 'バーチャルパッド割当'; section.append(h);
-      const preset = document.createElement('select'); preset.innerHTML = '<option value="">プリセットを選択</option><option value="tenkey">テンキー移動＋SPACE/RETURN</option><option value="cursor">カーソル＋Z/X</option>'; preset.addEventListener('change', () => { if (!preset.value) return; settings[kind] = kind === 'virtual' ? migrateVirtual(Object.fromEntries(Object.entries(preset.value === 'tenkey' ? tenkey : cursor).filter(([id]) => !['x', 'y'].includes(id)))) : {...(preset.value === 'tenkey' ? tenkey : cursor)}; save(); refresh(); layout(); render(); }); section.append(preset);
-      const ids = kind === 'gamepad' ? [...buttons, 'axis0-', 'axis0+', 'axis1-', 'axis1+', 'axis2-', 'axis2+', 'axis3-', 'axis3+'] : Object.keys(parts);
-      const grid = document.createElement('div'); grid.className = 'input-grid';
-      for (const id of ids) { const row = document.createElement('label'); row.textContent = `${parts[id] ?? (id.startsWith('axis') ? `軸 ${id.slice(4)}` : id.toUpperCase())} `; row.append(selectKey(settings[kind][id], n => { if (n < 0) delete settings[kind][id]; else settings[kind][id] = n; save(); refresh(); if (kind === 'virtual') layout(); })); grid.append(row); } section.append(grid); sections.append(section);
+    tabs.replaceChildren();
+    for (const [id, label] of [['gamepad', 'ゲームパッド'], ['host', 'キーボード'], ['virtual', 'バーチャルパッド']] as const) {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+      button.setAttribute('aria-pressed', String(tab === id));
+      button.onclick = () => { tab = id; selected = null; detecting = null; render(); }; tabs.append(button);
     }
-    const section = document.createElement('section'); const h = document.createElement('h3'); h.textContent = 'キーボード割当'; section.append(h); const note = document.createElement('p'); note.textContent = '入力欄で割り当て元のキーを押し、変換先を選択します。'; section.append(note);
-    for (const code of Object.keys(settings.host).sort()) { const row = document.createElement('div'); row.className = 'host-row'; const label = document.createElement('span'); label.textContent = code; const del = document.createElement('button'); del.textContent = '削除'; del.type = 'button'; del.onclick = () => { delete settings.host[code]; save(); render(); }; row.append(label, selectKey(settings.host[code], n => { if (n < 0) delete settings.host[code]; else settings.host[code] = n; save(); render(); }), del); section.append(row); }
-    const capture = document.createElement('input'); capture.placeholder = 'ここを選び、キーを押して追加'; capture.readOnly = true; capture.addEventListener('keydown', e => { e.preventDefault(); e.stopPropagation(); const k = codeToRetroKey(e.code); settings.host[e.code] = keys.some(([, n]) => n === k) ? k! : 32; save(); render(); }); section.append(capture); sections.append(section);
+    sections.replaceChildren();
+    const section = document.createElement('section'); sections.append(section);
+    if (tab === 'gamepad') { section.append(status, live, zoneLabel); }
+    if (tab === 'host') {
+      const label = document.createElement('label');
+      const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.checked = settings.hostEnabled;
+      enabled.onchange = () => { settings.hostEnabled = enabled.checked; save(); render(); };
+      label.append(enabled, ' 物理キーの再割り当てを有効にする'); section.append(label);
+      const badge = document.createElement('span'); badge.className = 'input-badge'; badge.textContent = settings.hostEnabled ? '有効' : '無効'; section.append(badge);
+    }
+    if (tab !== 'host') {
+      const preset = document.createElement('select'); preset.innerHTML = '<option value="">プリセットを選択</option><option value="tenkey">テンキー移動＋SPACE/RETURN</option><option value="cursor">カーソル＋Z/X</option>';
+      preset.onchange = () => { if (!preset.value) return; const value = preset.value === 'tenkey' ? tenkey : cursor; settings[tab as 'gamepad' | 'virtual'] = tab === 'virtual' ? migrateVirtual(Object.fromEntries(Object.entries(value).filter(([id]) => !['x', 'y'].includes(id)))) : {...value}; selected = null; save(); refresh(); layout(); render(); }; section.append(preset);
+    }
+    const heading = document.createElement('h3'); heading.textContent = '割り当て一覧'; section.append(heading);
+    const bindings = settings[tab];
+    const ids = tab === 'virtual' ? Object.keys(parts) : Object.keys(bindings).sort();
+    if (!ids.length) { const empty = document.createElement('p'); empty.textContent = '割り当てはありません。'; section.append(empty); }
+    const list = document.createElement('div'); list.className = 'input-bindings'; section.append(list);
+    for (const id of ids) {
+      const row = document.createElement('div'); row.className = 'host-row';
+      const choose = document.createElement('button'); choose.type = 'button'; choose.className = 'input-binding';
+      choose.textContent = `${tab === 'host' ? id : sourceName(id)} → ${keys.find(([, code]) => code === bindings[id])?.[0] ?? '割当なし'}`;
+      choose.setAttribute('aria-pressed', String(selected === id)); choose.onclick = () => { selected = id; detecting = null; render(); };
+      const del = document.createElement('button'); del.type = 'button'; del.textContent = '削除'; del.disabled = bindings[id] === undefined;
+      del.onclick = () => { delete bindings[id]; if (selected === id) selected = null; save(); refresh(); layout(); render(); }; row.append(choose, del); list.append(row);
+    }
+    if (tab !== 'virtual') {
+      const detect = document.createElement('button'); detect.type = 'button'; detect.textContent = detecting === tab ? '検出をキャンセル' : tab === 'host' ? 'キーを押して追加' : 'ボタン・軸を押して追加';
+      detect.onclick = () => { if (detecting === tab) { detecting = null; } else { detecting = tab as 'gamepad' | 'host'; selected = null; baseline = new Set(gamepadSources); } render(); if (detecting === 'host') dialog.querySelector<HTMLInputElement>('.input-capture')?.focus(); /* render() で作り直した新しい欄へ */ }; section.append(detect);
+    }
+    const capture = document.createElement('input'); capture.className = 'input-capture'; capture.readOnly = true; capture.placeholder = '割り当てる物理キーを押してください';
+    if (detecting === 'host') {
+      capture.addEventListener('keydown', e => { e.preventDefault(); e.stopPropagation(); if (e.repeat || !e.code) return; selected = e.code; detecting = null; render(); });
+      section.append(capture);
+    }
+    const hint = document.createElement('p'); hint.textContent = detecting ? (detecting === 'host' ? '物理キーを押してください。' : 'ゲームパッドのボタンか軸を操作してください。') : selected ? `${tab === 'host' ? selected : sourceName(selected)} の割り当て先を選んでください。` : '一覧の項目を選ぶか、入力元を追加してください。'; section.append(hint);
+    const picker = document.createElement('div'); picker.className = 'input-key-picker'; picker.setAttribute('aria-label', 'PC-88キー');
+    for (const [label, code] of keys) {
+      if (code < 0) continue;
+      const key = document.createElement('button'); key.type = 'button'; key.textContent = label; key.disabled = !selected;
+      key.onclick = () => { if (!selected) return; bindings[selected] = code; save(); refresh(); layout(); render(); }; picker.append(key);
+    }
+    section.append(picker);
   };
-  render(); const close = document.createElement('button'); close.type = 'button'; close.textContent = '閉じる'; close.onclick = () => { backdrop.hidden = true; }; dialog.append(close);
-  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.hidden = true; });
+  render(); const close = document.createElement('button'); close.type = 'button'; close.textContent = '閉じる'; close.onclick = () => { backdrop.hidden = true; detecting = null; }; dialog.append(close);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) { backdrop.hidden = true; detecting = null; } });
   document.querySelector<HTMLButtonElement>('#input-settings')!.addEventListener('click', () => { backdrop.hidden = false; render(); });
   let lastStatus = '';
   const poll = () => {
@@ -339,9 +382,15 @@ export function initInputControls(createSource: () => (code: number, pressed: bo
       pad.buttons.forEach((b, i) => { if (b.pressed && buttons[i]) next.add(buttons[i]); });
       pad.axes.slice(0, 4).forEach((v, i) => { if (v < -settings.deadzone) next.add(`axis${i}-`); if (v > settings.deadzone) next.add(`axis${i}+`); });
     }
-    gamepadSources = next; refresh(); requestAnimationFrame(poll);
+    live.textContent = `操作中: ${[...next].map(sourceName).join('、') || 'なし'}`;
+    if (detecting === 'gamepad' && !backdrop.hidden) {
+      for (const source of next) if (!baseline.has(source)) { selected = source; detecting = null; render(); break; }
+      baseline = new Set(next);
+      gamepadSources = new Set();
+    } else gamepadSources = next;
+    refresh(); requestAnimationFrame(poll);
   }; requestAnimationFrame(poll);
   const release = () => { pointers.clear(); gamepadSources.clear(); panel.querySelectorAll('.active').forEach(b => b.classList.remove('active')); knob.style.transform = 'translate(0px, 0px)'; refresh(); };
   window.addEventListener('blur', release); document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
-  return () => settings.host;
+  return () => settings.hostEnabled ? settings.host : {};
 }
