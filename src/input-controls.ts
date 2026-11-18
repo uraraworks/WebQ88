@@ -181,18 +181,34 @@ const migrateVirtual = (bindings: Bindings): Bindings => { const result = {...bi
 const buttons = ['a', 'b', 'x', 'y', 'l', 'r', 'l2', 'r2', 'select', 'start', 'l3', 'r3', 'up', 'down', 'left', 'right'];
 const keys: Array<[string, number]> = [['割当なし', -1], ['SPACE', 32], ['RETURN', 13], ['ESC', 27], ['TAB', 9], ['SHIFT', 304], ['CTRL', 306], ['BS/DEL', 8], ['INS', 277], ['HOME/CLR', 278], ['HELP', 279], ['ROLL UP', 280], ['ROLL DOWN', 281], ['CAPS', 301], ['カナ', 311], ['GRPH', 308], ['STOP', 318], ['COPY', 316], ...[...'@[-^\\;:],./_'].map((c): [string, number] => [c, c.charCodeAt(0)]), ...[['テンキー /', 267], ['テンキー *', 268], ['テンキー -', 269], ['テンキー +', 270], ['テンキー ,', 271], ['テンキー .', 266], ['テンキー =', 272]] as Array<[string, number]>, ['↑', 273], ['↓', 274], ['←', 276], ['→', 275], ...Array.from({length: 10}, (_, i): [string, number] => [`テンキー ${i}`, 256 + i]), ...Array.from({length: 26}, (_, i): [string, number] => [String.fromCharCode(65 + i), 97 + i]), ...Array.from({length: 10}, (_, i): [string, number] => [String(i), 48 + i]), ...Array.from({length: 10}, (_, i): [string, number] => [`F${i + 1}`, 282 + i])];
 const initial = (): Settings => ({ version: 1, gamepad: {...tenkey}, virtual: migrateVirtual(Object.fromEntries(Object.entries(tenkey).filter(([id]) => !['x', 'y'].includes(id)))), host: {}, deadzone: .3, visible: false });
-function load(): Settings {
+function cleanSettings(s: Settings | null): Settings {
   const def = initial();
   try {
-    const s = JSON.parse(localStorage.getItem('webq88-input-settings') || 'null') as Settings | null;
     if (!s || s.version !== 1) return def;
     const clean = (v: unknown): Bindings => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([k, n]) => k.length < 80 && Number.isInteger(n) && keys.some(([, c]) => c === n && c >= 0))) as Bindings;
     return { version: 1, gamepad: clean(s.gamepad), virtual: migrateVirtual(clean(s.virtual)), host: clean(s.host), deadzone: Number.isFinite(s.deadzone) ? Math.max(.05, Math.min(.95, s.deadzone)) : .3, visible: !!s.visible };
   } catch { return def; }
 }
+type Profile = { id: string; name: string; settings: Settings };
+type ProfileStore = { version: 1; activeId: string; profiles: Profile[] };
+function loadProfiles(): ProfileStore {
+  try {
+    const raw = JSON.parse(localStorage.getItem('webq88-input-profiles') || 'null');
+    if (raw?.version === 1 && Array.isArray(raw.profiles)) {
+      const seen = new Set<string>();
+      const profiles: Profile[] = raw.profiles.filter((p: Profile) => p && typeof p.id === 'string' && p.id && typeof p.name === 'string' && p.name.trim() && p.settings && !seen.has(p.id) && seen.add(p.id)).map((p: Profile) => ({ id: p.id, name: p.name, settings: cleanSettings(p.settings) }));
+      if (profiles.length) return { version: 1, profiles, activeId: profiles.some(p => p.id === raw.activeId) ? raw.activeId : profiles[0].id };
+    }
+  } catch { /* 旧設定または既定値を使う */ }
+  let old: Settings | null = null;
+  try { old = JSON.parse(localStorage.getItem('webq88-input-settings') || 'null'); } catch { /* 既定値を使う */ }
+  return { version: 1, activeId: 'standard', profiles: [{ id: 'standard', name: '標準', settings: cleanSettings(old) }] };
+}
 export function initInputControls(createSource: () => (code: number, pressed: boolean) => void): () => Bindings {
-  const settings = load();
-  const save = () => { try { localStorage.setItem('webq88-input-settings', JSON.stringify(settings)); } catch { /* 保存不可 */ } };
+  const store = loadProfiles();
+  const settings = structuredClone(store.profiles.find(p => p.id === store.activeId)!.settings);
+  const save = () => { store.profiles.find(p => p.id === store.activeId)!.settings = structuredClone(settings); try { localStorage.setItem('webq88-input-profiles', JSON.stringify(store)); } catch { /* 保存不可 */ } };
+  save();
   const send = createSource();
   let active = new Map<string, number>();
   const reconcile = (next: Map<string, number>) => {
@@ -269,6 +285,29 @@ export function initInputControls(createSource: () => (code: number, pressed: bo
   const backdrop = document.createElement('div'); backdrop.className = 'library-backdrop input-backdrop'; backdrop.hidden = true;
   const dialog = document.createElement('section'); dialog.className = 'library-modal'; dialog.setAttribute('role','dialog'); dialog.setAttribute('aria-modal','true'); dialog.setAttribute('aria-label','入力設定'); backdrop.append(dialog); player.append(backdrop);
   const title = document.createElement('h2'); title.textContent = '入力設定'; dialog.append(title);
+  const profiles = document.createElement('div'); profiles.className = 'input-profiles';
+  const profileLabel = document.createElement('label'); profileLabel.textContent = 'プロファイル ';
+  const profileSelect = document.createElement('select'); profileLabel.append(profileSelect); profiles.append(profileLabel);
+  const profileActions = document.createElement('div'); profiles.append(profileActions);
+  const nameForm = document.createElement('form'); nameForm.hidden = true;
+  const nameLabel = document.createElement('label'); const nameText = document.createElement('span'); nameLabel.append(nameText); const nameInput = document.createElement('input'); nameInput.maxLength = 100; nameInput.required = true; nameLabel.append(nameInput);
+  const confirmName = document.createElement('button'); confirmName.type = 'submit'; confirmName.textContent = '決定';
+  const cancelName = document.createElement('button'); cancelName.type = 'button'; cancelName.textContent = 'キャンセル'; cancelName.onclick = () => { nameForm.hidden = true; };
+  nameForm.append(nameLabel, confirmName, cancelName); profiles.append(nameForm); dialog.append(profiles);
+  let acceptName: (name: string) => void = () => {};
+  nameForm.onsubmit = e => { e.preventDefault(); const name = nameInput.value.trim(); if (!name) { nameInput.setCustomValidity('名前を入力してください'); nameInput.reportValidity(); return; } nameForm.hidden = true; acceptName(name); };
+  nameInput.oninput = () => nameInput.setCustomValidity('');
+  const askName = (label: string, value: string, accept: (name: string) => void) => { nameText.textContent = label; nameInput.value = value; nameInput.setCustomValidity(''); acceptName = accept; nameForm.hidden = false; nameInput.focus(); nameInput.select(); };
+  const renderProfiles = () => { profileSelect.replaceChildren(...store.profiles.map(p => new Option(p.name, p.id))); profileSelect.value = store.activeId; };
+  const applyProfile = (id: string) => { store.activeId = id; Object.assign(settings, structuredClone(store.profiles.find(p => p.id === id)!.settings)); pointers.clear(); gamepadSources.clear(); updateAppearance(); knob.style.transform = 'translate(0px, 0px)'; knob.classList.remove('active'); refresh(); renderVisible(); zone.value = String(settings.deadzone); zoneValue.textContent = zone.value; layout(); render(); renderProfiles(); save(); };
+  profileSelect.onchange = () => { nameForm.hidden = true; applyProfile(profileSelect.value); };
+  const button = (label: string, action: () => void) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = action; profileActions.append(b); };
+  const addProfile = (name: string, value: Settings) => { const id = `profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; store.profiles.push({ id, name, settings: structuredClone(value) }); applyProfile(id); };
+  button('作成', () => askName('新しい名前 ', '', name => addProfile(name, initial())));
+  button('複製', () => askName('複製の名前 ', `${store.profiles.find(p => p.id === store.activeId)!.name} のコピー`, name => addProfile(name, settings)));
+  button('名前変更', () => askName('新しい名前 ', store.profiles.find(p => p.id === store.activeId)!.name, name => { store.profiles.find(p => p.id === store.activeId)!.name = name; save(); renderProfiles(); }));
+  button('削除', () => { if (store.profiles.length === 1) { alert('最後のプロファイルは削除できません。'); return; } const profile = store.profiles.find(p => p.id === store.activeId)!; if (!confirm(`「${profile.name}」を削除しますか？`)) return; store.profiles = store.profiles.filter(p => p.id !== profile.id); applyProfile(store.profiles[0].id); });
+  renderProfiles();
   const status = document.createElement('p'); status.textContent = 'ゲームパッド: 未接続'; dialog.append(status);
   const zoneLabel = document.createElement('label'); zoneLabel.textContent = 'スティックのデッドゾーン '; const zone = document.createElement('input'); zone.type = 'range'; zone.min = '0.05'; zone.max = '0.95'; zone.step = '0.05'; zone.value = String(settings.deadzone); const zoneValue = document.createElement('span'); zoneValue.textContent = zone.value; zone.addEventListener('input', () => { settings.deadzone = Number(zone.value); zoneValue.textContent = zone.value; save(); }); zoneLabel.append(zone, zoneValue); dialog.append(zoneLabel);
   const selectKey = (value: number | undefined, changed: (n: number) => void) => {
