@@ -101,7 +101,7 @@ WebQ88 の特徴を紹介する紹介ページは
 
 `mcp/` に、AI エージェントから WebQ88 を操作する MCP サーバーがあります。ブラウザで
 `?bridge=1` 付きで開くと、手元の MCP サーバーとつながり、キー入力・文字列入力・画面の状態取得、
-ディスクの挿入・排出などを行えます。セットアップは [mcp/README.md](mcp/README.md)、コマンドの一覧と可否は
+ディスクの挿入・排出などを行えます。`find_text` と `wait_screen` は本文を返さず文字列の検索・出現待ちができ、制限モードでは使えません。セットアップは [mcp/README.md](mcp/README.md)、コマンドの一覧と可否は
 [docs/AUTOMATION.md](docs/AUTOMATION.md) を参照してください。
 
 ## 開発方法

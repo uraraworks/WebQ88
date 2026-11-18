@@ -48,6 +48,8 @@ npm run dev -- --port 5188 --strictPort
 ブリッジのポートを変えたい場合は、サーバー側は環境変数 `WEBQ88_BRIDGE_PORT`、
 ページ側は `?bridge=<ポート番号>` で指定します(既定 3188。WebX68k の 3099 とは別ポート)。
 
+`find_text` は `text` と任意の `all` を受け、0始まりの `matches`（`row`, `col`）と `count` を返します。`wait_screen` は `contains` と任意の `timeout_ms`（既定10000、最大60000）を受け、`found` と `elapsed_ms` を返します。どちらも行内で大文字小文字を区別し、半角カナに対応します。
+
 ## 提供するツール
 
 自動操作APIを使うツールです。
@@ -62,6 +64,7 @@ npm run dev -- --port 5188 --strictPort
 | `paste_text` | ASCII・半角カナを送信し、対応外の文字を一覧で返す | ○ |
 | `send_keys` | `SHIFT+F1` や `CTRL+C` などのキーの組み合わせを送る | ○ |
 | `screen_signature` | 画面の署名(行数・非空白文字数・sha256)。本文は返さない | ○ |
+| `find_text` / `wait_screen` | 文字列の位置・件数 / 出現と経過時間。本文は返さない。存在の反復照会で本文を復元できるため拒否 | ×(エラー) |
 | `screen_text` | テキスト画面の本文を行配列で取得 | ×(エラー) |
 | `screenshot` | 画面をPNG画像で取得 | ×(エラー) |
 | `wait_screen_change` | 画面の署名が変化するまで待つ | ○ |

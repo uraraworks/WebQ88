@@ -271,6 +271,24 @@ async function main() {
   const joined = (screenText.lines || []).join('\n');
   check('compat screen_text: 計算結果(2)が現れる', /(^|[^0-9])2([^0-9]|$)/.test(joined), '(本文は出力しない)');
 
+  // --- 文字列検索: 半角カナ、重なり、桁位置と待機結果を検査 ---
+  {
+    const testCtx = { ...compatCtx, textCols: () => 8, textSnapshot: () => Uint8Array.from([0, 0xa6, 65, 65, 65, 32, 32, 32]) };
+    const find = await ApiDispatch.exec(testCtx, 'find_text', { text: 'AA', all: true });
+    check('find_text: 重なる一致と桁位置', JSON.stringify(find.matches) === JSON.stringify([{ row: 0, col: 2 }, { row: 0, col: 3 }]) && find.count === 2);
+    const kana = await ApiDispatch.exec(testCtx, 'find_text', { text: 'ｦA' });
+    check('find_text: 半角カナ', kana.count === 1 && kana.matches[0].col === 1);
+    const text = await ApiDispatch.exec(testCtx, 'screen_text', {});
+    check('screen_text: 半角カナの共通変換', text.lines[0].includes('ｦA'));
+    const found = await ApiDispatch.exec(testCtx, 'wait_screen', { contains: 'ｦA', timeout_ms: 20 });
+    const absent = await ApiDispatch.exec(testCtx, 'wait_screen', { contains: '不存在', timeout_ms: 10 });
+    let advanced = false;
+    const changingCtx = { ...testCtx, textSnapshot: () => Uint8Array.from(advanced ? [65, 32, 32, 32, 32, 32, 32, 32] : [32, 32, 32, 32, 32, 32, 32, 32]), driveFrames: async () => { advanced = true; } };
+    const delayed = await ApiDispatch.exec(changingCtx, 'wait_screen', { contains: 'A', timeout_ms: 100 });
+    check('wait_screen: 画面変化後に一致', delayed.found === true && advanced);
+    check('wait_screen: 一致とタイムアウト', found.found === true && absent.found === false && absent.elapsed_ms >= 10 && !('text' in found) && !('text' in absent));
+  }
+
   // --- wait_screen_change: 変化を検出できる ---
   {
     const waitPromise = ApiDispatch.exec(compatCtx, 'wait_screen_change', { timeoutFrames: 600 });
@@ -433,10 +451,12 @@ async function main() {
   const restrictedCtx = restrictedCore.makeCtx();
   await restrictedCore.driveFrames(120);
 
-  const restrictedDenied = ['screen_text', 'screenshot', 'read_memory', 'write_memory', 'get_state_blob', 'get_disk_image'];
+  const restrictedDenied = ['screen_text', 'find_text', 'wait_screen', 'screenshot', 'read_memory', 'write_memory', 'get_state_blob', 'get_disk_image'];
   for (const cmd of restrictedDenied) {
     const args =
-      cmd === 'read_memory'
+      cmd === 'find_text' ? { text: 'A' }
+        : cmd === 'wait_screen' ? { contains: 'A', timeout_ms: 10 }
+        : cmd === 'read_memory'
         ? { region: 0, offset: 0, length: 1 }
         : cmd === 'write_memory'
           ? { region: 0, offset: 0, bytes: Buffer.from([0]).toString('base64') }

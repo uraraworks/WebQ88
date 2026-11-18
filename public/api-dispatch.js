@@ -311,6 +311,8 @@
         var ch = snapshot[r * cols + c];
         if (ch >= 0x20 && ch <= 0x7e) {
           line += String.fromCharCode(ch);
+        } else if (ch >= 0xa1 && ch <= 0xdf) {
+          line += String.fromCharCode(0xff61 + ch - 0xa1);
         } else {
           line += '\\x' + ch.toString(16).padStart(2, '0');
         }
@@ -318,6 +320,27 @@
       lines.push(line);
     }
     return lines;
+  }
+
+  // 変換後の文字位置を画面上の桁に戻す。重なる一致も数える。
+  function findScreenText(ctx, target, all) {
+    var snap = ctx.textSnapshot(), cols = ctx.textCols();
+    var lines = textSnapshotToString(snap, cols), matches = [];
+    for (var r = 0; r < lines.length; r++) {
+      var pos = -1;
+      while ((pos = lines[r].indexOf(target, pos + 1)) !== -1) {
+        var col = 0, offset = 0;
+        while (col < cols && offset < pos) {
+          var byte = snap[r * cols + col];
+          offset += (byte >= 0x20 && byte <= 0x7e) || (byte >= 0xa1 && byte <= 0xdf) ? 1 : 4;
+          col++;
+        }
+        if (offset !== pos) continue;
+        matches.push({ row: r, col: col });
+        if (!all) return matches;
+      }
+    }
+    return matches;
   }
 
   /**
@@ -436,6 +459,29 @@
           var cols = ctx.textCols();
           var lines = textSnapshotToString(snap, cols);
           return { ok: true, lines: lines, columns: cols, rows: lines.length };
+        }
+
+        case 'find_text': {
+          if (ctx.getMode().restricted) return { error: RESTRICTED_ERROR };
+          if (typeof args.text !== 'string' || !args.text) return { error: 'invalid args: text must be a non-empty string' };
+          if (args.all !== undefined && typeof args.all !== 'boolean') return { error: 'invalid args: all must be a boolean' };
+          var matches = findScreenText(ctx, args.text, args.all === true);
+          return { ok: true, matches: matches, count: matches.length };
+        }
+
+        case 'wait_screen': {
+          if (ctx.getMode().restricted) return { error: RESTRICTED_ERROR };
+          if (typeof args.contains !== 'string' || !args.contains) return { error: 'invalid args: contains must be a non-empty string' };
+          var timeoutMs = args.timeout_ms === undefined ? 10000 : args.timeout_ms;
+          if (typeof timeoutMs !== 'number' || !Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 60000) return { error: 'invalid args: timeout_ms must be greater than 0 and at most 60000' };
+          var started = Date.now();
+          while (true) {
+            if (ctx.getMode().restricted) return { error: RESTRICTED_ERROR };
+            var found = findScreenText(ctx, args.contains, false).length > 0;
+            var elapsedMs = Date.now() - started;
+            if (found || elapsedMs >= timeoutMs) return { ok: true, found: found, elapsed_ms: elapsedMs };
+            await ctx.driveFrames(2);
+          }
         }
 
         case 'screenshot': {

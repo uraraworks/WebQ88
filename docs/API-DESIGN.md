@@ -54,6 +54,7 @@ PC88Behavior のクリーンルーム規律（PC88Behavior リポジトリの `C
 | `reset` / `type_text` / `key` / `key_sequence` | ○ | ○ |
 | `insert_disk` / `eject_disk` / `list_disks`（名前・サイズ・書き込みの有無のみ） | ○ | ○ |
 | `get_disk_image`（ディスクの中身を返す） | ○ | × |
+| `find_text` / `wait_screen`（存在を反復照会すると本文を復元できるため拒否） | ○ | × |
 | `screen_text`（テキスト画面の本文。`columns`/`rows` つき。40桁・20/25行に追従） | ○ | × |
 | `screenshot`（画像） | ○ | × |
 | `screen_signature`（行数・非空白文字数・SHA-256・桁数・行数） | ○ | ○ |

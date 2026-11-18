@@ -101,7 +101,7 @@ async function waitForClient(timeoutMs = CLIENT_WAIT_MS) {
 }
 
 async function sendCommand(cmd, args = {}) {
-  const timeoutMs = cmd === 'paste_text' ? Math.max(REQUEST_TIMEOUT_MS, 5000 + Array.from(args.text || '').length * 1000) : REQUEST_TIMEOUT_MS;
+  const timeoutMs = cmd === 'paste_text' ? Math.max(REQUEST_TIMEOUT_MS, 5000 + Array.from(args.text || '').length * 1000) : cmd === 'wait_screen' ? Math.max(REQUEST_TIMEOUT_MS, (args.timeout_ms ?? 10000) + 5000) : REQUEST_TIMEOUT_MS;
   if (!(await waitForClient())) {
     throw new Error('WebQ88 のブラウザタブが接続されていません');
   }
@@ -265,6 +265,20 @@ server.tool(
   'テキスト画面の内容を行ごとの文字列として取得する。制限モード(利用者ROM使用時)では拒否される。',
   {},
   async () => callDispatch('screen_text')
+);
+
+server.tool(
+  'find_text',
+  '画面の文字列を検索し、0始まりの行・桁と件数を返す。制限モードでは拒否される。',
+  { text: z.string().describe('検索する文字列'), all: z.boolean().optional().describe('全件を返す（既定は先頭のみ）') },
+  async ({ text, all }) => callDispatch('find_text', { text, all })
+);
+
+server.tool(
+  'wait_screen',
+  '画面に文字列が現れるまで待ち、成否と経過ミリ秒を返す。制限モードでは拒否される。',
+  { contains: z.string().describe('待つ文字列'), timeout_ms: z.number().optional().describe('待機ミリ秒（既定10000、最大60000）') },
+  async ({ contains, timeout_ms }) => callDispatch('wait_screen', { contains, timeout_ms })
 );
 
 server.tool(
