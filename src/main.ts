@@ -25,9 +25,11 @@ initPlayerUi();
 const audio = new AudioEngine();
 const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
 const volumeInput = document.querySelector<HTMLInputElement>('#volume')!;
+const driveSoundInput = document.querySelector<HTMLInputElement>('#drive-sound')!;
 let muted = false;
 try {
   muted = localStorage.getItem('webq88-muted') === 'true';
+  driveSoundInput.checked = localStorage.getItem('webq88-drive-sound') === 'true';
   const stored = localStorage.getItem('webq88-volume');
   if (stored !== null && Number.isFinite(Number(stored))) volumeInput.value = String(Math.max(0, Math.min(100, Number(stored))));
 } catch { /* 保存を使えない環境でも再生する */ }
@@ -42,6 +44,11 @@ function updateAudioSettings(): void {
 }
 muteButton.addEventListener('click', () => { muted = !muted; updateAudioSettings(); });
 volumeInput.addEventListener('input', updateAudioSettings);
+audio.setDriveSound(driveSoundInput.checked);
+driveSoundInput.addEventListener('change', () => {
+  audio.setDriveSound(driveSoundInput.checked);
+  try { localStorage.setItem('webq88-drive-sound', String(driveSoundInput.checked)); } catch { /* 保存不可 */ }
+});
 updateAudioSettings();
 // 自動起動時も最初のユーザー操作から AudioContext を開始する。
 for (const event of ['pointerdown', 'keydown'] as const) window.addEventListener(event, () => audio.start(), { capture: true });
@@ -171,6 +178,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
     onAudio: buffer => audio.push(buffer),
     onFrame: ({ width, height, pitch, buffer, lamp }) => {
       diskPanel?.setLamp(lamp);
+      audio.setDriveLamp(lamp);
       if (!imageData || width !== imageData.width || height !== imageData.height) {
         canvas.width = width;
         canvas.height = height;
@@ -219,6 +227,24 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   });
 
   diskPanel = new DiskPanel(proxy, disksEl, { blankImage: blank2d ? new Uint8Array(blank2d.bytes) : null });
+
+  const stage = document.querySelector<HTMLElement>('#screen-stage')!;
+  stage.addEventListener('dragover', event => {
+    if (!event.dataTransfer?.types.includes('Files')) return;
+    event.preventDefault();
+    stage.classList.add('drag-over');
+  });
+  stage.addEventListener('dragleave', event => {
+    if (!stage.contains(event.relatedTarget as Node | null)) stage.classList.remove('drag-over');
+  });
+  stage.addEventListener('drop', event => {
+    event.preventDefault();
+    stage.classList.remove('drag-over');
+    const files = Array.from(event.dataTransfer?.files ?? []).slice(0, 2);
+    void (async () => {
+      for (let i = 0; i < files.length; i++) await diskPanel!.insertFile(files.length > 1 ? i : event.shiftKey ? 1 : 0, files[i]);
+    })();
+  });
 
   initLibrary(diskPanel);
   initStateUi(proxy, () => diskPanel!.flushAll());

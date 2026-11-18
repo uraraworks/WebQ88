@@ -62,6 +62,9 @@ export class AudioEngine {
   private muted = false;
   private volume = 1;
   private paused = false;
+  private driveSound = false;
+  private driveLamp = 0;
+  private lastDriveClick = 0;
   onQueue: ((seconds: number) => void) | null = null;
 
   start(): void {
@@ -90,5 +93,22 @@ export class AudioEngine {
   flush(): void { this.node?.port.postMessage({ t: 'flush' }); }
   setPaused(paused: boolean): void { this.paused = paused; this.flush(); this.updateGain(); }
   setSettings(muted: boolean, volume: number): void { this.muted = muted; this.volume = volume; this.updateGain(); }
+  setDriveSound(enabled: boolean): void { this.driveSound = enabled; this.driveLamp = 0; }
+  setDriveLamp(mask: number): void {
+    const rising = mask & ~this.driveLamp;
+    this.driveLamp = mask;
+    const now = performance.now();
+    if (!this.driveSound || !mask || (!rising && now - this.lastDriveClick < 90)) return;
+    if (!this.ctx || !this.gain || this.ctx.state !== 'running' || this.paused || this.muted) return;
+    this.lastDriveClick = now;
+    const length = Math.ceil(this.ctx.sampleRate * 0.012);
+    const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+    const samples = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) samples[i] = (Math.random() * 2 - 1) * Math.exp(-i / (length * 0.18)) * 0.12;
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.gain);
+    source.start();
+  }
   private updateGain(): void { if (this.gain) this.gain.gain.value = this.muted || this.paused ? 0 : this.volume; }
 }
