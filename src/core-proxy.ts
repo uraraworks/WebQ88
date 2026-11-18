@@ -4,7 +4,7 @@
 // Worker 生成・メッセージの送受信だけを担当し、描画（rgb565.ts）や
 // キー入力の変換（keyboard.ts）はここに持ち込まない。
 
-import type { DiskResult, MainToWorkerMessage, RomFile, RomMode, WorkerToMainMessage } from './core-protocol';
+import type { DiskResult, StateResult, MainToWorkerMessage, RomFile, RomMode, WorkerToMainMessage } from './core-protocol';
 import { WORKER_SCRIPT_PATH } from './core-protocol';
 import type { VerifiedRom } from './compat-rom';
 
@@ -25,6 +25,7 @@ export class CoreProxy {
   private pendingRamReads = new Map<number, { resolve: (data: ArrayBuffer) => void; reject: (err: Error) => void }>();
   private pendingRamWrites = new Map<number, { resolve: () => void; reject: (err: Error) => void }>();
   private pendingApiExecs = new Map<number, (result: Record<string, unknown>) => void>();
+  private pendingStates = new Map<number, (result: StateResult) => void>();
   private pendingDisks = new Map<number, (result: DiskResult) => void>();
 
   constructor(handlers: CoreProxyHandlers) {
@@ -77,6 +78,11 @@ export class CoreProxy {
           } else {
             pending.resolve();
           }
+          break;
+        }
+        case 'stateResult': {
+          const pending = this.pendingStates.get(msg.requestId);
+          if (pending) { this.pendingStates.delete(msg.requestId); pending(msg); }
           break;
         }
         case 'diskResult': {
@@ -179,6 +185,14 @@ export class CoreProxy {
     });
     const payload: MainToWorkerMessage = { type: 'disk', requestId, op, drive, name: extra.name, bytes: extra.bytes, image: extra.image, key: extra.key };
     this.worker.postMessage(payload, extra.bytes ? [extra.bytes] : []);
+    return promise;
+  }
+
+  stateRequest(op: 'save' | 'load' | 'info', bytes?: ArrayBuffer): Promise<StateResult> {
+    const requestId = nextRequestId++;
+    const promise = new Promise<StateResult>((resolve) => { this.pendingStates.set(requestId, resolve); });
+    const payload: MainToWorkerMessage = { type: 'state', requestId, op, bytes };
+    this.worker.postMessage(payload, bytes ? [bytes] : []);
     return promise;
   }
 

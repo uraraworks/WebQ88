@@ -127,3 +127,8 @@ body.vpad-shown #player { min-width: min(340px, 100%); }
 .host-row { max-width: 350px; margin: 4px 0; }
 
 .drive-image { flex: 0 0 auto; max-width: 7em; font-size: 12px; }
+
+#state-slots { display: grid; gap: 8px; }
+.state-slot { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.state-slot span { flex: 1 1 100%; }
+#state-message { color: #a22; overflow-wrap: anywhere; }

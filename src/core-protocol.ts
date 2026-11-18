@@ -40,6 +40,7 @@ export interface RomMode {
 
 /** メインスレッド → Worker */
 export type MainToWorkerMessage =
+  | { type: 'state'; requestId: number; op: 'save' | 'load' | 'info'; bytes?: ArrayBuffer }
   | { type: 'audioQueue'; enabled: boolean; seconds: number }
   | {
       // 初回はコアを新規起動、2回目以降(moduleInstance が既にある)は
@@ -78,6 +79,7 @@ export type MainToWorkerMessage =
 
 /** Worker → メインスレッド */
 export type WorkerToMainMessage =
+  | ({ type: 'stateResult'; requestId: number } & StateResult)
   | { type: 'ready'; width: number; height: number; fps: number; sampleRate: number; mode: RomMode }
   | { type: 'audio'; buffer: ArrayBuffer }
   | {
@@ -124,3 +126,14 @@ export interface DiskPollEntry {
 
 export const WORKER_SCRIPT_PATH = 'core-worker.js';
 export const CORE_JS_RELATIVE_PATH = 'core/q88_libretro.js';
+
+export interface StateInfo {
+  roms: Array<{ role: string; name: string; origin: 'bundled' | 'user'; id: string }>;
+  disks: Array<{ name: string | null; image: number | null }>;
+}
+export interface StateResult {
+  ok: boolean;
+  error?: string;
+  info?: StateInfo;
+  bytes?: ArrayBuffer;
+}

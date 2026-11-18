@@ -93,6 +93,7 @@ var stateSlots = Object.create(null); // save_state/load_state のスロット(W
 // restricted: 一方向の掛け金。true にする代入は handleInit 内の1箇所のみ。
 var restricted = false;
 var romMode = { restricted: false, roms: [], unresolved: [] };
+var stateRomInfo = [];
 
 function postError(message) {
   postMessage({ type: 'error', message: String(message) });
@@ -323,6 +324,13 @@ function finishBoot(M, plan, isReboot) {
 
 function handleInit(bundled, user) {
   var plan = WebQ88RomRoles.planRomPlacement(bundled || [], user || []);
+  // 使用するROMの内容も識別し、同名の異なるROMを検出する。
+  stateRomInfo = plan.placements.map(function (p) {
+    var bytes = new Uint8Array(p.bytes);
+    var hash = 2166136261;
+    for (var i = 0; i < bytes.length; i++) hash = Math.imul(hash ^ bytes[i], 16777619);
+    return { role: p.role, name: p.name, origin: p.origin, id: (hash >>> 0).toString(16) + ':' + bytes.length };
+  }).sort(function (a, b) { return a.role.localeCompare(b.role); });
   // 一方向の掛け金: true にする代入はここだけ。false に戻す経路は作らない。
   if (plan.restricted) {
     restricted = true;
@@ -650,6 +658,40 @@ function handleDisk(msg) {
   }
 }
 
+// UI用はMCPのスロットを変更せず、バイト列を直接受け渡す。
+function handleState(msg) {
+  var response = { type: 'stateResult', requestId: msg.requestId, ok: true };
+  try {
+    if (!moduleInstance || !disks) throw new Error('未起動です');
+    var M = moduleInstance;
+    response.info = { roms: stateRomInfo, disks: disks.poll().map(function (d) {
+      return { name: d.present ? d.name : null, image: d.present ? d.image : null };
+    }) };
+    if (msg.op === 'save') {
+      var size = M._retro_serialize_size();
+      if (!size) throw new Error('保存できません');
+      var ptr = M._malloc(size);
+      if (!ptr) throw new Error('メモリを確保できません');
+      try {
+        if (!M._retro_serialize(ptr, size)) throw new Error('保存できません');
+        response.bytes = M.HEAPU8.slice(ptr, ptr + size).buffer;
+      } finally { M._free(ptr); }
+    } else if (msg.op === 'load') {
+      var bytes = new Uint8Array(msg.bytes);
+      if (!bytes.length) throw new Error('データが空です');
+      var loadPtr = M._malloc(bytes.length);
+      if (!loadPtr) throw new Error('メモリを確保できません');
+      try {
+        M.HEAPU8.set(bytes, loadPtr);
+        if (!M._retro_unserialize(loadPtr, bytes.length)) throw new Error('復元できません');
+      } finally { M._free(loadPtr); }
+    }
+    postMessage(response, response.bytes ? [response.bytes] : []);
+  } catch (err) {
+    postMessage({ type: 'stateResult', requestId: msg.requestId, ok: false, error: String((err && err.message) || err) });
+  }
+}
+
 self.onmessage = function (ev) {
   var msg = ev.data;
   if (!msg || typeof msg.type !== 'string') return;
@@ -697,6 +739,9 @@ self.onmessage = function (ev) {
       break;
     case 'apiExec':
       handleApiExec(msg);
+      break;
+    case 'state':
+      handleState(msg);
       break;
     case 'disk':
       handleDisk(msg);

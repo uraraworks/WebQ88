@@ -19,6 +19,7 @@ import { initInputControls } from './input-controls';
 import { convertRgb565ToImageData } from './rgb565';
 import { Bridge, resolveBridgeUrl } from './bridge';
 import { registerUrl } from './disk-source';
+import { initStateUi } from './state-ui';
 
 initPlayerUi();
 const audio = new AudioEngine();
@@ -220,6 +221,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   diskPanel = new DiskPanel(proxy, disksEl, { blankImage: blank2d ? new Uint8Array(blank2d.bytes) : null });
 
   initLibrary(diskPanel);
+  initStateUi(proxy, () => diskPanel!.flushAll());
 
   // 初回は起動操作を待ち、同梱の互換ROMで起動する。
   void startRequested.then(userRoms => proxy.init(bundledRoms, userRoms));

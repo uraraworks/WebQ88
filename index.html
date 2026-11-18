@@ -27,6 +27,7 @@
                 <button type="button" data-menu-group="input" aria-expanded="false" aria-controls="menu-input">入力 <span aria-hidden="true">›</span></button>
                 <button type="button" data-menu-group="sound" aria-expanded="false" aria-controls="menu-sound">音 <span aria-hidden="true">›</span></button>
                 <button type="button" data-menu-group="disk" aria-expanded="false" aria-controls="menu-disk">ディスク <span aria-hidden="true">›</span></button>
+                <button type="button" data-menu-group="state" aria-expanded="false" aria-controls="menu-state">ステート <span aria-hidden="true">›</span></button>
                 <button type="button" data-menu-group="rom" aria-expanded="false" aria-controls="menu-rom">ROM <span aria-hidden="true">›</span></button>
               </div>
             </div>
@@ -53,6 +54,10 @@
                 Safari で7日間使わなかったとき)。大事なディスクは「ダウンロード」で手元にも保存してください。
                 書き込みは数秒おきにこのブラウザへ自動保存され、次に開いたときドライブへ自動で挿入し直します。
               </div>
+            </div>
+            <div id="menu-state" class="toolbar-submenu" data-submenu="state" hidden>
+              <div class="toolbar-submenu-heading"><button type="button" data-menu-back>← 戻る</button><strong>ステート</strong></div>
+              <div id="state-slots"></div><div id="state-message" role="status"></div>
             </div>
             <div id="menu-rom" class="toolbar-submenu" data-submenu="rom" hidden>
               <div class="toolbar-submenu-heading"><button type="button" data-menu-back>← 戻る</button><strong>ROM</strong></div>

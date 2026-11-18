@@ -1,5 +1,5 @@
 /** 「…」メニューの DOM に依存しない状態遷移。 */
-export type OverflowGroup = 'display' | 'input' | 'sound' | 'disk' | 'rom';
+export type OverflowGroup = 'display' | 'input' | 'sound' | 'disk' | 'rom' | 'state';
 export type OverflowState = { level: 'closed' } | { level: 'root' } | { level: 'group'; group: OverflowGroup };
 
 export const closedMenu: OverflowState = { level: 'closed' };
