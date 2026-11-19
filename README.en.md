@@ -103,6 +103,31 @@ becomes unavailable (see [docs/API-DESIGN.md](docs/API-DESIGN.md) for the reason
 - A self-made kanji ROM generated from the free Shinonome font is bundled (glyphs differ from real hardware).
 - See [compat-rom/README.md](compat-rom/README.md) for details.
 
+## What the compatible ROM can and cannot do
+
+A summary as of November 19, 2026 (the bundled compatible ROM is built from PC88Behavior `ff82516`).
+
+- **BASIC:** You can enter, edit and run lines and use `LIST`, conditionals, loops,
+  string and numeric functions, arrays, `INPUT`, function keys and more. Representative
+  programs run, but compatibility with every N88-BASIC feature or program is not guaranteed.
+- **Disks and files:** `FILES`, ASCII `LOAD` and `SAVE`, `KILL`, `NAME`, and sequential
+  and random file I/O are supported. Booting from a bootable disk is also supported.
+- **Screen, input and graphics:** Text screen editing, keyboard input, screen width and
+  color settings, `PSET`, `LINE`, `CIRCLE`, `PAINT`, and image `GET@` and `PUT@` are available.
+- **Machine code:** `CALL`, `USR`, `VARPTR`, `BSAVE` and `BLOAD` are supported, but memory
+  addresses differ from the official ROM and some boundary cases remain unresolved.
+- **Save format:** Intermediate-language `SAVE` files are incompatible with the official ROM;
+  programs saved in that format by the official ROM cannot be loaded. Use ASCII format,
+  `SAVE "…",A`, to exchange programs. `SAVE ,P` is not supported.
+- **Other limits:** `TIME$`, `DATE$`, and kanji in BASIC are not implemented. `SOUND` and
+  `PLAY` produce syntax errors (as the official BASIC does in every configuration measured). Double-precision numeric functions and some precision and
+  numeric input cases remain unsupported or unverified, and execution is slower than with
+  the official ROM. Aborting when a disk is ejected during boot behaves differently from the official ROM.
+- **Commercial games:** Some have been observed to progress as they do with the official ROM,
+  but operation is not guaranteed. For games that do not work, you can load a user ROM to run them with the official ROM.
+
+For details, see the [PC88Behavior README](https://github.com/uraraworks/PC88Behavior#readme).
+
 ## MCP support (remote control from AI agents)
 
 `mcp/` contains an MCP server that lets AI agents operate WebQ88. Open the page
