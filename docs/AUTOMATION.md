@@ -37,6 +37,10 @@ ws.send(JSON.stringify({ id: 1, cmd: 'status', args: {} }));
 を通るため、可否判定はブリッジ経由と完全に同じ。本番ビルド(`npm run build`)
 には含まれない。
 
+### コア設定の上書き（速度調査用デバッグ機能）
+
+URL に `?bridge=1&q88_cpu_clock=2&q88_basic_mode=N88%20V1S&q88_sub_cpu_mode=0` のように指定する。許可値は `q88_cpu_clock` が `4`, `8`, `16`, `32`, `64`, `1`, `2`、`q88_basic_mode` が `N88 V2`, `N88 V1H`, `N88 V1S`, `N`、`q88_sub_cpu_mode` が `0`, `1`, `2`。不正値は無視し、未指定時は従来どおり。リセット後も保持する。`perf` の `appliedCoreOptions` には有効な上書きのみが入り、未指定なら空オブジェクトになる。
+
 ## 2. コマンド一覧と可否
 
 `docs/API-DESIGN.md` 第4節の表のとおり。制限モード(利用者が公式ROMを
@@ -45,7 +49,7 @@ ws.send(JSON.stringify({ id: 1, cmd: 'status', args: {} }));
 
 | コマンド | 引数 | 互換 | 制限 | 備考 |
 |---|---|---|---|---|
-| `perf` | `{seconds?}` | ○ | ○ | 既定5秒、最大30秒。`coreFrames`, `wallMs`, `runFps`, `targetFps`, `ratio`, `drawFps`, `audioQueueMs`（`avg`/`min`/`max`）, `audioSampleRate`, `coreSampleRate`, `paused`, `audioPacing`, `devicePixelRatio`, `refreshHz`。取得不能値は `null`。リフレッシュはrAF間隔の中央値から推定 |
+| `perf` | `{seconds?}` | ○ | ○ | 既定5秒、最大30秒。`coreFrames`, `wallMs`, `runFps`, `targetFps`, `ratio`, `drawFps`, `audioQueueMs`（`avg`/`min`/`max`）, `audioSampleRate`, `coreSampleRate`, `paused`, `audioPacing`, `devicePixelRatio`, `refreshHz`, `appliedCoreOptions`。取得不能値は `null`。リフレッシュはrAF間隔の中央値から推定 |
 | `status` | — | ○ | ○ | 起動状態・モード・ROM出どころ |
 | `reset` | — | ○ | ○ | 同一Workerで再起動(掛け金は保持) |
 | `key` | `{code, action:'down'\|'up'\|'tap'}` | ○ | ○ | `code`はRETROK値 |

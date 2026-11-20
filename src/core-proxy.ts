@@ -28,7 +28,7 @@ export class CoreProxy {
   private pendingStates = new Map<number, (result: StateResult) => void>();
   private pendingDisks = new Map<number, (result: DiskResult) => void>();
 
-  constructor(handlers: CoreProxyHandlers) {
+  constructor(handlers: CoreProxyHandlers, private coreOptions: Record<string, string> = {}) {
     // ワーカー本体は importScripts() で emscripten の UMD 出力を読み込む必要があり
     // モジュールワーカーにできないため、public/ 直下の素の .js をクラシックワーカーとして使う
     // （core-protocol.ts 冒頭のコメント参照）。
@@ -115,6 +115,7 @@ export class CoreProxy {
   init(bundled: VerifiedRom[], user: RomFile[] = []): void {
     const payload: MainToWorkerMessage = {
       type: 'init',
+      coreOptions: this.coreOptions,
       bundled: bundled.map((r) => ({ name: r.name, bytes: r.bytes })),
       user: user.map((r) => ({ name: r.name, bytes: r.bytes })),
     };

@@ -10,6 +10,9 @@ try {
   for (const key of ['coreFrames', 'wallMs', 'runFps', 'targetFps', 'ratio', 'drawFps', 'coreSampleRate', 'devicePixelRatio', 'refreshHz']) assert.equal(typeof result[key], 'number', key);
   assert.ok(result.coreFrames > 0 && result.wallMs >= 1000 && result.runFps > 0);
   assert.equal(result.audioPacing, false);
+  if (new URL(process.env.WEBQ88_URL ?? 'http://localhost:5173/?bridge=1').searchParams.get('q88_cpu_clock') === '2') {
+    assert.equal(result.appliedCoreOptions.q88_cpu_clock, '2');
+  }
   assert.equal(typeof result.paused, 'boolean');
   const invalid = await page.evaluate(() => window.__webq88Debug.exec('perf', { seconds: 31 }));
   assert.ok(invalid.error);

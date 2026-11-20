@@ -24,6 +24,17 @@ import { saveRoms, loadRoms, clearRoms, listRomNames } from './rom-store';
 
 initPlayerUi();
 const urlParams = new URLSearchParams(location.search);
+// デバッグ用の上書きだけを渡す。選択肢は libretro_core_options.h に合わせる。
+const coreOptionValues: Record<string, readonly string[]> = {
+  q88_cpu_clock: ['4', '8', '16', '32', '64', '1', '2'],
+  q88_basic_mode: ['N88 V2', 'N88 V1H', 'N88 V1S', 'N'],
+  q88_sub_cpu_mode: ['0', '1', '2'],
+};
+const appliedCoreOptions: Record<string, string> = {};
+for (const [key, values] of Object.entries(coreOptionValues)) {
+  const value = urlParams.get(key);
+  if (value !== null && values.includes(value)) appliedCoreOptions[key] = value;
+}
 const audio = new AudioEngine();
 const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
 const volumeInput = document.querySelector<HTMLInputElement>('#volume')!;
@@ -267,7 +278,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
     onError: (message) => {
       setStatus(`エラー: ${message}`);
     },
-  });
+  }, appliedCoreOptions);
 
   const audioPacing = !new URLSearchParams(location.search).has('bridge');
   const queueListeners = new Set<(ms: number) => void>();
@@ -441,7 +452,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
       audioQueueMs: { avg: queues.length ? queues.reduce((a, b) => a + b, 0) / queues.length : null,
         min: queues.length ? Math.min(...queues) : null, max: queues.length ? Math.max(...queues) : null },
       audioSampleRate: audio.sampleRate, coreSampleRate, paused, audioPacing,
-      devicePixelRatio: window.devicePixelRatio, refreshHz: median ? 1000 / median : null };
+      devicePixelRatio: window.devicePixelRatio, refreshHz: median ? 1000 / median : null, appliedCoreOptions: { ...appliedCoreOptions } };
   };
   const bridge = new Bridge(createBridgeHost(proxy, diskPanel, samplePerf));
   const bridgeUrl = resolveBridgeUrl(window.location.search);

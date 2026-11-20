@@ -67,6 +67,7 @@ var FALLBACK_FPS = 60;
 var portMouse = false;
 var mouseButtons = [[], []];
 var moduleInstance = null;
+var coreOptions = {};
 var disks = null; // WebQ88DiskHost.create(M)(public/disk-host.js)。コア起動後に作る
 var lampAcc = 0; // 直近のframe送信以降に点いたアクセスランプ(bit0=ドライブ1, bit1=ドライブ2)
 // 既定2ポーリング: ../PC88Behavior 系メモ「最低2ポーリングは押下を保つ」を踏まえた値。
@@ -109,6 +110,14 @@ function setupCallbacks(M) {
 
   var saveToDiskPtr = M._malloc(16);
   M.stringToUTF8('enabled', saveToDiskPtr, 16);
+  // ポインタはコアの寿命中保持する。
+  var optionPtrs = Object.create(null);
+  Object.keys(coreOptions).forEach(function (key) {
+    var value = coreOptions[key];
+    var size = value.length * 4 + 1; // 値は ASCII の選択肢だけ
+    optionPtrs[key] = M._malloc(size);
+    M.stringToUTF8(value, optionPtrs[key], size);
+  });
 
   var envCb = M.addFunction(function (cmd, data) {
     var realCmd = cmd & 0xffff;
@@ -118,8 +127,13 @@ function setupCallbacks(M) {
       // 無効だと上流は save_path の .srm 差分ファイルへ書き、吸い出したイメージに
       // 書き込みが入らない(scripts/smoke-disk.cjs の陰性対照で確認)。
       var keyPtr = new DataView(M.HEAPU8.buffer).getUint32(data, true);
-      if (M.UTF8ToString(keyPtr) === 'q88_save_to_disk_image') {
+      var key = M.UTF8ToString(keyPtr);
+      if (key === 'q88_save_to_disk_image') {
         new DataView(M.HEAPU8.buffer).setUint32(data + 4, saveToDiskPtr, true);
+        return 1;
+      }
+      if (optionPtrs[key]) {
+        new DataView(M.HEAPU8.buffer).setUint32(data + 4, optionPtrs[key], true);
         return 1;
       }
       return 0;
@@ -717,6 +731,7 @@ self.onmessage = function (ev) {
   if (!msg || typeof msg.type !== 'string') return;
   switch (msg.type) {
     case 'init':
+      if (!moduleInstance) coreOptions = msg.coreOptions || {};
       handleInit(msg.bundled, msg.user);
       break;
     case 'portDevice':

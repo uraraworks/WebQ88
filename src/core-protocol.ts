@@ -47,6 +47,7 @@ export type MainToWorkerMessage =
       // 同一Workerインスタンス内で ROM を差し替えて再起動する
       // (docs/API-DESIGN.md 第3節「一方向の掛け金」)。
       type: 'init';
+      coreOptions: Record<string, string>;
       bundled: RomFile[];
       user: RomFile[];
     }
