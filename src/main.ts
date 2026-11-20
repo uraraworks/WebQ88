@@ -103,6 +103,14 @@ async function refreshRomNames(): Promise<void> {
   try {
     const names = await listRomNames();
     savedRomNames.textContent = `保存済みROM: ${names.length ? names.join('、') : 'なし'}`;
+    // 起動前は、起動ボタンとモード表示を「これから使うROM」に合わせる。
+    const overlay = document.querySelector<HTMLElement>('#startup-overlay');
+    if (overlay && !overlay.hidden) {
+      document.querySelector<HTMLElement>('#startup-button')!.textContent = names.length ? '登録したROMで起動' : '互換ROMで起動';
+      document.querySelector<HTMLElement>('#mode-info')!.innerHTML = names.length
+        ? '<span class="restricted">制限モード（利用者ROMあり）</span> 起動待ち'
+        : '';
+    }
   } catch {
     savedRomNames.textContent = '保存済みROM: 取得できませんでした';
     console.warn('ROM一覧を取得できませんでした');
