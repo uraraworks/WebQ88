@@ -11,9 +11,8 @@ import type { DiskPanel } from './disks';
 // ../../X68K/WebX68k/src/bridge.ts と同じ向き。
 //
 // メッセージ形式は {id, cmd, args} を受け取り、{id, result} を返す
-// (docs/API-DESIGN.md の指示どおり、コマンドの実装・可否判定は一切ここに
-// 持たない。CoreProxy.execApi 経由で Worker の public/api-dispatch.js へ
-// そのまま転送し、返ってきた結果をそのまま返すだけ)。
+// 通常は CoreProxy.execApi 経由で Worker へ転送する。ブラウザ側の
+// 計測や IndexedDB を使うコマンドは createBridgeHost で扱う。
 //
 // エミュレータ本体はブラウザ内で動き、ブリッジサーバーはユーザーのマシン上で
 // 動く想定。ページ側から ws://127.0.0.1:<port> へ繋ぎに行く。
@@ -115,9 +114,10 @@ export class Bridge {
 }
 
 /** IndexedDB とUI側の操作をWorkerのAPIに合流させる。 */
-export function createBridgeHost(proxy: CoreProxy, panel: DiskPanel): BridgeHost {
+export function createBridgeHost(proxy: CoreProxy, panel: DiskPanel, perf: (args: Record<string, unknown>) => Promise<Record<string, unknown>>): BridgeHost {
   return { async exec(cmd, args) {
     try {
+      if (cmd === 'perf') return await perf(args);
       if (['disk_list_files', 'disk_read_file', 'disk_write_file', 'disk_delete_file'].includes(cmd)) {
         if (args.slot !== 'fd1' && args.slot !== 'fd2') throw Error('スロットはfd1またはfd2です');
         const d = args.slot === 'fd1' ? 0 : 1;

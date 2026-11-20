@@ -79,6 +79,7 @@ document.querySelector<HTMLElement>('#screen-stage')!.append(perfOverlay);
 const updatePerfVisibility = () => { perfOverlay.hidden = !perfToggle.checked; };
 perfToggle.addEventListener('change', () => { updatePerfVisibility(); try { localStorage.setItem('webq88-perf', String(perfToggle.checked)); } catch { /* 保存不可 */ } });
 updatePerfVisibility();
+let perfDrawTotal = 0;
 let perfFrames = 0, perfCoreFrames = 0, perfLastCoreFrames = 0, perfHz = 0, perfQueue: number | null = null;
 let perfLastTime = performance.now(), perfLastFrameTime = 0;
 setInterval(() => {
@@ -203,10 +204,11 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   let pixelBuf32: Uint32Array | null = null;
   let diskPanel: DiskPanel | null = null;
   let firstReady = true;
+  let coreSampleRate: number | null = null;
 
   const proxy = new CoreProxy({
     onReady: ({ width, height, fps, sampleRate, mode }) => {
-      perfHz = fps;
+      perfHz = fps; coreSampleRate = sampleRate;
       audio.setRate(sampleRate);
       canvas.width = width;
       canvas.height = height;
@@ -246,7 +248,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
     },
     onAudio: buffer => audio.push(buffer),
     onFrame: ({ width, height, pitch, buffer, lamp, executedFrames }) => {
-      perfFrames++; perfCoreFrames = executedFrames; perfLastFrameTime = performance.now();
+      perfFrames++; perfDrawTotal++; perfCoreFrames = executedFrames; perfLastFrameTime = performance.now();
       diskPanel?.setLamp(lamp);
       audio.setDriveLamp(lamp);
       if (!imageData || width !== imageData.width || height !== imageData.height) {
@@ -268,7 +270,8 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   });
 
   const audioPacing = !new URLSearchParams(location.search).has('bridge');
-  audio.onQueue = seconds => { perfQueue = seconds; proxy.setAudioQueue(seconds, audioPacing); };
+  const queueListeners = new Set<(ms: number) => void>();
+  audio.onQueue = seconds => { perfQueue = seconds; for (const listener of queueListeners) listener(seconds * 1000); proxy.setAudioQueue(seconds, audioPacing); };
   let paused = false;
   pauseButton.addEventListener('click', () => {
     paused = !paused;
@@ -412,8 +415,35 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   // 自動操作API(docs/API-DESIGN.md)の入口。原則は Worker側(public/api-dispatch.js)へ
   // 転送するだけ(第5節)。例外として、メインスレッドにしか無い IndexedDB を扱う
   // list_states(UIスロット分の合流)・load_state("ui:N")・list_disk_library・persist_disks
-  // だけは createBridgeHost(src/bridge.ts)が受け持つ。バイト列は外へ返さない。
-  const bridge = new Bridge(createBridgeHost(proxy, diskPanel));
+  // とブラウザ側の perf は createBridgeHost(src/bridge.ts)が受け持つ。バイト列は外へ返さない。
+  const samplePerf = async (args: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    const seconds = args.seconds === undefined ? 5 : args.seconds;
+    if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0 || seconds > 30) throw new Error('secondsは0より大きく30以下の数値です');
+    const start = performance.now(), coreStart = perfCoreFrames, drawStart = perfDrawTotal;
+    const queues: number[] = [], intervals: number[] = [];
+    const listener = (ms: number) => queues.push(ms);
+    queueListeners.add(listener);
+    let raf = 0, previous: number | null = null;
+    const frame = (time: number) => {
+      if (previous !== null && time > previous) intervals.push(time - previous);
+      previous = time; raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    try { await new Promise<void>(resolve => setTimeout(resolve, seconds * 1000)); }
+    finally { cancelAnimationFrame(raf); queueListeners.delete(listener); }
+    const wallMs = performance.now() - start;
+    const coreFrames = Math.max(0, perfCoreFrames - coreStart), runFps = coreFrames * 1000 / wallMs;
+    intervals.sort((a, b) => a - b);
+    const middle = Math.floor(intervals.length / 2);
+    const median = intervals.length ? (intervals.length % 2 ? intervals[middle] : (intervals[middle - 1] + intervals[middle]) / 2) : null;
+    return { ok: true, coreFrames, wallMs, runFps, targetFps: perfHz || null,
+      ratio: perfHz ? runFps / perfHz : null, drawFps: (perfDrawTotal - drawStart) * 1000 / wallMs,
+      audioQueueMs: { avg: queues.length ? queues.reduce((a, b) => a + b, 0) / queues.length : null,
+        min: queues.length ? Math.min(...queues) : null, max: queues.length ? Math.max(...queues) : null },
+      audioSampleRate: audio.sampleRate, coreSampleRate, paused, audioPacing,
+      devicePixelRatio: window.devicePixelRatio, refreshHz: median ? 1000 / median : null };
+  };
+  const bridge = new Bridge(createBridgeHost(proxy, diskPanel, samplePerf));
   const bridgeUrl = resolveBridgeUrl(window.location.search);
   if (bridgeUrl) {
     bridge.connect(bridgeUrl);

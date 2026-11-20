@@ -67,6 +67,8 @@ export class AudioEngine {
   private lastDriveClick = 0;
   onQueue: ((seconds: number) => void) | null = null;
 
+  get sampleRate(): number | null { return this.ctx?.sampleRate ?? null; }
+
   start(): void {
     if (this.ctx) { if (!this.paused) void this.ctx.resume().catch(() => {}); return; }
     try {

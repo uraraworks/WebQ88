@@ -101,7 +101,7 @@ async function waitForClient(timeoutMs = CLIENT_WAIT_MS) {
 }
 
 async function sendCommand(cmd, args = {}) {
-  const timeoutMs = cmd === 'paste_text' ? Math.max(REQUEST_TIMEOUT_MS, 5000 + Array.from(args.text || '').length * 1000) : cmd === 'wait_screen' ? Math.max(REQUEST_TIMEOUT_MS, (args.timeout_ms ?? 10000) + 5000) : REQUEST_TIMEOUT_MS;
+  const timeoutMs = cmd === 'perf' ? Math.max(REQUEST_TIMEOUT_MS, (args.seconds ?? 5) * 1000 + 5000) : cmd === 'paste_text' ? Math.max(REQUEST_TIMEOUT_MS, 5000 + Array.from(args.text || '').length * 1000) : cmd === 'wait_screen' ? Math.max(REQUEST_TIMEOUT_MS, (args.timeout_ms ?? 10000) + 5000) : REQUEST_TIMEOUT_MS;
   if (!(await waitForClient())) {
     throw new Error('WebQ88 のブラウザタブが接続されていません');
   }
@@ -176,6 +176,13 @@ server.tool(
   'WebQ88 の現在の状態(起動しているか、互換/制限モード、読み込んだROMの役割・出どころ)を取得する。まず最初にこれを呼ぶと状況が分かる。',
   {},
   async () => callDispatch('status')
+);
+
+server.tool(
+  'perf',
+  '実行速度、描画速度、音声キューと画面リフレッシュを指定秒数測定する。',
+  { seconds: z.number().positive().max(30).optional().describe('測定秒数（既定5、最大30）') },
+  async ({ seconds }) => callDispatch('perf', { seconds })
 );
 
 server.tool(

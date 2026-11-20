@@ -6,7 +6,7 @@
 
 ## 1. 入口
 
-自動操作APIの実装(可否判定を含む)は `public/api-dispatch.js` の
+Worker側の自動操作APIの実装(可否判定を含む)は `public/api-dispatch.js` の
 `exec(ctx, cmd, args)` 1箇所に集約されている。呼び出し元は以下の2つで、
 どちらも `exec()` へ転送して結果を返すだけで、コマンド一覧や可否判定を
 複製しない。
@@ -33,7 +33,7 @@ ws.send(JSON.stringify({ id: 1, cmd: 'status', args: {} }));
 
 `npm run dev` で起動したときだけ、ページ内JSから直接呼べる入口が
 `window.__webq88Debug.exec(cmd, args)` として公開される。ブリッジと同じ
-経路(`Bridge.exec()` → `CoreProxy.execApi()` → Worker → `api-dispatch.js`)
+経路（多くのコマンドは `Bridge.exec()` → `CoreProxy.execApi()` → Worker → `api-dispatch.js`。`perf` はブラウザ側で計測）
 を通るため、可否判定はブリッジ経由と完全に同じ。本番ビルド(`npm run build`)
 には含まれない。
 
@@ -45,6 +45,7 @@ ws.send(JSON.stringify({ id: 1, cmd: 'status', args: {} }));
 
 | コマンド | 引数 | 互換 | 制限 | 備考 |
 |---|---|---|---|---|
+| `perf` | `{seconds?}` | ○ | ○ | 既定5秒、最大30秒。`coreFrames`, `wallMs`, `runFps`, `targetFps`, `ratio`, `drawFps`, `audioQueueMs`（`avg`/`min`/`max`）, `audioSampleRate`, `coreSampleRate`, `paused`, `audioPacing`, `devicePixelRatio`, `refreshHz`。取得不能値は `null`。リフレッシュはrAF間隔の中央値から推定 |
 | `status` | — | ○ | ○ | 起動状態・モード・ROM出どころ |
 | `reset` | — | ○ | ○ | 同一Workerで再起動(掛け金は保持) |
 | `key` | `{code, action:'down'\|'up'\|'tap'}` | ○ | ○ | `code`はRETROK値 |

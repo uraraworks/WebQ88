@@ -50,6 +50,7 @@ PC88Behavior のクリーンルーム規律（PC88Behavior リポジトリの `C
 
 | API | 互換モード | 制限モード |
 |---|---|---|
+| `perf`（速度・音声・画面の数値計測） | ○ | ○ |
 | `status`（起動状態・モード・読み込んだ ROM の名前） | ○ | ○ |
 | `reset` / `type_text` / `paste_text` / `key` / `key_sequence` | ○ | ○（文字入力後の画面本文は返さない） |
 | `insert_disk` / `eject_disk` / `list_disks`（名前・サイズ・書き込みの有無のみ） | ○ | ○ |
