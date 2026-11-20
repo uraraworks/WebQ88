@@ -60,7 +60,7 @@
               <div class="toolbar-submenu-heading"><button type="button" data-menu-back>← 戻る</button><strong>ディスク</strong></div>
               <button id="share-disks" type="button" title="挿入中のURL由来ディスクの共有URLをコピー">共有URLをコピー</button>
               <div class="disks-notice">
-                ディスクはドライブ行へのドラッグ＆ドロップでも挿入できます。ブランクFDは FDD2 で作成できます。
+                ディスクはドライブ行へのドラッグ＆ドロップでも挿入できます。ブランクFDは各ドライブの「ブランクFDを作成」で作成できます。
                 ブラウザ保存は消えることがあります(サイトデータの削除・シークレットウィンドウ・容量不足・
                 Safari で7日間使わなかったとき)。大事なディスクは「ダウンロード」で手元にも保存してください。
                 書き込みは数秒おきにこのブラウザへ自動保存され、次に開いたときドライブへ自動で挿入し直します。
@@ -94,6 +94,7 @@
           <button type="button" class="drive-insert" title="挿入" aria-label="挿入"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19l6-8H6l6 8z M6 5h12" /></svg></button>
           <button type="button" class="drive-library" title="ライブラリから挿入" aria-label="ライブラリから挿入"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16h13l3-3V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1z M4 20h13a3 3 0 0 0 3-3 M8 9h6v4H8z" /></svg></button>
           <button type="button" class="drive-eject" title="排出" aria-label="排出" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l6 8H6l6-8z M6 19h12" /></svg></button>
+          <button type="button" class="drive-blank" title="ブランクFDを作成" aria-label="ブランクFDを作成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9l-6-6z M13 3v6h6 M12 12v6 M9 15h6" /></svg></button>
           <button type="button" class="drive-files" title="ディスク内のファイル" aria-label="ディスク内のファイル" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h13 M12 4l4 4-4 4 M21 16H8 M12 20l-4-4 4-4" /></svg></button>
           <button type="button" class="drive-download" title="ダウンロード" aria-label="ダウンロード" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4 M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg></button>
           <input type="file" class="drive-file-input" accept=".d88,.88d,.zip,.lzh" hidden />
