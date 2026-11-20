@@ -20,6 +20,7 @@ import { convertRgb565ToImageData } from './rgb565';
 import { Bridge, resolveBridgeUrl, createBridgeHost } from './bridge';
 import { registerUrl } from './disk-source';
 import { initStateUi } from './state-ui';
+import { saveRoms, loadRoms, clearRoms, listRomNames } from './rom-store';
 
 initPlayerUi();
 const urlParams = new URLSearchParams(location.search);
@@ -96,6 +97,30 @@ pauseButton.disabled = true;
 screenshotButton.disabled = true;
 const romFilesInput = document.querySelector<HTMLInputElement>('#rom-files')!;
 const romBootButton = document.querySelector<HTMLButtonElement>('#rom-boot')!;
+const savedRomNames = document.querySelector<HTMLElement>('#saved-rom-names')!;
+const savedRomMessage = document.querySelector<HTMLElement>('#saved-rom-message')!;
+async function refreshRomNames(): Promise<void> {
+  try {
+    const names = await listRomNames();
+    savedRomNames.textContent = `保存済みROM: ${names.length ? names.join('、') : 'なし'}`;
+  } catch {
+    savedRomNames.textContent = '保存済みROM: 取得できませんでした';
+    console.warn('ROM一覧を取得できませんでした');
+  }
+}
+void refreshRomNames();
+document.querySelector<HTMLButtonElement>('#clear-roms')!.addEventListener('click', () => {
+  void (async () => {
+    try {
+      await clearRoms();
+      await refreshRomNames();
+      savedRomMessage.textContent = '次回起動から互換モード';
+    } catch {
+      savedRomMessage.textContent = '保存済みROMを削除できませんでした';
+      console.warn('ROMを削除できませんでした');
+    }
+  })();
+});
 const modeInfoEl = document.querySelector<HTMLDivElement>('#mode-info')!;
 const disksEl = document.querySelector<HTMLDivElement>('#disks')!;
 const coreResetButton = document.querySelector<HTMLButtonElement>('#core-reset')!;
@@ -279,13 +304,24 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   initStateUi(proxy, () => diskPanel!.flushAll());
 
   // 初回は起動操作を待ち、同梱の互換ROMで起動する。
-  void startRequested.then(userRoms => proxy.init(bundledRoms, userRoms));
+  void startRequested.then(async userRoms => {
+    if (userRoms.length === 0) {
+      try { userRoms = await loadRoms(); }
+      catch { console.warn('保存済みROMを読み込めませんでした'); }
+    }
+    proxy.init(bundledRoms, userRoms);
+  });
 
   // 利用者ROM読み込みUI: ファイル名・役割だけを扱い、中身は表示・ログ出力しない。
   // 渡したファイルは同梱ROMより優先され、足りない役割は同梱ROMで補う(混成可)。
   romBootButton.addEventListener('click', () => {
     void (async () => {
       const userRoms = await filesToRomFiles(romFilesInput.files);
+      if (userRoms.length > 0) {
+        await saveRoms(userRoms);
+        await refreshRomNames();
+        savedRomMessage.textContent = '';
+      }
       // 再起動でディスクの状態が変わりうるので、先にゲストの書き込みを保存する。
       await diskPanel?.flushAll();
       setStatus('起動中…');

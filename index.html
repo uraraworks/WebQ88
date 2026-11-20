@@ -72,6 +72,8 @@
             </div>
             <div id="menu-rom" class="toolbar-submenu" data-submenu="rom" hidden>
               <div class="toolbar-submenu-heading"><button type="button" data-menu-back>← 戻る</button><strong>ROM</strong></div>
+              <div id="saved-rom-names">保存済みROM: 確認中…</div>
+              <button id="clear-roms" type="button">保存済みROMを削除</button><div id="saved-rom-message" role="status"></div>
               <label for="rom-files">利用者ROMを選択（複数選択可・任意）</label>
               <input type="file" id="rom-files" multiple />
               <span>利用者ROMを渡すと制限モードになります。</span><button id="rom-boot" type="button">選択したROMで起動 / 再起動</button><div id="mode-info"></div>
