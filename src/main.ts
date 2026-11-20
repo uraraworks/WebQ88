@@ -133,6 +133,7 @@ document.querySelector<HTMLButtonElement>('#clear-roms')!.addEventListener('clic
   void (async () => {
     try {
       await clearRoms();
+      romFilesInput.value = ''; // 選択中のファイルも外す(残すと次の起動で再保存される)
       await refreshRomNames();
       savedRomMessage.textContent = '次回起動から互換モード';
       setStatus('保存済みROMを削除しました（次回起動から互換モード）');
