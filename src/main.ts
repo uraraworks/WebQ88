@@ -115,6 +115,8 @@ document.querySelector<HTMLButtonElement>('#clear-roms')!.addEventListener('clic
       await clearRoms();
       await refreshRomNames();
       savedRomMessage.textContent = '次回起動から互換モード';
+      setStatus('保存済みROMを削除しました（次回起動から互換モード）');
+      closeToolbarMenu();
     } catch {
       savedRomMessage.textContent = '保存済みROMを削除できませんでした';
       console.warn('ROMを削除できませんでした');
@@ -127,6 +129,12 @@ const coreResetButton = document.querySelector<HTMLButtonElement>('#core-reset')
 
 function setStatus(text: string): void {
   statusEl.textContent = text;
+}
+
+/** 「…」メニューが開いていれば閉じる(トグルボタンを押す)。 */
+function closeToolbarMenu(): void {
+  const more = document.querySelector<HTMLButtonElement>('#toolbar-more');
+  if (more?.getAttribute('aria-expanded') === 'true') more.click();
 }
 
 /**
@@ -325,6 +333,7 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
       // 再起動でディスクの状態が変わりうるので、先にゲストの書き込みを保存する。
       await diskPanel?.flushAll();
       setStatus('起動中…');
+      closeToolbarMenu();
       if (!startupRequested) start(userRoms);
       else proxy.init(bundledRoms, userRoms);
     })();
