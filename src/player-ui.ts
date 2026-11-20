@@ -48,6 +48,7 @@ export function initPlayerUi(): void {
     menuState = closedMenu;
     renderMenu();
   }
+  document.querySelector<HTMLButtonElement>('#file-transfer')!.addEventListener('click', closeMenu, true);
   more.addEventListener('click', () => {
     menuState = toggleMenu(menuState);
     renderMenu();

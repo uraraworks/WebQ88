@@ -96,6 +96,7 @@ export class DiskPanel {
       this.rows.push(this.buildRow(d));
     }
     this.render();
+    document.querySelector<HTMLButtonElement>('#file-transfer')!.addEventListener('click', () => void this.fileDialog());
     void this.withOp(async () => {
       try {
         const assignment = await getAssignment();
@@ -147,7 +148,6 @@ export class DiskPanel {
     row.ejectBtn.addEventListener('click', () => void this.eject(d));
     row.blankBtn?.addEventListener('click', () => void this.createBlank(d));
     row.downloadBtn.addEventListener('click', () => void this.download(d));
-    q<HTMLButtonElement>('.drive-files').addEventListener('click', (event) => { event.stopPropagation(); void this.fileDialog(d); });
     root.addEventListener('dragover', (ev) => {
       if (ev.dataTransfer?.types.includes('Files')) {
         ev.preventDefault();
@@ -183,8 +183,6 @@ export class DiskPanel {
       row.imageSelect.value = String(slot.image);
       row.ejectBtn.disabled = slot.name === null;
       row.downloadBtn.disabled = slot.name === null;
-      const filesBtn = row.root.querySelector<HTMLButtonElement>('.drive-files');
-      if (filesBtn) filesBtn.disabled = slot.name === null;
       row.lamp.classList.toggle('on', (this.lampMask & (1 << d)) !== 0);
     }
   }
@@ -634,29 +632,44 @@ export class DiskPanel {
     });
   }
 
-  private async fileDialog(d: number): Promise<void> {
+  private async fileDialog(): Promise<void> {
     const dialog = document.createElement('dialog'); dialog.className = 'library-modal';
-    const title = document.createElement('h2'); title.textContent = `ドライブ${d+1}のファイル`;
+    const title = document.createElement('h2'); title.textContent = 'ファイル転送';
+    const driveLabel = document.createElement('label'); driveLabel.textContent = '対象ドライブ ';
+    const driveSelect = document.createElement('select');
+    for (let i = 0; i < 2; i++) {
+      const option = document.createElement('option'); option.value = String(i); option.textContent = `FDD${i + 1}`; option.disabled = this.slots[i].name === null; driveSelect.append(option);
+    }
+    const firstDrive = this.slots.findIndex(slot => slot.name !== null);
+    driveSelect.value = firstDrive < 0 ? '' : String(firstDrive); driveSelect.disabled = firstDrive < 0; driveLabel.append(driveSelect);
+    let d = firstDrive;
+    let refreshId = 0;
     const notice = document.createElement('p'); notice.textContent = '読み書き中は操作しないでください。再挿入後もゲストのキャッシュが残る場合があります。書き込みはASCII形式です。';
     const status = document.createElement('p'); const list = document.createElement('div'); list.className = 'library-list';
     const input = document.createElement('input'); input.type = 'file';
     const close = document.createElement('button'); close.textContent = '閉じる'; close.onclick = () => dialog.close();
     const refresh = async () => {
+      const id = ++refreshId; const drive = d;
+      list.replaceChildren();
+      if (drive < 0) { status.textContent = 'ディスクが挿入されていません'; input.disabled = true; return; }
+      input.disabled = false; status.textContent = '読み込み中';
       try {
-        const info = await this.fileOperation(d, fs => fs.list(), false) as ReturnType<N88FS['list']>;
+        const info = await this.fileOperation(drive, fs => fs.list(), false) as ReturnType<N88FS['list']>;
+        if (id !== refreshId) return;
         status.textContent = `空き ${info.free} / ${info.total} バイト　書込禁止: ${info.writeProtected === null ? '不明' : info.writeProtected ? 'あり' : 'なし'}`;
         list.replaceChildren();
         for (const entry of info.entries) {
           const row = document.createElement('div'); row.className = 'library-list-item'; const label = document.createElement('span'); label.className = 'library-item-name'; label.textContent = `${entry.name} (${entry.attribute}, ${entry.size ?? '不明'} バイト) `;
-          const download = document.createElement('button'); download.className = 'library-action-btn'; download.textContent = '取り出す'; download.onclick = async () => { try { const bytes = await this.fileOperation(d, fs => fs.read(entry.name), false) as Uint8Array; const url = URL.createObjectURL(new Blob([bytes.slice().buffer as ArrayBuffer])); const a = document.createElement('a'); a.href=url; a.download=entry.name; a.click(); URL.revokeObjectURL(url); } catch(e) { status.textContent=(e as Error).message; } };
-          const del = document.createElement('button'); del.className = 'library-action-btn danger'; del.textContent = '削除'; del.onclick = async () => { if (!confirm(`${entry.name} を削除しますか？`)) return; try { await this.fileOperation(d, fs => fs.delete(entry.name), true); await refresh(); } catch(e) { status.textContent=(e as Error).message; } };
+          const download = document.createElement('button'); download.className = 'library-action-btn'; download.textContent = '取り出す'; download.onclick = async () => { try { const bytes = await this.fileOperation(drive, fs => fs.read(entry.name), false) as Uint8Array; const url = URL.createObjectURL(new Blob([bytes.slice().buffer as ArrayBuffer])); const a = document.createElement('a'); a.href=url; a.download=entry.name; a.click(); URL.revokeObjectURL(url); } catch(e) { status.textContent=(e as Error).message; } };
+          const del = document.createElement('button'); del.className = 'library-action-btn danger'; del.textContent = '削除'; del.onclick = async () => { if (!confirm(`${entry.name} を削除しますか？`)) return; try { await this.fileOperation(drive, fs => fs.delete(entry.name), true); await refresh(); } catch(e) { status.textContent=(e as Error).message; } };
           row.append(label,download,del); list.append(row);
         }
-      } catch(e) { status.textContent=(e as Error).message; }
+      } catch(e) { if (id === refreshId) status.textContent=(e as Error).message; }
     };
+    driveSelect.onchange = () => { d = Number(driveSelect.value); void refresh(); };
     input.onchange = async () => { const file=input.files?.[0]; if (!file) return; const name=prompt('ディスク上のファイル名（9文字以内）',file.name); input.value=''; if (!name) return; try { const bytes=new Uint8Array(await file.arrayBuffer()); await this.fileOperation(d, fs => fs.write(name, bytes), true); await refresh(); } catch(e) { status.textContent=(e as Error).message; } };
     const footer = document.createElement('div'); footer.className = 'library-footer'; footer.append(close);
-    dialog.append(title,notice,status,list,input,footer); document.body.append(dialog); dialog.addEventListener('close', () => dialog.remove()); dialog.showModal(); await refresh();
+    dialog.append(title,driveLabel,notice,status,list,input,footer); document.body.append(dialog); dialog.addEventListener('close', () => dialog.remove()); dialog.showModal(); await refresh();
   }
 
   // ---- 起動時の復元 ----
