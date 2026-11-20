@@ -8,7 +8,9 @@ export function initLibrary(panel: DiskPanel): void {
   const close = document.querySelector<HTMLButtonElement>('#library-close')!;
   const expanded = new Set<string>();
   let folders: DiskFolder[] = [];
-  const dismiss = (): void => { backdrop.hidden = true; open.focus(); };
+  let targetDrive: number | null = null;
+  let opener: HTMLButtonElement = open;
+  const dismiss = (): void => { backdrop.hidden = true; opener.focus(); };
   const action = (label: string, run: () => Promise<void>, danger = false): HTMLButtonElement => {
     const button = document.createElement('button');
     button.type = 'button';
@@ -51,7 +53,7 @@ export function initLibrary(panel: DiskPanel): void {
     const meta = document.createElement('span'); meta.className = 'library-item-meta';
     meta.textContent = `${(disk.bytes.byteLength / 1024).toFixed(0)} KB / ${new Date(disk.savedAt).toLocaleString()}`;
     const actions = document.createElement('div'); actions.className = 'library-item-actions';
-    for (let d = 0; d < 2; d++) actions.append(action(`FDD${d + 1}へ挿入`, async () => { await panel.insertStored(d, disk.sourceKey); dismiss(); }));
+    for (let d = 0; d < 2; d++) if (targetDrive === null || targetDrive === d) actions.append(action(`FDD${d + 1}へ挿入`, async () => { await panel.insertStored(d, disk.sourceKey); dismiss(); }));
     actions.append(action('名前変更', async () => {
       const value = window.prompt(`表示名を入力してください（元のファイル名: ${disk.name}）`, disk.displayName || disk.name);
       if (value !== null) { await renameDisk(disk.sourceKey, value); await refresh(); }
@@ -84,7 +86,11 @@ export function initLibrary(panel: DiskPanel): void {
   const create = action('フォルダ作成', async () => { const name = window.prompt('フォルダ名を入力してください'); if (name !== null) { const folder = await createFolder(name); expanded.add(folder.id); await refresh(); } });
   list.before(create);
   document.querySelector<HTMLButtonElement>('#share-disks')!.addEventListener('click', () => { void panel.shareUrl().catch((err: Error) => window.alert(err.message)); });
-  open.addEventListener('click', () => { backdrop.hidden = false; close.focus(); void refresh().catch(() => { list.textContent = 'ライブラリを読み込めませんでした。'; }); });
+  const show = (button: HTMLButtonElement, drive: number | null): void => { opener = button; targetDrive = drive; backdrop.hidden = false; close.focus(); void refresh().catch(() => { list.textContent = 'ライブラリを読み込めませんでした。'; }); };
+  open.addEventListener('click', () => show(open, null));
+  document.querySelectorAll<HTMLButtonElement>('.drive-library').forEach((button) => {
+    button.addEventListener('click', () => show(button, Number(button.closest<HTMLElement>('.drive-row')!.dataset.drive)));
+  });
   close.addEventListener('click', dismiss);
   backdrop.addEventListener('click', (event) => { if (event.target === backdrop) dismiss(); });
   document.addEventListener('keydown', (event) => {
