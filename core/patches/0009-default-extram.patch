@@ -1,0 +1,12 @@
+diff --git a/src/initval.h b/src/initval.h
+--- a/src/initval.h
++++ b/src/initval.h
+@@ -44,7 +44,7 @@
+ #define	DEFAULT_BOOT		( BOOT_AUTO  )
+ #define	DEFAULT_SOUND		( SOUND_I    )
+ #define	DEFAULT_JISHO		( NOT_JISHO  )
+-#define	DEFAULT_EXTRAM		( 0 )
++#define	DEFAULT_EXTRAM		( 1 )
+ #define	DEFAULT_DIPSW		( 0x391a )
+ #define	DEFAULT_BAUDRATE	( BAUDRATE_1200 )
+ 

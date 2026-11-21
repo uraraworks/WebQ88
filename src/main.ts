@@ -29,6 +29,7 @@ const coreOptionValues: Record<string, readonly string[]> = {
   q88_cpu_clock: ['4', '8', '16', '32', '64', '1', '2'],
   q88_basic_mode: ['N88 V2', 'N88 V1H', 'N88 V1S', 'N'],
   q88_sub_cpu_mode: ['0', '1', '2'],
+  q88_sound_board: ['OPNA', 'OPN'],
 };
 const appliedCoreOptions: Record<string, string> = {};
 for (const [key, values] of Object.entries(coreOptionValues)) {

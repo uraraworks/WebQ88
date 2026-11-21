@@ -1,0 +1,13 @@
+diff --git a/src/LIBRETRO/libretro.c b/src/LIBRETRO/libretro.c
+--- a/src/LIBRETRO/libretro.c
++++ b/src/LIBRETRO/libretro.c
+@@ -858,7 +858,8 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
+ 
+ size_t retro_serialize_size(void)
+ {
+-   return 0x70000;
++   /* Include OPNA ADPCM and up to 16 expansion RAM cards. */
++   return 0x300000;
+ }
+ 
+ /* TODO: Not safe across endianness yet! */

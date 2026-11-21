@@ -67,7 +67,7 @@ var FALLBACK_FPS = 60;
 var portMouse = false;
 var mouseButtons = [[], []];
 var moduleInstance = null;
-var coreOptions = {};
+var coreOptions = { q88_sound_board: 'OPNA' };
 var disks = null; // WebQ88DiskHost.create(M)(public/disk-host.js)。コア起動後に作る
 var lampAcc = 0; // 直近のframe送信以降に点いたアクセスランプ(bit0=ドライブ1, bit1=ドライブ2)
 // 既定2ポーリング: ../PC88Behavior 系メモ「最低2ポーリングは押下を保つ」を踏まえた値。
@@ -731,7 +731,7 @@ self.onmessage = function (ev) {
   if (!msg || typeof msg.type !== 'string') return;
   switch (msg.type) {
     case 'init':
-      if (!moduleInstance) coreOptions = msg.coreOptions || {};
+      if (!moduleInstance) coreOptions = Object.assign({ q88_sound_board: 'OPNA' }, msg.coreOptions || {});
       handleInit(msg.bundled, msg.user);
       break;
     case 'portDevice':
