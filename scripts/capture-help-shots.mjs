@@ -1,5 +1,5 @@
 // 開発サーバーを別途起動してから npm run capture-help を実行する。
-// プレイヤーの UI は現在日本語のみ。両言語のヘルプに実際の UI を掲載する。
+// 日本語のヘルプに実際の UI を掲載する。
 import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -20,17 +20,16 @@ const profile = await mkdtemp(join(tmpdir(), 'webq88-shots-'));
 let browser;
 try {
   browser = await puppeteer.launch({ executablePath: chrome, userDataDir: profile, headless: true, args: ['--hide-scrollbars'] });
-  for (const lang of ['ja', 'en']) {
+  {
     const context = await browser.createBrowserContext();
     try {
       const page = await context.newPage();
       await page.setViewport({ width: 900, height: 700, deviceScaleFactor: 2 });
-      await page.setExtraHTTPHeaders({ 'Accept-Language': lang });
-      const suffix = lang === 'ja' ? '' : '-en';
+      await page.setExtraHTTPHeaders({ 'Accept-Language': 'ja' });
       const shoot = async (selector, name) => {
         const element = await page.waitForSelector(selector, { visible: true });
-        await element.screenshot({ path: join(output, `${name}${suffix}.png`) });
-        console.log(`撮影: ${name}${suffix}.png`);
+        await element.screenshot({ path: join(output, `${name}.png`) });
+        console.log(`撮影: ${name}.png`);
       };
       await page.goto(base.href, { waitUntil: 'networkidle2' });
       await shoot('#player', 'overlay');
@@ -48,6 +47,7 @@ try {
       // 起動メッセージの表示が出そろうまで少し待つ。
       await new Promise((r) => setTimeout(r, 2000));
       await shoot('#player', 'overview');
+      await shoot('#disks', 'fdd');
 
       // 互換 ROM に同梱された空ディスクのみを、撮影専用プロファイルへ登録する。
       await page.evaluate(async (data) => {
@@ -74,10 +74,16 @@ try {
       await page.waitForFunction(() => document.querySelector('#library-list .library-item-name')?.textContent === 'SAMPLE1.D88');
       await shoot('#library-backdrop .library-modal', 'library');
       await page.click('#library-close');
+      await page.click('.drive-row[data-drive="0"] .drive-library');
+      await page.waitForSelector('.library-menu-item', { visible: true });
+      await shoot('.library-menu', 'library-insert');
+      await page.keyboard.press('Escape');
       await page.click('#keyboard-toggle');
       await shoot('#virtual-keyboard', 'keyboard');
       await page.click('#keyboard-toggle');
       await page.click('#toolbar-more');
+      await page.click('[data-menu-group="display"]');
+      await shoot('#menu-display', 'menu');
       await page.click('[data-menu-group="state"]');
       await shoot('#menu-state', 'state');
       await page.click('[data-menu-group="input"]');
@@ -90,6 +96,28 @@ try {
       // タブとキー一覧が収まるよう撮影時だけ高さを広げる。
       await page.setViewport({ width: 900, height: 1100, deviceScaleFactor: 2 });
       await shoot('.input-backdrop .library-modal', 'gamepad');
+      // 同梱の自作ROMを保存し、一覧と削除ボタンを撮る。
+      const rom = await readFile(resolve(root, 'compat-rom/N88.ROM'));
+      await page.evaluate(async (data) => {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('webq88-roms', 1);
+          request.onupgradeneeded = () => request.result.createObjectStore('roms', { keyPath: 'name' });
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction('roms', 'readwrite');
+          tx.objectStore('roms').put({ name: 'N88.ROM', bytes: new Uint8Array(data).buffer });
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+      }, Array.from(rom));
+      await page.reload({ waitUntil: 'networkidle2' });
+      await page.waitForFunction(() => document.querySelector('#saved-rom-names').textContent.includes('N88.ROM'));
+      await page.click('#toolbar-more');
+      await page.click('[data-menu-group="rom"]');
+      await shoot('#menu-rom', 'rom');
     } finally {
       await context.close();
     }

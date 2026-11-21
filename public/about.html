@@ -59,7 +59,8 @@
           0 2px 6px rgba(0, 0, 0, 0.4);
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
+        flex-direction: column;
         gap: 12px;
       }
 
@@ -83,20 +84,7 @@
         letter-spacing: 0.03em;
       }
 
-      .lang-toggle-btn {
-        flex: 0 0 auto;
-        padding: 6px 14px;
-        font-size: 12px;
-        border-radius: 5px;
-        border: 1px solid var(--footer-btn-border);
-        background: var(--footer-btn-bg);
-        color: var(--footer-text);
-        cursor: pointer;
-      }
-
-      .lang-toggle-btn:hover {
-        background: #5c5c5c;
-      }
+      .help-header nav, .help-header nav a { color: #a8a8a8; font-size: 11px; }
 
       main {
         flex: 1 1 auto;
@@ -181,19 +169,6 @@
 
       footer.help-footer a {
         color: var(--page-footer-text);
-      }
-
-      .lang-en {
-        display: none;
-      }
-
-      /* このページに直接コンテキストを持たせるため、body[data-lang] で切り替える。 */
-      body[data-lang='en'] .lang-ja {
-        display: none;
-      }
-
-      body[data-lang='en'] .lang-en {
-        display: block;
       }
 
       /* ヒーローセクション: キャッチコピー+CTAボタン2つ+大きめスクリーンショット。 */
@@ -292,13 +267,10 @@
       }
     </style>
   </head>
-  <body data-lang="ja">
+  <body>
     <header class="help-header">
-      <div class="help-header-title">
-        <h1 class="lang-ja">WebQ88 とは</h1>
-        <h1 class="lang-en">About WebQ88</h1>
-      </div>
-      <button type="button" class="lang-toggle-btn" id="langToggleBtn"></button>
+      <div class="help-header-title"><img src="./logo.svg" alt="" /><h1>WebQ88</h1></div>
+      <nav aria-label="ページ"><a href="./">プレイヤー</a> / <a href="./help.html">使い方</a> / <a href="./about.html">WebQ88とは</a></nav>
     </header>
 
     <main>
@@ -317,19 +289,7 @@
             </div>
             <img src="./help/overview.png" alt="WebQ88 のプレイヤー画面" />
           </div>
-          <div class="lang-en">
-            <h2>A PC-8801 in your browser. Just open the URL.</h2>
-            <p class="hero-lead">
-              WebQ88 is a web player that runs a WebAssembly build of QUASI88-libretro — a libretro port of
-              the PC-8801 emulator QUASI88 — directly in your browser. It bundles a compatible ROM,
-              PC88Behavior, written in a clean-room fashion instead of the official ROM, so it boots to an
-              N88-BASIC-compatible screen with nothing else to prepare — just open the page.
-            </p>
-            <div class="hero-buttons">
-              <a class="hero-btn hero-btn-primary" href="./">Try it now</a>
-            </div>
-            <img src="./help/overview-en.png" alt="WebQ88 player overview" />
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -340,14 +300,7 @@
               プラグインも不要です。対応ブラウザで URL を開けば、その場で PC-8801 が起動します。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>No install — runs entirely in the browser</h2>
-            <p>
-              The emulator itself runs as WebAssembly inside your browser, so there's no app to install and
-              no browser plugin needed. Open the URL in a supported browser and the PC-8801 starts right
-              there.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -361,17 +314,7 @@
               メインの数字キーや矢印キーをテンキーとして使えます。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>Keyboard, gamepad, and touch screens</h2>
-            <p>
-              An on-screen <strong>soft keyboard</strong> in the PC-88 layout lets you type by touch. A
-              <strong>virtual pad</strong> shows touch-friendly directional keys and buttons, connected
-              physical <strong>gamepads</strong> are supported, and <strong>key assignment</strong> lets
-              you change what buttons, axes, and physical keyboard keys map to. On computers without a
-              numeric keypad, "Numpad substitute" lets the main number keys and arrow keys act as the
-              keypad.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -386,22 +329,12 @@
               保管してください。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>Automatic disk saving and a disk library</h2>
-            <img src="./help/library-en.png" alt="Disk Library" />
-            <p>
-              Whatever the guest writes is automatically saved into your browser (IndexedDB) every few
-              seconds and re-inserted the next time you open the page. Disks you've loaded appear in the
-              Disk Library, where you can insert, rename, download, or delete them. Loaded disks and saved
-              data are never sent to a server. Browser storage is cleared when site data is deleted, so
-              download any disk you care about to keep a copy.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
           <div class="lang-ja"><h2>ホストからテキスト送信</h2><p>「…」→「入力」から ASCII や半角カナを貼り付けて送信できます。</p><img src="./help/paste.png" alt="テキスト貼り付け画面" /></div>
-          <div class="lang-en"><h2>Type on the host, send it to the guest</h2><p>Paste and send ASCII or half-width kana from More (…) → Input.</p><img src="./help/paste-en.png" alt="Text paste panel" /></div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -417,17 +350,7 @@
               を参照してください。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>AI agents can operate the PC-8801 directly<span class="feature-badge">MCP support</span></h2>
-            <p>
-              Through an MCP server running on your own machine, AI agents such as Claude Code can drive
-              WebQ88. Open the page with <code>?bridge=1</code> and it connects to the local MCP server on
-              <code>127.0.0.1</code>, letting the agent send key presses, type text, check the screen,
-              reset the machine, insert and eject disks, and more. The MCP server runs on your own machine. See
-              <a href="https://github.com/uraraworks/WebQ88/tree/main/mcp" target="_blank" rel="noopener">mcp/README.md</a>
-              for setup details.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -441,17 +364,7 @@
               起動できます。漢字ROMも、フリーの東雲フォントから作った自作のものを同梱しています。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>Boots without an official ROM, thanks to a bundled compatible ROM</h2>
-            <p>
-              The bundled compatible ROM,
-              <a href="https://github.com/uraraworks/PC88Behavior" target="_blank" rel="noopener">PC88Behavior</a>,
-              is a clean-room implementation written using only externally observable behavior as a
-              guide, and it contains no bytes from the official ROM. That's why you can start the
-              machine just by opening the URL and pressing one button, with no official ROM on hand.
-              A self-made kanji ROM, generated from the free Shinonome font, is bundled as well.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -464,15 +377,7 @@
               そのまま人に渡すこともできます。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>Boot with disks specified in the URL</h2>
-            <p>
-              Pass disk image URLs as parameters, as in <code>?fd1=URL&amp;fd2=URL&amp;run=1</code>, and
-              the machine starts right away without any button press. ZIP and LZH archives are extracted
-              automatically and the D88 images inside are registered in the library. You can also copy a
-              shareable URL for the disks currently inserted and hand it to someone else.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -483,14 +388,7 @@
               音量を調整できます(設定はブラウザに保存されます)。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>BGM and sound effects</h2>
-            <p>
-              Background music and sound effects are played. Use the toolbar's Mute button to silence
-              them and the volume slider in the "…" menu to adjust the level (the settings are saved in
-              your browser).
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -502,38 +400,21 @@
               スクリーンショットは PNG で保存でき、全画面表示にも対応しています。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>4:3 display and interpolation</h2>
-            <p>
-              By default the screen is shown at 4:3, like a real monitor. The "Aspect ratio" setting in
-              the "…" menu switches to 1:1 pixel display, and "Interpolation" switches between
-              sharp bilinear and nearest-neighbor (both are saved). You can save screenshots as PNG, and
-              fullscreen display is supported too.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
           <div class="lang-ja">
             <h2>手持ちの ROM も使える(制限モード)</h2>
             <p>
-              お持ちの ROM ファイルを「…」メニューから選んで、そちらで起動し直すこともできます。
+              お持ちの ROM ファイルを「…」→「ROM」から選び、「選択したROMで起動 / 再起動」で起動できます。保存済みROMは同じメニューで確認・削除でき、削除後は次回起動から互換モードになります。
               ROM はブラウザの中だけで使い、どこにも送信しません。利用者の ROM で起動している間は
               <strong>制限モード</strong>になり、AI から操作する機能の一部(画面本文の取得、
               スクリーンショット、メモリの読み書きなど)は使えなくなります。ROM の入手と使用は、
               利用者自身が適法に行ってください。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>Bring your own ROMs (restricted mode)</h2>
-            <p>
-              You can also pick your own ROM files from the "…" menu and restart with them. ROMs are used
-              only inside your browser and are never sent anywhere. While running with your own ROMs, the
-              player is in <strong>restricted mode</strong>, and some of the AI-control features (reading
-              screen text, screenshots, reading and writing memory, and so on) become unavailable. Obtaining
-              and using ROMs lawfully is your own responsibility.
-            </p>
-          </div>
+          
         </section>
 
         <section class="help-card feature-card">
@@ -550,90 +431,15 @@
               PC-8801 の公式 ROM・市販ソフトウェアのディスクイメージは一切同梱していません。
             </p>
           </div>
-          <div class="lang-en">
-            <h2>Privacy and licensing</h2>
-            <p>
-              Any disk image or ROM you load is handled only inside your own browser and is never sent to
-              a server. You're responsible for the rights and handling of any such files you choose to
-              load.
-            </p>
-            <p>
-              No particular license is specified for this repository's own code. The core
-              (QUASI88-libretro) is under the BSD 3-Clause license, and the bundled compatible ROM
-              (a build artifact of PC88Behavior) is under the MIT license. The Shinonome font used for the kanji ROM is in the public domain. No official PC-8801 ROMs and
-              no commercial software disk images are bundled.
-            </p>
-          </div>
+          
         </section>
       </div>
     </main>
 
     <footer class="help-footer">
-      <span class="lang-ja">
-        <a href="./">WebQ88 プレイヤーに戻る</a> /
-        <a href="./help.html?lang=ja">使い方</a> /
-        <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">GitHubで見る</a> /
-        © <a href="https://www.urara-works.jp/" target="_blank" rel="noopener">URARA-works</a>
-      </span>
-      <span class="lang-en">
-        <a href="./">Back to the WebQ88 player</a> /
-        <a href="./help.html?lang=en">How to use</a> /
-        <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">View on GitHub</a> /
-        © <a href="https://www.urara-works.jp/" target="_blank" rel="noopener">URARA-works</a>
-      </span>
+      <a href="https://www.urara-works.jp/" target="_blank" rel="noopener">© URARA-works</a> /
+      <a href="https://github.com/uraraworks/WebQ88" target="_blank" rel="noopener">GitHubで見る</a> /
+      <a href="./">プレイヤー</a> / <a href="./help.html">使い方</a> / <a href="./about.html">WebQ88とは</a>
     </footer>
-
-    <script>
-      (function () {
-        'use strict';
-
-        var STORAGE_KEY = 'webq88-lang';
-        var TITLES = { ja: 'WebQ88 とは', en: 'About WebQ88' };
-
-        function readStoredLang() {
-          try {
-            var v = localStorage.getItem(STORAGE_KEY);
-            return v === 'ja' || v === 'en' ? v : null;
-          } catch (e) {
-            return null;
-          }
-        }
-
-        // 優先順位: URL ?lang= ＞ localStorage ＞ navigator.language(ja判定) ＞ 既定 'en'。
-        function resolveLang() {
-          var params = new URLSearchParams(location.search);
-          var fromUrl = params.get('lang');
-          if (fromUrl === 'ja' || fromUrl === 'en') return fromUrl;
-
-          var stored = readStoredLang();
-          if (stored) return stored;
-
-          if (navigator.language && navigator.language.toLowerCase().indexOf('ja') === 0) return 'ja';
-
-          return 'en';
-        }
-
-        function setLang(lang) {
-          try {
-            localStorage.setItem(STORAGE_KEY, lang);
-          } catch (e) {
-            // localStorage が使えない環境ではメモリ上の切替のみ有効。
-          }
-          document.body.setAttribute('data-lang', lang);
-          document.documentElement.setAttribute('lang', lang);
-          document.title = TITLES[lang];
-          var toggleBtn = document.getElementById('langToggleBtn');
-          if (toggleBtn) toggleBtn.textContent = lang === 'ja' ? 'EN' : '日本語';
-        }
-
-        var currentLang = resolveLang();
-        setLang(currentLang);
-
-        document.getElementById('langToggleBtn').addEventListener('click', function () {
-          currentLang = currentLang === 'ja' ? 'en' : 'ja';
-          setLang(currentLang);
-        });
-      })();
-    </script>
   </body>
 </html>
