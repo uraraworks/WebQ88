@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
+import { installGuardFixture } from './guard-fixture.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const output = resolve(root, 'public/help');
@@ -20,6 +21,35 @@ const profile = await mkdtemp(join(tmpdir(), 'webq88-shots-'));
 let browser;
 try {
   browser = await puppeteer.launch({ executablePath: chrome, userDataDir: profile, headless: true, args: ['--hide-scrollbars'] });
+  {
+    // 他の撮影とは独立した互換ROMの環境で、自作機械語から見張りを発動する。
+    const context = await browser.createBrowserContext();
+    try {
+      const page = await context.newPage();
+      await page.setViewport({ width: 900, height: 700, deviceScaleFactor: 2 });
+      await page.setExtraHTTPHeaders({ 'Accept-Language': 'ja' });
+      await installGuardFixture(page);
+      const url = new URL(base);
+      url.searchParams.set('bridge', '1');
+      await page.goto(url.href, { waitUntil: 'networkidle2' });
+      await page.waitForFunction(() => window.__webq88Debug && !document.querySelector('#screenshot').disabled, { timeout: 60000 });
+      await new Promise((r) => setTimeout(r, 2500));
+      const type = async (text) => {
+        const result = await page.evaluate((text) => window.__webq88Debug.exec('type_text', { text }), text);
+        if (!result.ok) throw new Error(result.error);
+      };
+      for (const [i, byte] of [0xcd, 0x34, 0x12, 0xc9].entries()) {
+        await type(`POKE &H${(0xe000 + i).toString(16)},${byte}\n`);
+      }
+      // 停止により type_text のフレーム待ちは中断されうる。
+      await page.evaluate(() => window.__webq88Debug.exec('type_text', { text: 'DEF USR=&HE000:A=USR(0)\n' }));
+      await page.waitForSelector('#unsupported-overlay', { visible: true, timeout: 60000 });
+      await (await page.waitForSelector('#player', { visible: true })).screenshot({ path: join(output, 'unsupported.png') });
+      console.log('撮影: unsupported.png');
+    } finally {
+      await context.close();
+    }
+  }
   {
     const context = await browser.createBrowserContext();
     try {
