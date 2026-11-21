@@ -1,0 +1,13 @@
+diff --git a/src/quasi88.c b/src/quasi88.c
+--- a/src/quasi88.c
++++ b/src/quasi88.c
+@@ -1015,6 +1015,9 @@ void	quasi88_disk_eject(int drv)
+ {
+     if (disk_image_exist(drv)) {
+ 	disk_eject(drv);
++	/* Insertion selects disk boot; undo that selection on eject. */
++	if (drv == DRIVE_1) boot_from_rom = TRUE;
++
+ 	memset(file_disk[ drv ], 0, QUASI88_MAX_FILENAME);
+ 
+ 	if (filename_synchronize) {
