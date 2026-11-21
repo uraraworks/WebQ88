@@ -1,0 +1,131 @@
+--- a/src/z80.c
++++ b/src/z80.c
+@@ -82,6 +82,7 @@
+ 
+ #include "quasi88.h"
+ #include "z80.h"
++#include "webq88_guard.h"
+ 
+ 
+ #define S_FLAG      (0x80)
+@@ -130,6 +131,7 @@
+  *****************************************************************************/
+ void	z80_reset( z80arch *z80 )
+ {
++  if (z80 == &z80main_cpu) webq88_guard_reset();
+   z80->AF.W  = z80->BC.W  = z80->DE.W  = z80->HL.W  =0xffff;
+   z80->AF1.W = z80->BC1.W = z80->DE1.W = z80->HL1.W =0xffff;
+   z80->IX.W  = z80->IY.W  = 0xffff;
+@@ -777,6 +779,8 @@
+   int	total_state    = 0;	/* 関数終了時までに、処理したステート数	     */
+ 
+ 
++  const int guard = webq88_guard_enabled && z80 == &z80main_cpu;
++
+   z80_state_goal = state_of_exec;
+ 
+   for( ;; ){
+@@ -795,7 +799,27 @@
+ 
+     do{
+ 
+-      opcode = M_FETCH(z80->PC.W++);		/* 命令フェッチ */
++      /* ROM runs only compare the cached region; the bitmap is consulted
++         only on RAM -> ROM transitions. Prefix fetches are not instructions. */
++      if (guard) {
++        int rom = z80->PC.W < 0x8000 && webq88_guard_rom_mapped;
++        if (webq88_guard_stopped ||
++            (rom && webq88_guard_previous_ram &&
++             webq88_guard_transition(z80->PC.W))) {
++          /* Keep peripheral time moving until retro_run returns, without
++             fetching/executing the unsupported instruction or accepting INT. */
++          z80->state0 += MAX(4, z80_state_intchk - z80->state0);
++          goto webq88_guard_idle;
++        }
++        webq88_guard_previous_ram = !rom;
++        if (!rom) webq88_guard_source = z80->PC.W;
++      }
++      opcode = M_FETCH(z80->PC.W++);
++      if (guard && webq88_guard_previous_ram) {
++        webq88_guard_opcode = opcode;
++        if (opcode == 0xed)
++          webq88_guard_opcode = 0xed00 | M_RDMEM(z80->PC.W);
++      }		/* 命令フェッチ */
+       z80->R ++;
+       z80->state0 += state_table[ opcode ];
+ 
+@@ -829,12 +853,15 @@
+     /*      z80->icount の更新もこの関数にて行う。			*/
+     /*      メニュー等への遷移時は、 CPU_BREAKOFF() で処理を終える。	*/
+ 
++webq88_guard_idle:
+     (z80->intr_update)();
+ 
+     total_state += z80->state0;		/* 処理した state 数の累計 */
+     z80->state0  = 0;
+ 
+ 	/* ======== 割込発生チェックし、発生していたら応答する ======== */
++
++    if (guard && webq88_guard_stopped) goto webq88_guard_end;
+ 
+     if( z80->skip_intr_chk ){	/* 割込応答しない場合 (EI,DD/FD不当命令直後)*/
+       z80->skip_intr_chk = FALSE;
+@@ -849,6 +876,8 @@
+       if( z80->IFF==INT_ENABLE &&	    /* 割込許可かつ割込発生あり */
+ 	  z80->INT_active ){
+ 
++	/* An accepted interrupt must not inherit a previous RET exemption. */
++	if (guard && webq88_guard_previous_ram) webq88_guard_opcode = 0x100;
+ 	z80_interrupt( z80 );
+ 
+ 	/* 割り込みを受け付けると、その処理分 z80->state0 が増加するが、
+@@ -858,6 +887,7 @@
+ 
+ 	/* ========================== 終了判定 ======================= */
+ 
++webq88_guard_end:
+     if( z80_state_goal ){	/* 実行state数指定時は、ここで終了判定 */
+       if( (unsigned int)z80_state_goal <= (unsigned int)total_state ) break;
+ 
+--- a/src/pc88main.c
++++ b/src/pc88main.c
+@@ -254,6 +254,8 @@
+ */
+ 
+ 
++int webq88_guard_rom_mapped; /* Cached whenever the read mapping changes. */
++
+ static	byte	*read_mem_0000_5fff;	/* メインメモリ リードポインタ	*/
+ static	byte	*read_mem_6000_7fff;
+ static	byte	*read_mem_8000_83ff;
+@@ -273,6 +275,8 @@
+ #if 1
+ static INLINE	void	main_memory_mapping_0000_7fff( void )
+ {
++  webq88_guard_rom_mapped = !(grph_ctrl & GRPH_CTRL_64RAM) &&
++                            !(ext_ram_ctrl & 0x01);
+   highspeed_n88rom = FALSE;	/* デフォルト */
+ 
+   switch( ext_ram_ctrl ){
+@@ -354,6 +358,8 @@
+ 
+ static INLINE	void	main_memory_mapping_0000_7fff( void )
+ {
++  webq88_guard_rom_mapped = !(grph_ctrl & GRPH_CTRL_64RAM) &&
++                            !(ext_ram_ctrl & 0x01);
+   highspeed_n88rom = FALSE;	/* デフォルト */
+ 
+ 	/* リードは、指定したバンクに応じたメモリから */
+--- /dev/null
++++ b/src/webq88_guard.h
+@@ -0,0 +1,10 @@
++/* WebQ88: internal instruction-boundary guard, no ROM bytes exported. */
++#ifndef WEBQ88_GUARD_H
++#define WEBQ88_GUARD_H
++extern z80arch z80main_cpu;
++extern int webq88_guard_enabled, webq88_guard_stopped;
++extern int webq88_guard_rom_mapped, webq88_guard_previous_ram;
++extern unsigned int webq88_guard_source, webq88_guard_opcode;
++void webq88_guard_reset(void);
++int webq88_guard_transition(unsigned int address);
++#endif

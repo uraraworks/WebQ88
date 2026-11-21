@@ -1,17 +1,17 @@
 {
   "generatedBy": "PC88Behavior",
-  "sourceCommit": "a899608a24aa96f505f3771862570f41ec9a7c63",
+  "sourceCommit": "ae32cd98f5b1ff641c143400b80234fe8755704b (作業ツリーに未コミットの変更あり)",
   "license": "MIT",
   "files": [
     {
       "name": "N88.ROM",
       "size": 32768,
-      "sha256": "40018f6463d1ca66e95a6ebbc25e8f9fa35c1fda1efafc7c6b1dc2308864fa43"
+      "sha256": "ef2731c09762aa5e62ec38564bc1b3a3739467b71dbedee47b34ab9a4d57a742"
     },
     {
       "name": "DISK.ROM",
       "size": 8192,
-      "sha256": "1d4036e7bb665adda571fdf96492d4cba045c8a7532cd067756f27b0ed489859"
+      "sha256": "2b981bf19e337d3ee9f6e9e7cb451ce721e398651512542f6b98c80635cee448"
     },
     {
       "name": "FONT.ROM",
@@ -21,27 +21,27 @@
     {
       "name": "N88_0.ROM",
       "size": 8192,
-      "sha256": "e6621f4c7822bfa85e4a22093f078aa7aca863c576a79f53ebb44003c87d9f37"
+      "sha256": "309c8352574f030d0dd2d4f5d4185ec08be87b60a4db78d9b98ed333ae1cf33d"
     },
     {
       "name": "N88_1.ROM",
       "size": 8192,
-      "sha256": "0afea7802002174a53e4a9f134a9984efb97fcce8dccc5f4dd8cd30c1624fc10"
+      "sha256": "3dac53f54af0b31921753c49dce312da6d81bfc04f90223295a66e6385852215"
     },
     {
       "name": "N88_2.ROM",
       "size": 8192,
-      "sha256": "4d44601a137f52f8489fde2d89b1c67ce3de9949b129ad1c9d319a7892be54e8"
+      "sha256": "7d011c5ab01062b8df256b5e8af388f103d48d50c75e1e96a6975dce7b2f3074"
     },
     {
       "name": "N88N.ROM",
       "size": 32768,
-      "sha256": "eb8e29646d11c19e7f589e1feb070a4cbd8d5dc605abe2192631ffd75751ce32"
+      "sha256": "a55a601e1e4d2d9ac2993bc04952b3d68725599d9bd17dd122322015b2e4e460"
     },
     {
       "name": "N88_3.ROM",
       "size": 8192,
-      "sha256": "47e78eee71826c216e7b63288c47d3ddfe1fc59aa0e4387e5cf48c5e654a536f"
+      "sha256": "b7cf87c5c59631d241b7d85bca0d7e69490ca75836119b6f662352b64456b1c8"
     },
     {
       "name": "BLANK2D.D88",
@@ -57,6 +57,11 @@
       "name": "KANJI2.ROM",
       "size": 131072,
       "sha256": "1d338710a95e9a54442c499ed038efe8e698404bccca7adbf079ce6d57a5881e"
+    },
+    {
+      "name": "entries.json",
+      "size": 346,
+      "sha256": "ffde33d2a99377c703dab4f4c85d95df7a2bd9c09e3e051185faa954564dfa12"
     }
   ]
 }

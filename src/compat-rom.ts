@@ -69,7 +69,7 @@ async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
  * 成功したように見せない。../docs/API-DESIGN.md 4節と同じ考え方）。
  */
 export async function loadVerifiedCompatRoms(): Promise<VerifiedRom[]> {
-  return loadVerified((name) => !isDiskImage(name));
+  return loadVerified((name) => /\.rom$/i.test(name));
 }
 
 /**
@@ -109,4 +109,16 @@ async function loadVerified(pick: (name: string) => boolean): Promise<VerifiedRo
     results.push({ name: entry.name, bytes });
   }
   return results;
+}
+
+/** Optional build artifact: glob also emits it in production builds when present. */
+const entryUrls = import.meta.glob<string>('../compat-rom/entries.json', {
+  eager: true, query: '?url', import: 'default',
+});
+export function compatEntriesLocation(): { url: string; sha256?: string } {
+  const entry = (manifest as Manifest).files.find(f => f.name === 'entries.json');
+  return {
+    url: new URL(entryUrls['../compat-rom/entries.json'] ?? 'compat-rom/entries.json', document.baseURI).href,
+    sha256: entry?.sha256,
+  };
 }

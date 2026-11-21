@@ -177,3 +177,24 @@ node scripts/smoke-disk.cjs        # 互換ROMと自作ブランクディスク�
   やNodeのzlibモジュールに依存すると、Worker(ブラウザ)とNode(スモーク
   テスト)で別実装が必要になり、ロジックの二重化(このリポジトリで避けたい
   こと)につながるため。
+
+
+### 互換ROMの非公開入口検知
+
+`status` は `unsupported: null | {address: number, source: number}` を返す。
+互換ROMでRAMから公開入口外のROMへ移った場合、移動先（`address`）と
+直前のRAM上の命令PC（`source`）を整数で返し、命令実行を停止する。
+画面本文・ROM内容・命令バイトは通知しない。通常の一時停止とは別状態で、
+案内を閉じる操作や再開操作では解除されず、`reset` または再起動で解除される。
+
+公開入口はPC88Behaviorの `N88.entries.json` を取り込んだ
+`compat-rom/entries.json`（version 1、source文字列、mainに0〜32767の整数を
+重複なし昇順）を使い、manifestにSHA-256を記録する。
+一覧の欠落・取得失敗・不正形式・空一覧・ハッシュ不一致時は検知を無効にする。
+コアの既定も無効。制限モードでは一覧を取得せず、shimも有効化を拒否する。
+RET/RET cc/RETI/RETNの戻りは除外し、RSTと割り込みの入口は一覧で判断する。
+上流コアはNMI自体を未サポートのため、NMIの実行検査は対象外。
+
+検査: `WEBQ88_URL=http://localhost:5188/?bridge=1 node scripts/smoke-guard.mjs`。
+新規ブラウザプロファイル・同梱互換ROM・自作機械語だけを使用する。
+試験用一覧はHTTP応答として注入し、compat-romの配布物を書き換えない。

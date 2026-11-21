@@ -47,6 +47,7 @@ export type MainToWorkerMessage =
       // 同一Workerインスタンス内で ROM を差し替えて再起動する
       // (docs/API-DESIGN.md 第3節「一方向の掛け金」)。
       type: 'init';
+      entries: { url: string; sha256?: string };
       coreOptions: Record<string, string>;
       bundled: RomFile[];
       user: RomFile[];
@@ -83,6 +84,8 @@ export type MainToWorkerMessage =
 
 /** Worker → メインスレッド */
 export type WorkerToMainMessage =
+  | { type: 'unsupported'; address: number; source: number }
+  | { type: 'guardCleared' }
   | ({ type: 'stateResult'; requestId: number } & StateResult)
   | { type: 'ready'; width: number; height: number; fps: number; sampleRate: number; mode: RomMode }
   | { type: 'audio'; buffer: ArrayBuffer }

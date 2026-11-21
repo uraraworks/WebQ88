@@ -353,7 +353,7 @@
       switch (cmd) {
         case 'status': {
           var mode = ctx.getMode();
-          return { ok: true, booted: ctx.isBooted(), mode: mode };
+          return { ok: true, booted: ctx.isBooted(), mode: mode, unsupported: ctx.getUnsupported ? ctx.getUnsupported() : null };
         }
 
         case 'reset': {

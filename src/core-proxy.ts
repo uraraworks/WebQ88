@@ -6,9 +6,11 @@
 
 import type { DiskResult, StateResult, MainToWorkerMessage, RomFile, RomMode, WorkerToMainMessage } from './core-protocol';
 import { WORKER_SCRIPT_PATH } from './core-protocol';
-import type { VerifiedRom } from './compat-rom';
+import { compatEntriesLocation, type VerifiedRom } from './compat-rom';
 
 export interface CoreProxyHandlers {
+  onUnsupported?: (position: { address: number; source: number }) => void;
+  onGuardCleared?: () => void;
   onReady?: (info: { width: number; height: number; fps: number; sampleRate: number; mode: RomMode }) => void;
   onAudio?: (buffer: ArrayBuffer) => void;
   onFrame?: (frame: { width: number; height: number; pitch: number; buffer: ArrayBuffer; lamp: number; executedFrames: number }) => void;
@@ -37,6 +39,8 @@ export class CoreProxy {
     this.worker.onmessage = (ev: MessageEvent<WorkerToMainMessage>) => {
       const msg = ev.data;
       switch (msg.type) {
+        case 'unsupported': handlers.onUnsupported?.({ address: msg.address, source: msg.source }); break;
+        case 'guardCleared': handlers.onGuardCleared?.(); break;
         case 'ready':
           handlers.onReady?.({ width: msg.width, height: msg.height, fps: msg.fps, sampleRate: msg.sampleRate, mode: msg.mode });
           break;
@@ -115,6 +119,7 @@ export class CoreProxy {
   init(bundled: VerifiedRom[], user: RomFile[] = []): void {
     const payload: MainToWorkerMessage = {
       type: 'init',
+      entries: compatEntriesLocation(),
       coreOptions: this.coreOptions,
       bundled: bundled.map((r) => ({ name: r.name, bytes: r.bytes })),
       user: user.map((r) => ({ name: r.name, bytes: r.bytes })),

@@ -94,7 +94,10 @@ else
 fi
 
 echo "== emsdk 環境読み込み =="
+BUILD_EM_CACHE="${EM_CACHE:-}"
 source "$EMSDK_DIR/emsdk_env.sh"
+# emsdk_env が既定値へ戻す場合も、呼び出し側の書き込み可能なキャッシュを使う。
+if [ -n "$BUILD_EM_CACHE" ]; then export EM_CACHE="$BUILD_EM_CACHE"; fi
 EMCC_VERSION="$(emcc --version | head -n 1 | grep -oE '[0-9]+(\.[0-9]+){2}' | head -n 1)"
 if [ "$EMCC_VERSION" != "$REQUIRED_EMSDK_VERSION" ]; then
   echo "エラー: emcc $REQUIRED_EMSDK_VERSION が必要です（検出: $EMCC_VERSION）。" >&2
@@ -124,7 +127,7 @@ fi
 emcc -c "$SHIM_SRC" -Isrc -Isrc/LIBRETRO -Isrc/LIBRETRO/libretro-common/include -O2 -o "$SHIM_OBJ"
 
 TEST_SHIM_OBJS=()
-EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free,_webq88_restrict,_webq88_is_restricted,_webq88_ram_read,_webq88_ram_write,_webq88_text_cols,_webq88_text_snapshot,_webq88_disk_insert,_webq88_disk_image_count,_webq88_disk_image_selected,_webq88_disk_eject,_webq88_drive_busy,_webq88_port_device,_webq88_mouse_move,_webq88_mouse_button,_fflush"
+EXPORTED_FUNCTIONS="_retro_set_environment,_retro_set_video_refresh,_retro_set_audio_sample,_retro_set_audio_sample_batch,_retro_set_input_poll,_retro_set_input_state,_retro_init,_retro_deinit,_retro_api_version,_retro_get_system_av_info,_retro_run,_retro_load_game,_retro_reset,_retro_serialize_size,_retro_serialize,_retro_unserialize,_malloc,_free,_webq88_guard_enable,_webq88_guard_set_entries,_webq88_guard_poll,_webq88_restrict,_webq88_is_restricted,_webq88_ram_read,_webq88_ram_write,_webq88_text_cols,_webq88_text_snapshot,_webq88_disk_insert,_webq88_disk_image_count,_webq88_disk_image_selected,_webq88_disk_eject,_webq88_drive_busy,_webq88_port_device,_webq88_mouse_move,_webq88_mouse_button,_fflush"
 
 if [ "$TEST_SHIM" = "1" ]; then
   echo "== 試験ビルド専用シム(core/shim/webq88_test_shim.c)をコンパイル =="

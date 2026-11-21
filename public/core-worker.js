@@ -84,6 +84,66 @@ var loopTimer = null;
 var lastTickMs = 0;
 var accumulatedMs = 0;
 var paused = false;
+var unsupported = null;
+var guardEnabled = false;
+var guardPollPtr = 0;
+
+async function configureGuard(M, entries) {
+  guardEnabled = false;
+  if (!M._webq88_guard_enable) return; // Older cores remain disabled.
+  M._webq88_guard_enable(0);
+  if (romMode.restricted || !entries) return;
+  try {
+    var response = await fetch(entries.url, { cache: 'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    var bytes = await response.arrayBuffer();
+    if (entries.sha256) {
+      var digest = await crypto.subtle.digest('SHA-256', bytes);
+      var hash = Array.from(new Uint8Array(digest), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+      if (hash !== entries.sha256) throw new Error('sha256 mismatch');
+    }
+    var data = JSON.parse(new TextDecoder().decode(bytes));
+    if (data.version !== 1 || typeof data.source !== 'string' ||
+        !Array.isArray(data.main) || !data.main.length || data.main.length > 0x8000 ||
+        !data.main.every(function (a, i) { return Number.isInteger(a) && a >= 0 && a < 0x8000 && (!i || a > data.main[i - 1]); })) {
+      throw new Error('invalid entries');
+    }
+    var ptr = M._malloc(data.main.length * 2);
+    try {
+      M.HEAPU16.set(data.main, ptr >>> 1);
+      M._webq88_guard_set_entries(ptr, data.main.length);
+      M._webq88_guard_enable(1);
+      guardEnabled = true;
+    } finally { M._free(ptr); }
+    if (!guardPollPtr) guardPollPtr = M._malloc(8);
+  } catch (err) {
+    console.warn('公開入口一覧を読み込めないため、ROM内部呼び出しの検知は無効です。', String(err));
+  }
+}
+
+function clearUnsupported() {
+  unsupported = null;
+  keyHoldTracker = new KeyHoldTracker(keyHoldTracker.minPolls);
+  postMessage({ type: 'guardCleared' });
+}
+
+function resetCore() {
+  if (!moduleInstance) return;
+  moduleInstance._retro_reset();
+  clearUnsupported();
+  audioChunks = [];
+  if (!paused) startLoop();
+}
+
+function pollGuard() {
+  var M = moduleInstance;
+  if (!guardEnabled || !M._webq88_guard_poll(guardPollPtr, guardPollPtr + 4)) return false;
+  var view = new DataView(M.HEAPU8.buffer);
+  unsupported = { address: view.getUint32(guardPollPtr, true), source: view.getUint32(guardPollPtr + 4, true) };
+  audioChunks = [];
+  postMessage({ type: 'unsupported', address: unsupported.address, source: unsupported.source });
+  return true;
+}
 var audioChunks = [];
 var audioQueueSeconds = null;
 var audioQueueAt = 0;
@@ -222,12 +282,14 @@ function readAvInfo(M) {
 }
 
 function startLoop() {
+  clearTimeout(loopTimer);
+  if (paused || unsupported) return;
   lastTickMs = performance.now();
   accumulatedMs = 0;
   var frameDurationMs = 1000 / fps;
 
   function tick() {
-    if (paused) return;
+    if (paused || unsupported) return;
     var now = performance.now();
     accumulatedMs += now - lastTickMs;
     lastTickMs = now;
@@ -243,6 +305,7 @@ function startLoop() {
       for (var b = 0; b < 2; b++) if (mouseButtons[b].length) moduleInstance._webq88_mouse_button(b, mouseButtons[b].shift() ? 1 : 0);
       moduleInstance._retro_run();
       executedFrames++;
+      if (pollGuard()) return;
       lampAcc |= disks.lampMask();
       accumulatedMs -= frameDurationMs;
       ran++;
@@ -311,7 +374,10 @@ function writeSysRoms(M, placements) {
  * (代償として、reboot のたびに古いバッファが1組ぶん解放されずに残る
  * = 軽いメモリリークが起きるが、ページ再読み込みで解消するため許容する)。
  */
-function finishBoot(M, plan, isReboot) {
+async function finishBoot(M, plan, isReboot, entries) {
+  clearTimeout(loopTimer);
+  if (M._webq88_guard_enable) M._webq88_guard_enable(0);
+  clearUnsupported();
   // ROMをFSに置く「前」に掛け金を掛ける(起動後では遅い)。
   if (restricted) {
     M._webq88_restrict();
@@ -334,17 +400,16 @@ function finishBoot(M, plan, isReboot) {
     }
   }
 
+  await configureGuard(M, entries);
   M._webq88_port_device(portMouse ? 1 : 0);
   var avInfo = readAvInfo(M);
   fps = avInfo.fps;
   postMessage({ type: 'ready', width: avInfo.width, height: avInfo.height, fps: fps, sampleRate: avInfo.sampleRate, mode: romMode });
 
-  if (!isReboot) {
-    startLoop();
-  }
+  startLoop();
 }
 
-function handleInit(bundled, user) {
+function handleInit(bundled, user, entries) {
   var plan = WebQ88RomRoles.planRomPlacement(bundled || [], user || []);
   // 使用するROMの内容も識別し、同名の異なるROMを検出する。
   stateRomInfo = plan.placements.map(function (p) {
@@ -367,7 +432,7 @@ function handleInit(bundled, user) {
 
   if (moduleInstance) {
     // 同一Workerインスタンス内での再起動(ページ再読み込み・Worker作り直しではない)。
-    finishBoot(moduleInstance, plan, true);
+    finishBoot(moduleInstance, plan, true, entries).catch(function (err) { postError(String(err)); });
     return;
   }
 
@@ -388,7 +453,7 @@ function handleInit(bundled, user) {
       // 既に存在する場合は無視
     }
     setupCallbacks(M);
-    finishBoot(M, plan, false);
+    return finishBoot(M, plan, false, entries);
   }).catch(function (err) {
     postError('コア初期化中の例外: ' + (err && err.message ? err.message : String(err)));
   });
@@ -493,6 +558,10 @@ function driveFrames(n) {
         resolve();
         return;
       }
+      if (unsupported) {
+        reject(new Error('unsupported ROM entry'));
+        return;
+      }
       if (Date.now() > deadline) {
         reject(new Error('drive frames timeout (core loop not advancing?)'));
         return;
@@ -511,9 +580,8 @@ function buildApiCtx() {
     getMode: function () {
       return romMode;
     },
-    reset: function () {
-      if (moduleInstance) moduleInstance._retro_reset();
-    },
+    getUnsupported: function () { return unsupported; },
+    reset: resetCore,
     press: function (id) {
       keyHoldTracker.press(id);
     },
@@ -600,6 +668,7 @@ function buildApiCtx() {
     },
     listStates: function () { return Object.keys(stateMetadata).map(function (slot) { return stateMetadata[slot]; }); },
     loadState: function (slot) {
+      if (unsupported) throw new Error('非公開ROM入口で停止中です。先にリセットしてください');
       if (!moduleInstance) throw new Error('not booted');
       var saved = stateSlots[slot];
       if (!saved) throw new Error('no saved state in slot: ' + slot);
@@ -609,6 +678,7 @@ function buildApiCtx() {
         M.HEAPU8.set(saved, ptr);
         var ok = M._retro_unserialize(ptr, saved.length);
         if (!ok) throw new Error('retro_unserialize failed');
+        if (M._webq88_guard_enable) M._webq88_guard_enable(guardEnabled ? 1 : 0);
         M._webq88_port_device(portMouse ? 1 : 0);
       } finally {
         M._free(ptr);
@@ -710,6 +780,7 @@ function handleState(msg) {
         response.bytes = M.HEAPU8.slice(ptr, ptr + size).buffer;
       } finally { M._free(ptr); }
     } else if (msg.op === 'load') {
+      if (unsupported) throw new Error('非公開ROM入口で停止中です。先にリセットしてください');
       var bytes = new Uint8Array(msg.bytes);
       if (!bytes.length) throw new Error('データが空です');
       var loadPtr = M._malloc(bytes.length);
@@ -717,6 +788,7 @@ function handleState(msg) {
       try {
         M.HEAPU8.set(bytes, loadPtr);
         if (!M._retro_unserialize(loadPtr, bytes.length)) throw new Error('復元できません');
+        if (M._webq88_guard_enable) M._webq88_guard_enable(guardEnabled ? 1 : 0);
         M._webq88_port_device(portMouse ? 1 : 0);
       } finally { M._free(loadPtr); }
     }
@@ -732,7 +804,7 @@ self.onmessage = function (ev) {
   switch (msg.type) {
     case 'init':
       if (!moduleInstance) coreOptions = Object.assign({ q88_sound_board: 'OPNA' }, msg.coreOptions || {});
-      handleInit(msg.bundled, msg.user);
+      handleInit(msg.bundled, msg.user, msg.entries);
       break;
     case 'portDevice':
       mouseButtons = [[], []];
@@ -764,11 +836,10 @@ self.onmessage = function (ev) {
       paused = false;
       accumulatedMs = 0;
       lastTickMs = performance.now();
+      startLoop();
       break;
     case 'reset':
-      if (moduleInstance) {
-        moduleInstance._retro_reset();
-      }
+      resetCore();
       break;
     case 'setKeyHoldMinPolls':
       // デバッグ/検証用: 0を渡すと保留を無効化する(陰性対照)。

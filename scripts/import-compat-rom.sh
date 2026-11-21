@@ -48,6 +48,14 @@ for f in $FILES KANJI1.ROM KANJI2.ROM; do
 done
 for f in $FILES KANJI1.ROM KANJI2.ROM; do cp "$TMP_DIR/$f" "$OUT_DIR/$f"; done
 
+# 公開入口が無い世代では古い一覧も残さず、検知を無効にする。
+if [ -f "$TMP_DIR/N88.entries.json" ]; then
+  cp "$TMP_DIR/N88.entries.json" "$OUT_DIR/entries.json"
+else
+  echo "警告: N88.entries.json がありません。ROM内部呼び出しの検知は無効です。" >&2
+  rm -f "$OUT_DIR/entries.json"
+fi
+
 # 全ファイルを生成元コミットから取り込み、manifest を作り直す（既存の他の項目は保持）。
 python3 - "$OUT_DIR" "$REV$DIRTY" <<'PYTHON'
 import hashlib, json, sys
@@ -57,7 +65,9 @@ manifest = out / 'manifest.json'
 data = json.loads(manifest.read_text())
 data['sourceCommit'] = rev
 data.pop('kanjiSourceCommit', None)
-names = [entry['name'] for entry in data['files']]
+names = [entry['name'] for entry in data['files'] if entry['name'] != 'entries.json']
+if (out / 'entries.json').is_file():
+    names.append('entries.json')
 for name in ('N88.ROM','N88N.ROM','DISK.ROM','FONT.ROM','N88_0.ROM','N88_1.ROM','N88_2.ROM','N88_3.ROM','BLANK2D.D88','KANJI1.ROM', 'KANJI2.ROM'):
     if name not in names:
         names.append(name)

@@ -1,3 +1,4 @@
+import { createUnsupportedUi } from './unsupported-ui';
 declare const __BUILD_TIME__: string;
 // main.ts — 最小の起動配線。
 //
@@ -219,7 +220,18 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
   let firstReady = true;
   let coreSampleRate: number | null = null;
 
+  const stage = document.querySelector<HTMLElement>('#screen-stage')!;
+  const unsupportedUi = createUnsupportedUi(stage, romFilesInput, romBootButton);
   const proxy = new CoreProxy({
+    onUnsupported: position => {
+      audio.setPaused(true);
+      unsupportedUi.show(position);
+      setStatus('公式ROMの内部機能への呼び出しを検出したため停止しました');
+    },
+    onGuardCleared: () => {
+      unsupportedUi.clear();
+      audio.setPaused(paused);
+    },
     onReady: ({ width, height, fps, sampleRate, mode }) => {
       perfHz = fps; coreSampleRate = sampleRate;
       audio.setRate(sampleRate);
@@ -314,7 +326,6 @@ async function main(startRequested: Promise<RomFile[]>): Promise<void> {
 
   diskPanel = new DiskPanel(proxy, disksEl, { blankImage: blank2d ? new Uint8Array(blank2d.bytes) : null });
 
-  const stage = document.querySelector<HTMLElement>('#screen-stage')!;
   stage.addEventListener('dragover', event => {
     if (!event.dataTransfer?.types.includes('Files')) return;
     event.preventDefault();
