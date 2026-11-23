@@ -112,6 +112,18 @@ async function configureGuard(M, entries) {
     try {
       M.HEAPU16.set(data.main, ptr >>> 1);
       M._webq88_guard_set_entries(ptr, data.main.length);
+      var relays = data.relay_sources;
+      if (M._webq88_guard_set_relay_sources && Array.isArray(relays) && relays.length <= 32 &&
+          relays.every(function (r) { return Array.isArray(r) && r.length === 2 &&
+            Number.isInteger(r[0]) && Number.isInteger(r[1]) &&
+            r[0] >= 0x8000 && r[0] < r[1] && r[1] <= 0x10000; })) {
+        var relayPtr = M._malloc(relays.length * 8);
+        try {
+          var relayView = new DataView(M.HEAPU8.buffer, relayPtr, relays.length * 8);
+          relays.flat().forEach(function (v, i) { relayView.setUint32(i * 4, v, true); });
+          M._webq88_guard_set_relay_sources(relayPtr, relays.length);
+        } finally { M._free(relayPtr); }
+      }
       M._webq88_guard_enable(1);
       guardEnabled = true;
     } finally { M._free(ptr); }

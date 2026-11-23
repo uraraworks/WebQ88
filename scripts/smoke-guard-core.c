@@ -20,6 +20,7 @@ static byte ram[65536];
 static int interrupt_once;
 void webq88_guard_enable(int);
 void webq88_guard_set_entries(const uint16_t *, int);
+void webq88_guard_set_relay_sources(const uint32_t *, int);
 int webq88_guard_poll(uint32_t *, uint32_t *);
 void webq88_restrict(void);
 static byte read_byte(word a) { return ram[a]; }
@@ -71,6 +72,23 @@ int main(void) {
     init(); ram[0xe000]=0xc3; ram[0xe001]=0x34; ram[0xe002]=0x12;
     steps(2); stopped(0x1234, 0xe000); /* JP */
     init(); call(0x37c9); ram[0x37c9]=0xc9; steps(4); assert(!webq88_guard_stopped);
+    /* 中継領域内と両端の直外でJP/CALLを確認する。 */
+    const uint32_t relays[] = {0xff9d, 0xffbc, 0xffdc, 0xffeb};
+    for (unsigned r=0; r<2; r++) for (unsigned op=0; op<2; op++) {
+        const word sources[] = {relays[r*2], relays[r*2+1]-1,
+                                relays[r*2]-1, relays[r*2+1]};
+        for (unsigned j=0; j<4; j++) {
+            webq88_guard_set_entries(entries, sizeof entries / sizeof *entries);
+            webq88_guard_set_relay_sources(relays, 2); webq88_guard_enable(1);
+            init(); word src=sources[j]; z80main_cpu.PC.W=src;
+            ram[src]=op ? 0xcd : 0xc3; ram[(word)(src+1)]=0x34; ram[(word)(src+2)]=0x12;
+            steps(2);
+            if (j<2) assert(!webq88_guard_stopped); else stopped(0x1234,src);
+        }
+    }
+    webq88_guard_set_entries(entries, sizeof entries / sizeof *entries); webq88_guard_enable(1);
+    init(); z80main_cpu.PC.W=0xff9d; ram[0xff9d]=0xc3; ram[0xff9e]=0x34; ram[0xff9f]=0x12;
+    steps(2); stopped(0x1234,0xff9d); /* 一覧再設定で中継元なし */
     /* ROM -> RAM hook -> RET -> 非公開ROM番地 */
     init(); z80main_cpu.PC.W=0x1200;
     ram[0x1200]=0xcd; ram[0x1201]=0; ram[0x1202]=0xe0; ram[0xe000]=0xc9;

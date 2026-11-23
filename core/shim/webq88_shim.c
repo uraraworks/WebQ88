@@ -85,6 +85,8 @@ int webq88_guard_previous_ram;
 unsigned int webq88_guard_source, webq88_guard_opcode;
 static uint8_t guard_entries[0x8000 / 8];
 static int guard_entries_ready, unsupported_rom_call;
+static uint32_t guard_relays[32][2];
+static int guard_relay_count;
 static uint32_t guard_address, guard_source, guard_instruction;
 
 void webq88_guard_reset(void)
@@ -106,6 +108,7 @@ void webq88_guard_set_entries(const uint16_t *addrs, int n)
     int i;
     webq88_guard_enable(0);
     guard_entries_ready = 0;
+    guard_relay_count = 0;
     memset(guard_entries, 0, sizeof guard_entries);
     if (g_webq88_restricted || !addrs || n <= 0 || n > 0x8000) return;
     for (i = 0; i < n; i++) {
@@ -115,12 +118,33 @@ void webq88_guard_set_entries(const uint16_t *addrs, int n)
     guard_entries_ready = 1;
 }
 
+/* Half-open RAM ranges; invalid input leaves no relay exemptions. */
+void webq88_guard_set_relay_sources(const uint32_t *ranges, int n)
+{
+    int i;
+    guard_relay_count = 0;
+    if (!ranges || n <= 0 || n > 32) return;
+    for (i = 0; i < n; i++) {
+        if (ranges[2*i] < 0x8000 || ranges[2*i] >= ranges[2*i+1] ||
+            ranges[2*i+1] > 0x10000) return;
+    }
+    for (i = 0; i < n; i++) {
+        guard_relays[i][0] = ranges[2*i];
+        guard_relays[i][1] = ranges[2*i+1];
+    }
+    guard_relay_count = n;
+}
+
 int webq88_guard_transition(unsigned int address)
 {
     unsigned int op = webq88_guard_opcode;
+    int i;
     if (!webq88_guard_enabled || g_webq88_restricted) return 0;
     if (op == 0xc9 || (op <= 0xff && (op & 0xc7) == 0xc0) ||
         op == 0xed4d || op == 0xed45) return 0;
+    for (i = 0; i < guard_relay_count; i++)
+        if (webq88_guard_source >= guard_relays[i][0] &&
+            webq88_guard_source < guard_relays[i][1]) return 0;
     if (guard_entries[address >> 3] & (1u << (address & 7))) return 0;
     guard_address = address;
     guard_source = webq88_guard_source;

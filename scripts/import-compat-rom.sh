@@ -48,7 +48,7 @@ for f in $FILES KANJI1.ROM KANJI2.ROM; do
 done
 for f in $FILES KANJI1.ROM KANJI2.ROM; do cp "$TMP_DIR/$f" "$OUT_DIR/$f"; done
 
-# 公開入口が無い世代では古い一覧も残さず、検知を無効にする。
+# relay_sources を含む公開入口一覧をそのまま取り込む。無い世代では古い一覧を残さない。
 if [ -f "$TMP_DIR/N88.entries.json" ]; then
   cp "$TMP_DIR/N88.entries.json" "$OUT_DIR/entries.json"
 else
