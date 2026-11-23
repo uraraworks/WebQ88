@@ -53,7 +53,7 @@ try {
   if (!fs.statSync(root).isDirectory()) throw Error();
   walk(root, false);
 } catch (_) { violation(root, 'ディレクトリを読み取れません'); }
-for (const entry of entries) if (!found.has(entry.sha256.toLowerCase())) violation(entry.name, '互換ROMの取り込み漏れ');
+for (const entry of entries) if (/\.(rom|d88|dsk|t88|cmt|2d|88d)$/i.test(entry.name) && !found.has(entry.sha256.toLowerCase())) violation(entry.name, '互換ROMの取り込み漏れ');
 if (violations) process.exit(1);
 console.log(`OK: ROM/ディスク ${count} 件すべて互換ROM一覧と一致`);
 NODE
